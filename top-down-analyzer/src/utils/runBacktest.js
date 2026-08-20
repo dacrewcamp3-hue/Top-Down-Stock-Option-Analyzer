@@ -143,9 +143,9 @@ function gradeFromConf(absConf) {
 
 // ── Grade-adaptive exit thresholds (options premium change) ───────────────────
 const GRADE_EXITS = {
-  'A+': { tp: 2.00, sl: -0.35 },
-  'A':  { tp: 1.50, sl: -0.40 },
-  'B':  { tp: 1.00, sl: -0.45 },
+  'A+': { tp: 2.00, sl: -0.20 },
+  'A':  { tp: 1.50, sl: -0.25 },
+  'B':  { tp: 1.00, sl: -0.30 },
 }
 
 // ── Commission / slippage constants ──────────────────────────────────────────

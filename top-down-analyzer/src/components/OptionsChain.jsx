@@ -262,10 +262,10 @@ function ExitPlan({ rec, currentPrice, qty, setupGrade, adxSignal }) {
   const { premium, delta, isCall } = rec
   const qtyN       = Math.max(1, qty)
   const single     = qtyN === 1
-  const stopPrem   = +(premium * 0.60).toFixed(2)
+  const stopPrem   = +(premium * 0.75).toFixed(2)
   const bePrem     = +(premium * 1.50).toFixed(2)
   const housePrem  = +(premium * 2.00).toFixed(2)
-  const stopTotal  = (premium * 0.40 * 100 * qtyN).toFixed(0)
+  const stopTotal  = (premium * 0.25 * 100 * qtyN).toFixed(0)
   const houseSell  = Math.ceil(qtyN / 2)
   const houseKeep  = qtyN - houseSell
 
@@ -280,7 +280,7 @@ function ExitPlan({ rec, currentPrice, qty, setupGrade, adxSignal }) {
       <div className="opt-exit-compact-grid">
         <div className="opt-exit-cell opt-exit-cell-stop">
           <span className="opt-exit-cell-num">1</span>
-          <span className="opt-exit-cell-label">STOP −40%</span>
+          <span className="opt-exit-cell-label">STOP −25%</span>
           <span className="opt-exit-cell-price">${stopPrem}/sh</span>
           <span className="opt-exit-cell-note">Close all · −${(+stopTotal).toLocaleString()}</span>
         </div>

@@ -366,7 +366,7 @@ function OptionsStats({ result }) {
       <div className="bt-opts-title">Options P&L Simulation — 21 DTE · ATM Strike · Grade-Adaptive Exits</div>
       <div className="bt-opts-note">
         Entry IV = rolling 20-day HV × 1.20 (includes the volatility risk premium real options carry).
-        Exits scan bar-by-bar: A+ closes at +200% / −35%, A at +150% / −40%, B at +100% / −45%.
+        Exits scan bar-by-bar: A+ closes at +200% / −20%, A at +150% / −25%, B at +100% / −30%.
         Unresolved trades close at 10 days with 15% IV crush. Earnings windows excluded.
         Debit Spread = buy ATM + sell next OTM strike same expiry — both legs repriced each bar.
       </div>

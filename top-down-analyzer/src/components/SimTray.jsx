@@ -82,7 +82,7 @@ function PositionCard({ trade, currentPrice, currentSigma, loadedTicker, onClose
 
   // Threshold detection for open live positions
   const pctPnl       = (isLive && nowPremium != null) ? (nowPremium - trade.entryPremium) / trade.entryPremium : null
-  const stopHit      = pctPnl != null && pctPnl <= -0.40
+  const stopHit      = pctPnl != null && pctPnl <= -0.25
   const breakevenHit = pctPnl != null && pctPnl >= 0.50 && pctPnl < 1.00
   const houseHit     = pctPnl != null && pctPnl >= 1.00
   const trailStop    = (houseHit && nowPremium != null) ? +(nowPremium * 0.75).toFixed(2) : null
@@ -139,7 +139,7 @@ function PositionCard({ trade, currentPrice, currentSigma, loadedTicker, onClose
             <span className="sim-alert-title">STOP LOSS HIT — CLOSE NOW</span>
             <span className="sim-alert-detail">
               Premium down {(pctPnl * 100).toFixed(0)}% from entry (${f2(trade.entryPremium)} → ~${f2(nowPremium)}).
-              Rule: cut all contracts at −40%. Every dollar past this point is a rule violation.
+              Rule: cut all contracts at −25%. Every dollar past this point is a rule violation.
             </span>
           </div>
         </div>
@@ -177,7 +177,7 @@ function PositionCard({ trade, currentPrice, currentSigma, loadedTicker, onClose
       {autoStop && (
         <div className="sim-alert sim-alert-autoclosed">
           <span className="sim-alert-icon">✂</span>
-          <span className="sim-alert-title">AUTO-CLOSED AT −40% STOP</span>
+          <span className="sim-alert-title">AUTO-CLOSED AT −25% STOP</span>
         </div>
       )}
 
@@ -195,7 +195,7 @@ function PositionCard({ trade, currentPrice, currentSigma, loadedTicker, onClose
         )}
         {trade.status === 'closed' && <span className="sim-closed-badge">CLOSED</span>}
         <span className="sim-step-dots"
-          data-tip={`Exit plan progress — ${stepLabel}. 4 stages: ① Stop −40% (cut all) → ② Breakeven +50% (move stop to entry) → ③ House +100% (sell half, recover cost) → ④ Trail 25% (let winners run free). Filled dots = stages reached.`}>
+          data-tip={`Exit plan progress — ${stepLabel}. 4 stages: ① Stop −25% (cut all) → ② Breakeven +50% (move stop to entry) → ③ House +100% (sell half, recover cost) → ④ Trail 25% (let winners run free). Filled dots = stages reached.`}>
           {[1,2,3,4].map(n => {
             const filled = stepReached === 0 ? n === 1 : n <= stepReached
             return <span key={n} style={{ color: filled ? stepDotClr : '#1e2d45' }}>●</span>
