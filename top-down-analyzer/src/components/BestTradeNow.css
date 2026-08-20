@@ -1,0 +1,243 @@
+.btn-root {
+  background: #060d18;
+  border: 1px solid #1e3050;
+  border-radius: 10px;
+  padding: 16px 18px 12px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Header ── */
+.btn-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #60a5fa;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.btn-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-scan-time {
+  font-size: 11px;
+  color: #344e6a;
+}
+
+.btn-scan-btn {
+  font-size: 11px;
+  font-weight: 600;
+  color: #60a5fa;
+  background: #0a1828;
+  border: 1px solid #1e3a5f;
+  border-radius: 5px;
+  padding: 4px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.15s, color 0.15s;
+}
+.btn-scan-btn:hover:not(:disabled) { background: #0e2040; color: #93c5fd; }
+.btn-scan-btn:disabled { opacity: 0.5; cursor: default; }
+.btn-scan-btn.btn-scanning { opacity: 0.7; }
+
+/* ── Spinner ── */
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}
+.btn-spin {
+  display: inline-block;
+  width: 11px; height: 11px;
+  border: 1.5px solid #1e3a5f;
+  border-top-color: #60a5fa;
+  border-radius: 50%;
+  animation: btn-spin 0.7s linear infinite;
+}
+.btn-spin-lg {
+  width: 16px; height: 16px;
+  border-width: 2px;
+}
+
+/* ── Loading / empty states ── */
+.btn-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #4a6888;
+  padding: 8px 0;
+}
+
+.btn-empty {
+  font-size: 13px;
+  color: #344e6a;
+  padding: 6px 0;
+  line-height: 1.5;
+}
+
+/* ── Results list ── */
+.btn-results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.btn-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #080f1c;
+  border: 1px solid #1a2a40;
+  border-left: 3px solid transparent;
+  border-radius: 7px;
+  padding: 10px 12px;
+  transition: background 0.15s;
+}
+
+.btn-result-top {
+  border-color: #1e3050;
+  box-shadow: 0 0 0 1px #1e305030;
+}
+
+/* ── Rank column ── */
+.btn-rank-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 28px;
+}
+
+.btn-rank {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.btn-top-badge {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  border: 1px solid;
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+/* ── Body ── */
+.btn-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.btn-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-ticker {
+  font-size: 15px;
+  font-weight: 700;
+  color: #c8d8e8;
+  letter-spacing: 0.5px;
+  min-width: 40px;
+}
+
+.btn-signal {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.btn-score-pill {
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid;
+  border-radius: 4px;
+  padding: 1px 6px;
+  letter-spacing: 0.3px;
+}
+
+.btn-bar-track {
+  flex: 1;
+  height: 3px;
+  background: #1a2840;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.btn-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.btn-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-detail-row span {
+  font-size: 11px;
+  color: #3a5878;
+}
+
+.btn-phase {
+  font-weight: 600;
+}
+
+/* ── Action column ── */
+.btn-action-col {
+  flex-shrink: 0;
+}
+
+.btn-load-btn {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: transparent;
+  border: 1px solid;
+  border-radius: 5px;
+  padding: 5px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, opacity 0.15s;
+}
+.btn-load-btn:hover { opacity: 0.85; }
+
+.btn-loaded-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #344e6a;
+  letter-spacing: 1px;
+  padding: 4px 8px;
+  border: 1px solid #1a2840;
+  border-radius: 4px;
+}
+
+/* ── Footer ── */
+.btn-footer {
+  font-size: 11px;
+  color: #283848;
+  line-height: 1.5;
+  border-top: 1px solid #0e1a28;
+  padding-top: 8px;
+}

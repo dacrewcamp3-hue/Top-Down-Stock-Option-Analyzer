@@ -1,0 +1,175 @@
+.ft-root {
+  background: #040b16;
+  border: 1px solid #0e1e30;
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: monospace;
+}
+
+/* ── Header ── */
+.ft-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid #0b1a28;
+}
+
+.ft-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #5a7a9a;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.ft-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.ft-scanning { color: #f59e0b; }
+.ft-live     { color: #10b981; }
+
+.ft-scan-spinner {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid #f59e0b44;
+  border-top-color: #f59e0b;
+  border-radius: 50%;
+  animation: ft-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.ft-live-dot {
+  width: 6px;
+  height: 6px;
+  background: #10b981;
+  border-radius: 50%;
+  animation: ft-pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes ft-spin  { to { transform: rotate(360deg) } }
+@keyframes ft-pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.3 } }
+
+.ft-ticker-count {
+  margin-left: auto;
+  font-size: 10px;
+  color: #2a4060;
+  font-weight: 600;
+}
+
+/* ── Column headers ── */
+.ft-col-hdr {
+  display: flex;
+  align-items: center;
+  padding: 5px 16px;
+  background: #020810;
+  border-bottom: 1px solid #0b1a28;
+  gap: 0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #2a4060;
+  text-transform: uppercase;
+}
+
+.ft-col-hdr > span { flex-shrink: 0; }
+
+/* ── Row list ── */
+.ft-list {
+  max-height: 480px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #0e1e30 transparent;
+}
+
+.ft-list::-webkit-scrollbar { width: 4px; }
+.ft-list::-webkit-scrollbar-thumb { background: #0e1e30; border-radius: 2px; }
+
+.ft-row {
+  display: flex;
+  align-items: center;
+  padding: 5px 16px;
+  border-bottom: 1px solid #07111e;
+  gap: 0;
+  transition: background 0.12s;
+}
+
+.ft-row:hover { background: #060e1c; }
+
+.ft-row.ft-new {
+  animation: ft-flash 1.8s ease-out forwards;
+}
+
+@keyframes ft-flash {
+  0%   { background: #1a3a1a; }
+  40%  { background: #102810; }
+  100% { background: transparent; }
+}
+
+/* ── Cells ── */
+.ft-cell {
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ft-time   { width: 60px; color: #2a4060; font-size: 10px; }
+.ft-ticker { width: 54px; color: #c4daf0; font-weight: 800; font-size: 11px; }
+.ft-type   { width: 42px; font-weight: 800; font-size: 11px; }
+.ft-strike { width: 60px; color: #7a9ab8; }
+.ft-exp    { width: 72px; color: #4a6888; font-size: 10px; }
+.ft-num    { width: 52px; color: #7a9ab8; }
+.ft-muted  { color: #3a5878; }
+.ft-prem   { width: 80px; font-weight: 700; }
+
+.ft-flow {
+  width: 50px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 1px 4px;
+  text-align: center;
+}
+
+.ft-bias {
+  width: 44px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* ── Empty / loading states ── */
+.ft-empty {
+  padding: 48px 24px;
+  text-align: center;
+  font-size: 12px;
+  color: #2a4060;
+  font-family: monospace;
+}
+
+.ft-loading { color: #4a6888; }
+
+/* ── Legend ── */
+.ft-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 8px 16px;
+  font-size: 10px;
+  color: #2a4060;
+  border-top: 1px solid #0b1a28;
+  background: #020810;
+}

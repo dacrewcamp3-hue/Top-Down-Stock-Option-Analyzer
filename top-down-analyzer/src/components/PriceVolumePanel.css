@@ -1,0 +1,215 @@
+.pvp-wrap {
+  max-width: 820px;
+  margin: 0 auto 0;
+  padding: 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.pvp-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pvp-title {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #5a7898;
+}
+
+.pvp-period {
+  font-size: 10px;
+  font-weight: 600;
+  color: #3a5470;
+  cursor: default;
+}
+
+/* ── Verdict card ────────────────────────────────────────────────────────── */
+.pvp-verdict {
+  border: 1px solid;
+  border-left: 3px solid;
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: default;
+}
+
+.pvp-verdict-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pvp-verdict-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pvp-tag {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border: 1px solid;
+  border-radius: 4px;
+}
+
+.pvp-verdict-plus {
+  font-size: 14px;
+  font-weight: 700;
+  color: #3a5470;
+}
+
+.pvp-verdict-kind {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.pvp-verdict-conclusion {
+  font-size: 14px;
+  font-weight: 700;
+  color: #c0d8f0;
+  letter-spacing: 0.1px;
+}
+
+.pvp-verdict-action {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* ── 2×2 reference grid ──────────────────────────────────────────────────── */
+.pvp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.pvp-quad {
+  background: #070d1c;
+  border: 1px solid #1a2e48;
+  border-radius: 7px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  cursor: default;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.pvp-quad-active {
+  border-left-width: 3px;
+}
+
+.pvp-quad-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pvp-quad-dir {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.pvp-quad-now {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.06);
+}
+
+.pvp-quad-conclusion {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.pvp-quad-action {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* Mini bar */
+.pvp-quad-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.pvp-quad-bar-track {
+  flex: 1;
+  height: 3px;
+  background: #0e1e30;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.pvp-quad-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.pvp-quad-bar-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Stats strip ─────────────────────────────────────────────────────────── */
+.pvp-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+@media (max-width: 540px) {
+  .pvp-stats { grid-template-columns: 1fr 1fr; }
+  .pvp-grid  { grid-template-columns: 1fr; }
+}
+
+.pvp-stat {
+  background: #070d1c;
+  border: 1px solid #1a2e48;
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: default;
+}
+
+.pvp-stat-lbl {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #3a5878;
+}
+
+.pvp-stat-val {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  line-height: 1;
+}

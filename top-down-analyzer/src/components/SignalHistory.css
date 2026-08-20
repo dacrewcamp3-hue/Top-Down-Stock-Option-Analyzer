@@ -1,0 +1,289 @@
+.sigh-root {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 12px 24px;
+}
+
+.sigh-empty {
+  text-align: center;
+  color: #3a5a7a;
+  font-size: 13px;
+  padding: 40px;
+}
+
+.sigh-header {
+  padding: 16px 0 10px;
+}
+
+.sigh-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #7a9ab8;
+  margin-bottom: 3px;
+}
+
+.sigh-meta {
+  font-size: 11px;
+  color: #3a5a7a;
+}
+
+/* ── Raw vs Filtered comparison ─────────────────────────────────────────── */
+.sigh-rate-grid {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  background: #040c1a;
+  border: 1px solid #0e1e32;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.sigh-rate-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sigh-rate-block-filtered {
+  border-left: 1px solid #0e1e32;
+  padding-left: 14px;
+}
+
+.sigh-rate-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #2a4a6a;
+  margin-bottom: 2px;
+}
+
+.sigh-rate-block-filtered .sigh-rate-label {
+  color: #7a9ab8;
+}
+
+.sigh-rate-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sigh-rate-tag {
+  font-size: 9px;
+  font-weight: 800;
+  min-width: 48px;
+}
+
+.sigh-rate-tag-bull { color: #10b981; }
+.sigh-rate-tag-bear { color: #ef4444; }
+
+.sigh-rate-count {
+  font-size: 10px;
+  color: #3a5a7a;
+  min-width: 28px;
+}
+
+.sigh-rate-arrow {
+  font-size: 18px;
+  color: #1a3050;
+  flex-shrink: 0;
+}
+
+/* ── Win rate bar ────────────────────────────────────────────────────────── */
+.sigh-winbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.sigh-winbar-track {
+  flex: 1;
+  height: 6px;
+  background: #0c1a2e;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.sigh-winbar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.sigh-winbar-pct {
+  font-size: 13px;
+  font-weight: 800;
+  font-family: monospace;
+  min-width: 38px;
+  text-align: right;
+}
+
+/* ── Filter rejection pills ─────────────────────────────────────────────── */
+.sigh-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: #030a14;
+  border: 1px solid #081624;
+  border-radius: 6px;
+}
+
+.sigh-filters-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #2a4a6a;
+  flex-shrink: 0;
+}
+
+.sigh-filter-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #061020;
+  border: 1px solid #0e1e32;
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: default;
+}
+
+.sigh-filter-name {
+  font-size: 9px;
+  color: #4a6888;
+  font-weight: 600;
+}
+
+.sigh-filter-pct {
+  font-size: 10px;
+  font-weight: 800;
+  font-family: monospace;
+}
+
+.sigh-filters-pass {
+  font-size: 10px;
+  color: #10b981;
+  font-weight: 700;
+  margin-left: auto;
+}
+
+/* ── Signal table ───────────────────────────────────────────────────────── */
+.sigh-table-wrap {
+  background: #030c18;
+  border: 1px solid #0e1e32;
+  border-radius: 8px;
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.sigh-table-head {
+  display: grid;
+  grid-template-columns: 80px 90px 80px 110px 110px 70px;
+  padding: 8px 14px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #2a4a6a;
+  background: #040b16;
+  border-bottom: 1px solid #0a1928;
+  min-width: 560px;
+}
+
+.sigh-table-head-7 {
+  grid-template-columns: 80px 90px 80px 110px 110px 70px;
+}
+
+.sigh-row {
+  display: grid;
+  grid-template-columns: 80px 90px 80px 110px 110px 70px;
+  padding: 8px 14px;
+  border-bottom: 1px solid #07111e;
+  align-items: center;
+  transition: background 0.1s;
+  min-width: 560px;
+}
+
+.sigh-row-7 {
+  grid-template-columns: 80px 90px 80px 110px 110px 70px;
+}
+
+.sigh-row:last-child { border-bottom: none; }
+.sigh-row:hover { background: #061020; }
+.sigh-row-pending { opacity: 0.7; }
+.sigh-row-filtered { opacity: 0.55; }
+
+.sigh-date {
+  font-size: 11px;
+  color: #4a6888;
+  font-family: monospace;
+}
+
+.sigh-kind {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sigh-entry {
+  font-size: 12px;
+  font-family: monospace;
+  color: #8ab0cc;
+}
+
+/* ── Outcome badges ─────────────────────────────────────────────────────── */
+.sigh-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid;
+}
+
+.sigh-badge-win {
+  color: #10b981;
+  border-color: #065f46;
+  background: #011c10;
+}
+
+.sigh-badge-loss {
+  color: #ef4444;
+  border-color: #7f1d1d;
+  background: #1a0000;
+}
+
+.sigh-badge-pending {
+  color: #f59e0b;
+  border-color: #4d3000;
+  background: #1a1000;
+}
+
+/* ── Legend ─────────────────────────────────────────────────────────────── */
+.sigh-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.sigh-legend-item {
+  font-size: 10px;
+  color: #2a4a6a;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.sigh-footer {
+  margin-top: 10px;
+  font-size: 10px;
+  color: #2a4a6a;
+  line-height: 1.6;
+}

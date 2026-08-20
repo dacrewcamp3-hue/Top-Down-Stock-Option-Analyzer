@@ -1,0 +1,339 @@
+﻿.mg-root {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 12px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Header ── */
+.mg-header {
+  padding-top: 16px;
+}
+
+.mg-header-title { font-size: 16px; font-weight: 700; color: #a0c0dc; display: block; }
+.mg-header-sub   { font-size: 12px; color: #4e6a88; display: block; margin-top: 3px; }
+
+/* ── Intro ── */
+.mg-intro {
+  font-size: 14px;
+  color: #7a9ab8;
+  line-height: 1.7;
+  background: #090d18;
+  border: 1px solid #1e2d45;
+  border-radius: 8px;
+  padding: 14px 18px;
+}
+
+/* ── Steps ── */
+.mg-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid #1e2d45;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mg-step {
+  border-bottom: 1px solid #1e2d45;
+}
+.mg-step:last-child { border-bottom: none; }
+
+.mg-step-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: #090d18;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.mg-step-open .mg-step-header {
+  background: #0a1628;
+  border-bottom: 1px solid #1e2d45;
+}
+
+.mg-step-header:hover { background: #0a1628; }
+
+.mg-step-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: #344e68;
+  letter-spacing: 0.5px;
+  width: 24px;
+  flex-shrink: 0;
+}
+
+.mg-step-open .mg-step-num { color: #60a5fa; }
+
+.mg-step-titles {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mg-step-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #a8c4dc;
+  line-height: 1.3;
+}
+
+.mg-step-short {
+  font-size: 12px;
+  color: #4e6a88;
+  line-height: 1.4;
+}
+
+.mg-step-chevron {
+  font-size: 12px;
+  color: #4e6a88;
+  flex-shrink: 0;
+}
+
+/* ── Step body ── */
+.mg-step-body {
+  padding: 20px 22px 24px;
+  background: #0a1628;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mg-step-text {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mg-step-text p {
+  font-size: 14px;
+  color: #8aacc8;
+  line-height: 1.8;
+  margin: 0;
+}
+
+/* ── Key rule callout ── */
+.mg-step-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #051220;
+  border: 1px solid #1e3a5f;
+  border-left: 3px solid #60a5fa;
+  border-radius: 4px;
+  padding: 12px 16px;
+}
+
+.mg-rule-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.mg-rule-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #9ab8d0;
+  line-height: 1.65;
+}
+
+/* ── Philosophy block ── */
+.mg-philosophy {
+  background: #080c14;
+  border: 1px solid #2a3d20;
+  border-left: 3px solid #4a7a3a;
+  border-radius: 8px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mg-phil-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #5a8a50;
+  text-transform: uppercase;
+}
+
+.mg-phil-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mg-phil-body p {
+  font-size: 14px;
+  color: #6e9478;
+  line-height: 1.8;
+  margin: 0;
+}
+
+.mg-phil-anchor {
+  font-size: 17px;
+  font-weight: 700;
+  color: #a8d0a8;
+  line-height: 1.4;
+  letter-spacing: -0.2px;
+  padding: 14px 0;
+  border-top: 1px solid #2a3d20;
+  border-bottom: 1px solid #2a3d20;
+}
+
+.mg-phil-footer {
+  font-size: 13px;
+  color: #4a7a3a;
+  font-style: italic;
+  line-height: 1.7;
+  border-top: 1px solid #1a2a14;
+  padding-top: 12px;
+}
+
+/* ── Mission footer ── */
+.mg-mission-footer {
+  background: #06090f;
+  border: 1px solid #1e2d45;
+  border-top: 2px solid #1e3a5f;
+  border-radius: 8px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mg-mission-line {
+  font-size: 14px;
+  color: #6888a4;
+  line-height: 1.8;
+}
+
+.mg-mission-sig {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4e6a88;
+  letter-spacing: 0.2px;
+}
+
+/* ── EMA Personalizer ── */
+.mg-ema-personalizer {
+  margin: 24px 0;
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.mg-ema-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: #0a1628;
+  border: none;
+  color: #7ab3d4;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  text-transform: uppercase;
+  text-align: left;
+  transition: background 0.15s;
+}
+.mg-ema-toggle:hover { background: #0d1e38; }
+.mg-ema-toggle-open { background: #0d1e38; color: #60a5fa; }
+.mg-ema-toggle-icon { font-size: 15px; }
+.mg-ema-toggle-chevron { margin-left: auto; font-size: 10px; opacity: 0.6; }
+.mg-ema-panel {
+  background: #060f1c;
+  border-top: 1px solid #1e3a5f;
+  padding: 18px;
+}
+.mg-ema-hint {
+  font-size: 12px;
+  color: #4e6a88;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+.mg-ema-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.mg-ema-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mg-ema-badge {
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid;
+  border-radius: 4px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  min-width: 54px;
+  text-align: center;
+}
+.mg-ema-role {
+  font-size: 11px;
+  color: #4e6a88;
+  flex: 1;
+  min-width: 0;
+}
+.mg-ema-input {
+  background: #0d1e38;
+  border: 1px solid #1e3a5f;
+  border-radius: 5px;
+  color: #c8d8e8;
+  font-size: 13px;
+  padding: 5px 10px;
+  width: 160px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.mg-ema-input:focus { border-color: #60a5fa; }
+.mg-ema-reset {
+  background: none;
+  border: 1px solid #1e3a5f;
+  border-radius: 5px;
+  color: #4e6a88;
+  font-size: 11px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.mg-ema-reset:hover { color: #7ab3d4; border-color: #2e5a8f; }
+
+/* ── Footer one-liner ── */
+.mg-footer {
+  background: #0a1628;
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mg-footer-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: #4a7aa8;
+  text-transform: uppercase;
+}
+
+.mg-footer-body {
+  font-size: 14px;
+  font-weight: 500;
+  color: #9ab8d0;
+  line-height: 1.7;
+}

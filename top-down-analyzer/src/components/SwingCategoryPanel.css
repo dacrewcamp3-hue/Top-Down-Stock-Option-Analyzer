@@ -1,0 +1,143 @@
+﻿.swing-panel {
+  background: #0f1623;
+  border: 1px solid #1e2d45;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.swing-panel:hover {
+  border-color: #2a3d59;
+}
+
+.swing-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #e2e8f0;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.swing-panel-header:hover {
+  background: #141d2e;
+}
+
+.swing-badge {
+  background: #090d18;
+  border: 1px solid #1e2d45;
+  border-radius: 5px;
+  color: #6b8099;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  min-width: 36px;
+  padding: 3px 6px;
+  text-align: center;
+}
+
+.swing-panel-label {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+  color: #e2e8f0;
+}
+
+.swing-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.swing-complete-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.swing-complete-dot.complete { background: #10b981; }
+.swing-complete-dot.partial  { background: #f59e0b; }
+
+.swing-chevron {
+  font-size: 11px;
+  color: #3a4d60;
+}
+
+.swing-panel-body {
+  border-top: 1px solid #1e2d45;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.swing-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.swing-field-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4a6380;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.swing-field-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.swing-btn {
+  background: #090d18;
+  border: 1px solid #1e2d45;
+  border-radius: 6px;
+  color: #6b8099;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 7px 14px;
+  transition: all 0.12s;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.swing-btn:hover {
+  border-color: #2a3d59;
+  color: #a0b4c8;
+}
+
+.swing-btn-sub {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.swing-btn.active-bull {
+  background: #022c1e;
+  border-color: #10b981;
+  color: #10b981;
+}
+
+.swing-btn.active-bear {
+  background: #2c0202;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.swing-btn.active-neutral {
+  background: #2c1a02;
+  border-color: #f59e0b;
+  color: #f59e0b;
+}

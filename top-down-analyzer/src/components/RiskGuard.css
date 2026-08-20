@@ -1,0 +1,63 @@
+.rg-root {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 16px 10px;
+}
+
+.rg-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid;
+  border-left-width: 3px;
+  border-radius: 8px;
+}
+
+.rg-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.rg-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.rg-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.rg-detail {
+  font-size: 11px;
+  color: #6b8099;
+  line-height: 1.5;
+}
+
+.rg-dismiss {
+  background: none;
+  border: none;
+  color: #3a5570;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.rg-dismiss:hover {
+  color: #8aacca;
+}
+
+@media (max-width: 600px) {
+  .rg-root { padding: 0 10px 8px; }
+  .rg-item { padding: 8px 10px; }
+  .rg-detail { font-size: 10px; }
+}

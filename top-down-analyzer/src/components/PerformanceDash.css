@@ -1,0 +1,318 @@
+﻿.pd-root {
+  padding: 12px 16px 80px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* ── Empty ── */
+.pd-empty {
+  text-align: center;
+  padding: 60px 24px;
+}
+.pd-empty-icon { font-size: 36px; margin-bottom: 12px; }
+.pd-empty-text { font-size: 15px; color: var(--text-dim); margin-bottom: 6px; }
+.pd-empty-sub  { font-size: 12px; color: var(--text-muted); }
+
+/* ── Top summary ── */
+.pd-summary {
+  display: flex;
+  align-items: stretch;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  gap: 0;
+  flex-wrap: wrap;
+}
+.pd-sum-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 100px;
+}
+.pd-sum-main .pd-sum-val {
+  font-size: 28px;
+}
+.pd-sum-lbl {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.pd-sum-val {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: monospace;
+  line-height: 1.1;
+}
+.pd-sum-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.pd-sum-div {
+  width: 1px;
+  background: var(--border);
+  margin: 0 16px;
+  align-self: stretch;
+}
+.pd-streak-val {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: monospace;
+  line-height: 1.1;
+}
+
+/* ── Best/Worst ── */
+.pd-extremes {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.pd-extreme {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.pd-best  { border-color: #064e2e; }
+.pd-worst { border-color: #6b0000; }
+.pd-ex-lbl {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.pd-ex-val {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: monospace;
+}
+.pd-ex-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── Monthly chart ── */
+.pd-chart-wrap {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.pd-chart-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  padding: 2px 4px 6px;
+}
+.pd-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ── Grade breakdown ── */
+.pd-grade-wrap {
+  margin-bottom: 12px;
+}
+.pd-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.pd-grade-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.pd-grade-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.pd-grade-empty {
+  opacity: 0.4;
+}
+.pd-grade-lbl {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.pd-grade-val {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: monospace;
+  line-height: 1.1;
+}
+.pd-grade-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.pd-grade-pl {
+  font-size: 12px;
+  font-weight: 600;
+  font-family: monospace;
+  margin-top: 2px;
+}
+
+/* ── Tips ── */
+.pd-tips {
+  margin-top: 4px;
+}
+.pd-tip {
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  border: 1px solid;
+}
+.pd-tip-warn {
+  background: #1a0000;
+  border-color: #6b0000;
+  color: #ef4444;
+}
+.pd-tip-info {
+  background: #0a1020;
+  border-color: #1e3a5f;
+  color: #60a5fa;
+}
+.pd-tip-good {
+  background: #001a0d;
+  border-color: #064e2e;
+  color: #10b981;
+}
+
+/* ── Section wrapper ── */
+.pd-section-wrap {
+  margin-bottom: 12px;
+}
+
+/* ── Direction cards ── */
+.pd-dir-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.pd-dir-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+/* ── Time of day ── */
+.pd-time-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pd-time-row {
+  display: grid;
+  grid-template-columns: 190px 1fr 44px 72px 70px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.pd-time-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.pd-time-bar-wrap {
+  height: 6px;
+  background: #0a1628;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.pd-time-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.pd-time-wr {
+  font-size: 13px;
+  font-weight: 800;
+  font-family: monospace;
+  text-align: right;
+}
+
+.pd-time-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.pd-time-pl {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: monospace;
+  text-align: right;
+}
+
+@media (max-width: 520px) {
+  .pd-grade-grid { grid-template-columns: repeat(2, 1fr); }
+  .pd-summary { gap: 12px; }
+  .pd-sum-div { display: none; }
+  .pd-time-row { grid-template-columns: 1fr 1fr; }
+  .pd-time-label { grid-column: 1 / -1; }
+}
+
+/* ── Share Stats ── */
+.pd-share-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #060e1a;
+  border: 1px solid #1e2d45;
+  border-radius: 8px;
+}
+.pd-share-hint {
+  font-size: 12px;
+  color: #4a6380;
+  flex: 1;
+}
+.pd-share-btn {
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  color: #020c16;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}

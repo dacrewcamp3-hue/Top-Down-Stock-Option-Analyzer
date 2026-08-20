@@ -1,0 +1,324 @@
+.ss-root {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 4px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Header ── */
+.ss-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+.ss-header-left { display: flex; flex-direction: column; gap: 3px; }
+.ss-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ss-title { font-size: 15px; font-weight: 800; color: #a0c0dc; }
+.ss-sub   { font-size: 11px; color: #3a5070; }
+
+.ss-notif-btn {
+  padding: 6px 10px;
+  background: #08111e;
+  border: 1px solid #2a4060;
+  border-radius: 6px;
+  color: #6a9ab8;
+  font-size: 11px;
+  cursor: pointer;
+}
+.ss-notif-btn:hover { background: #0d1e30; }
+.ss-notif-on { font-size: 11px; color: #10b981; }
+
+.ss-refresh-toggle {
+  padding: 6px 12px;
+  background: #08111e;
+  border: 1px solid #1e3050;
+  border-radius: 6px;
+  color: #4a6888;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: monospace;
+  min-width: 72px;
+  transition: all 0.15s;
+}
+.ss-refresh-toggle:hover { border-color: #2a4060; color: #6a9ab8; }
+.ss-refresh-toggle.ss-refresh-on {
+  background: #051810;
+  border-color: #1a6040;
+  color: #34d399;
+}
+
+.ss-scan-btn {
+  padding: 6px 18px;
+  background: #0a2010;
+  border: 1px solid #4a7a3a;
+  border-radius: 6px;
+  color: #a0c8a0;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ss-scan-btn:hover:not(:disabled) { background: #0e2a16; border-color: #5a9a4a; }
+.ss-scan-btn:disabled { opacity: 0.5; cursor: default; }
+.ss-scanning { opacity: 0.7; }
+
+/* ── Ticker chips ── */
+.ss-ticker-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 30px;
+}
+
+.ss-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  background: #0a1628;
+  border: 1px solid #1e3050;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6a9ab8;
+}
+
+.ss-chip-rm {
+  background: none;
+  border: none;
+  color: #2a4060;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 1px;
+  line-height: 1;
+}
+.ss-chip-rm:hover { color: #ef4444; }
+
+/* ── Controls ── */
+.ss-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ss-input {
+  flex: 1;
+  min-width: 180px;
+  background: #06111e;
+  border: 1px solid #1a3050;
+  border-radius: 6px;
+  color: #a0c0dc;
+  font-size: 12.5px;
+  padding: 8px 12px;
+  outline: none;
+  font-family: inherit;
+}
+.ss-input::placeholder { color: #2a4060; }
+
+.ss-add-btn {
+  padding: 8px 14px;
+  background: #08111e;
+  border: 1px solid #1e3050;
+  border-radius: 6px;
+  color: #6a9ab8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ss-add-btn:hover { background: #0d1e30; }
+
+/* ── Progress ── */
+.ss-progress-wrap {
+  height: 3px;
+  background: #0a1628;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.ss-progress-fill {
+  height: 100%;
+  background: #10b981;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* ── Filter tabs ── */
+.ss-summary {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ss-filter-btn {
+  padding: 5px 12px;
+  background: #060c18;
+  border: 1px solid #182840;
+  border-radius: 5px;
+  color: #4a6888;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.ss-filter-btn.active    { background: #0a1628; color: #a0c0dc; border-color: #2a4060; }
+.ss-filter-call.active   { color: #10b981; border-color: #4a7a3a; background: #08150a; }
+.ss-filter-put.active    { color: #ef4444; border-color: #7f1d1d; background: #140508; }
+.ss-filter-orb           { border-color: #2a3a18; }
+.ss-filter-orb.active    { color: #a3e635; border-color: #5a7a20; background: #0a1402; }
+
+/* ── Results table — 7 columns ── */
+.ss-results {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #182840;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ss-results-hdr {
+  display: grid;
+  grid-template-columns: 68px 108px 80px 1fr 150px 90px 64px;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #06111e;
+  border-bottom: 1px solid #182840;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #2a4060;
+}
+
+.ss-row {
+  display: grid;
+  grid-template-columns: 68px 108px 80px 1fr 150px 90px 64px;
+  gap: 8px;
+  align-items: center;
+  padding: 9px 14px;
+  border-bottom: 1px solid #0d1828;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.ss-row:last-child { border-bottom: none; }
+.ss-row:hover { background: #060f1e; }
+.ss-row-err   { opacity: 0.4; cursor: default; }
+
+/* ── ORB badge ── */
+.ss-orb-badge {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.ss-orb-dim {
+  color: #1e3050;
+  font-size: 11px;
+}
+
+/* ── Other cells ── */
+.ss-ticker {
+  font-size: 13px;
+  font-weight: 800;
+  color: #8aacc8;
+}
+
+.ss-sig-badge {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.ss-score-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ss-bar-wrap {
+  flex: 1;
+  height: 5px;
+  background: #0a1628;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.ss-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.ss-score-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a6888;
+  width: 30px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.ss-metrics {
+  display: flex;
+  gap: 8px;
+}
+.ss-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ss-metric-l {
+  font-size: 8px;
+  color: #2a4060;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.ss-metric-v {
+  font-size: 11px;
+  font-weight: 700;
+  color: #5a7a90;
+}
+.ss-green    { color: #10b981 !important; }
+.ss-red      { color: #ef4444 !important; }
+.ss-vol-low  { color: #5a3030 !important; }
+
+.ss-cycle {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.ss-price {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6a8aaa;
+  text-align: right;
+}
+
+/* ── States ── */
+.ss-empty, .ss-idle {
+  padding: 24px 20px;
+  font-size: 12.5px;
+  color: #3a5070;
+  line-height: 1.7;
+  background: #060c18;
+  border: 1px solid #182840;
+  border-radius: 8px;
+  text-align: center;
+}
+.ss-idle  { color: #2a4060; }
+.ss-empty strong { color: #5a8aaa; }

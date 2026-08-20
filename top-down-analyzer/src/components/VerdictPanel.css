@@ -1,0 +1,279 @@
+/* ── VerdictPanel — vp- prefix ─────────────────────────────────────────────── */
+
+/* Root card */
+.vp-root {
+  background: #060f1c;
+  border: 1px solid;
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  transition: box-shadow 0.3s ease;
+}
+
+/* ── Header ── */
+.vp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.vp-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vp-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Verdict text ── */
+.vp-verdict {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* ── Direction badge ── */
+.vp-dir-badge {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 3px 11px;
+  border-radius: 5px;
+  border: 1px solid;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+/* ── Score pill ── */
+.vp-score-pill {
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  padding: 3px 10px;
+  border-radius: 5px;
+  background: #0a0f1a;
+  border: 1px solid;
+  line-height: 1.4;
+}
+
+.vp-score-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.vp-ticker {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4a90c4;
+  letter-spacing: 1px;
+}
+
+/* ── Why line ── */
+.vp-why {
+  font-size: 13px;
+  color: #8090a8;
+  line-height: 1.5;
+  margin-bottom: 14px;
+  padding: 9px 13px;
+  background: #070d1c;
+  border-radius: 7px;
+  border: 1px solid #1a2535;
+}
+
+/* ── Entry plan (GO) ── */
+.vp-entry-plan {
+  display: flex;
+  gap: 1px;
+  background: #1a2535;
+  border: 1px solid #1a2535;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.vp-entry-col {
+  flex: 1;
+  background: #070d1c;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.vp-entry-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: #3a4d60;
+  text-transform: uppercase;
+}
+
+.vp-entry-value {
+  font-size: 18px;
+  font-weight: 900;
+  color: #c4d4e4;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vp-entry-note {
+  font-size: 11px;
+  color: #4a6380;
+  line-height: 1.35;
+}
+
+/* ── Invalidation bar ── */
+.vp-invalidation {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fca5a5;
+  background: #190600;
+  border: 1px solid #7c2d12;
+  border-radius: 6px;
+  padding: 8px 13px;
+  margin-bottom: 14px;
+  line-height: 1.45;
+}
+
+/* ── WAIT blockers ── */
+.vp-blockers {
+  background: #070d1c;
+  border: 1px solid #1a2535;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.vp-blockers-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: #3a4d60;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.vp-blocker-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: #8090a8;
+  line-height: 1.5;
+  padding: 5px 0;
+  border-bottom: 1px solid #0d1624;
+}
+
+.vp-blocker-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.vp-blocker-icon {
+  color: #f59e0b;
+  font-weight: 900;
+  font-size: 13px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  width: 14px;
+  text-align: center;
+}
+
+.vp-blocker-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Catalyst section ── */
+.vp-catalyst {
+  border-top: 1px solid #1a2535;
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.vp-catalyst-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #3a4d60;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+/* Each catalyst row — left border strip as color indicator */
+.vp-catalyst-row {
+  background: #070d1c;
+  border-radius: 6px;
+  border-left: 3px solid;
+  padding: 8px 12px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vp-catalyst-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.vp-catalyst-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #c4d4e4;
+  line-height: 1.4;
+}
+
+.vp-catalyst-detail {
+  font-size: 11px;
+  color: #6b8099;
+  line-height: 1.45;
+}
+
+/* ── Verdict-state modifiers ── */
+.vp-root.vp-go {
+  /* Green glow handled via inline box-shadow from component */
+}
+
+.vp-root.vp-wait .vp-why {
+  border-color: #4d3000;
+}
+
+.vp-root.vp-no .vp-why {
+  border-color: #4d0000;
+}
+
+/* ── Responsive: stack entry cols on narrow containers ── */
+@media (max-width: 380px) {
+  .vp-entry-plan {
+    flex-direction: column;
+    gap: 1px;
+  }
+  .vp-entry-value {
+    font-size: 16px;
+  }
+}

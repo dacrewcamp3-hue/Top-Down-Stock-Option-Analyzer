@@ -1,0 +1,202 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ExitPlan — structured 3-level exit: Stop, Target 1 (50%), Target 2 (full)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.ep-root {
+  background: #070d1c;
+  border: 1px solid #1e2d45;
+  border-radius: 11px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.ep-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ep-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #4a7098;
+}
+
+.ep-dir {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+}
+
+.ep-rr {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: #5a8ab0;
+  letter-spacing: 0.5px;
+  padding: 3px 10px;
+  background: #0a1628;
+  border: 1px solid #1e3050;
+  border-radius: 999px;
+}
+
+/* ── Levels grid ──────────────────────────────────────────────────────────── */
+.ep-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ep-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 13px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ep-row-left {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-shrink: 0;
+}
+
+.ep-row-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Entry row */
+.ep-entry-row {
+  background: #0a1220;
+  border-color: #1e2d45;
+}
+
+/* Stop row */
+.ep-stop-row {
+  background: #130507;
+  border-color: #5f1a1a;
+}
+
+/* T1 row */
+.ep-t1-row {
+  background: #071410;
+  border-color: #065f46;
+}
+
+/* T2 row */
+.ep-t2-row {
+  background: #071810;
+  border-color: #0a7a50;
+}
+
+/* ── Level badge ──────────────────────────────────────────────────────────── */
+.ep-level-badge {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ep-badge-entry {
+  background: #0a1628;
+  border-color: #1e3050;
+  color: #4a7098;
+}
+
+.ep-badge-stop {
+  background: rgba(239,68,68,0.10);
+  border-color: rgba(239,68,68,0.30);
+  color: #ef4444;
+}
+
+/* T1 + T2 styled dynamically via style prop */
+
+/* ── Price + pct ──────────────────────────────────────────────────────────── */
+.ep-level-label {
+  font-size: 11px;
+  color: #3a5878;
+  font-weight: 500;
+}
+
+.ep-price {
+  font-size: 14px;
+  font-weight: 800;
+  color: #c0d8f0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3px;
+}
+
+.ep-price-entry { color: #7a9ab8; }
+.ep-price-stop  { color: #ef4444; }
+
+.ep-pct {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ep-pct-stop {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ef4444;
+}
+
+.ep-shares {
+  font-size: 10.5px;
+  color: #5a3a3a;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.ep-rr-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid;
+  background: transparent;
+  letter-spacing: 0.3px;
+}
+
+/* ── Trade management rules ───────────────────────────────────────────────── */
+.ep-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #0e1e30;
+}
+
+.ep-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 11.5px;
+  color: #3a5878;
+  line-height: 1.5;
+}
+
+.ep-rule-icon {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a7098;
+  width: 16px;
+}

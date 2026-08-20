@@ -1,0 +1,39 @@
+﻿.tt-host {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tt-host::after {
+  content: '?';
+  font-size: 11px;
+  color: #3a5070;
+  border: 1px solid #1e2d45;
+  border-radius: 50%;
+  width: 13px;
+  height: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+  cursor: help;
+}
+
+/* Fixed positioning escapes all parent overflow:hidden clipping */
+.tt-bubble {
+  position: fixed;
+  background: #0a1628;
+  border: 1px solid #2a4060;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 11.5px;
+  color: #94afc8;
+  line-height: 1.55;
+  white-space: normal;
+  width: 240px;
+  z-index: 9999;
+  pointer-events: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}

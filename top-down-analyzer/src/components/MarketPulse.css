@@ -1,0 +1,110 @@
+.mp-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 16px;
+  background: #030910;
+  border-bottom: 1px solid #0d1e30;
+  min-height: 34px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-wrap: nowrap;
+  user-select: none;
+}
+.mp-bar::-webkit-scrollbar { display: none; }
+
+.mp-div {
+  width: 1px;
+  height: 18px;
+  background: #0e1e30;
+  margin: 0 14px;
+  flex-shrink: 0;
+}
+
+.mp-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.mp-status {
+  gap: 5px;
+}
+
+.mp-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mp-lbl {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #2a4060;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.mp-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: #7a9ab8;
+  font-family: monospace;
+  flex-shrink: 0;
+}
+
+.mp-dim { color: #2a4060; }
+
+.mp-vix-arrow {
+  font-size: 11px;
+  font-weight: 800;
+  margin-left: -3px;
+}
+
+.mp-sub {
+  font-size: 9px;
+  font-weight: 600;
+  color: #3a5878;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.mp-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+}
+
+/* EMA position pips (bull = green, bear = red) */
+.mp-ema-row {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.mp-ema-pip {
+  font-size: 8px;
+  font-weight: 800;
+  padding: 0 3px;
+  border-radius: 2px;
+  cursor: default;
+}
+
+.mp-ema-pip.bull {
+  color: #10b981;
+  background: #011c10;
+}
+
+.mp-ema-pip.bear {
+  color: #ef4444;
+  background: #1a0505;
+}

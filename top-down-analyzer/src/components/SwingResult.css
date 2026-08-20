@@ -1,0 +1,2176 @@
+﻿.swing-result {
+  background: #0f1623;
+  border: 1px solid #1e2d45;
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 13px;
+  color: #e2e8f0;
+}
+
+/* ── Header ── */
+.swing-result-header {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid #1e2d45;
+}
+
+.swing-eyebrow-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.swing-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #3a4d60;
+  text-transform: uppercase;
+}
+
+.swing-ticker {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a90c4;
+  letter-spacing: 1.5px;
+}
+
+.swing-signal {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.swing-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.swing-confirm-pip {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.swing-confirm-pip.empty  { background: transparent; border: 2px solid #1e2d45; }
+.swing-confirm-pip.filled { border: none; }
+
+.swing-confirm-text {
+  font-size: 12px;
+  color: #4a6380;
+  margin-left: 2px;
+}
+
+.swing-signal-desc {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 5px;
+  border: 1px solid;
+  line-height: 1.4;
+}
+
+.swing-signal-empty {
+  font-size: 11px;
+  color: #2a3d59;
+  padding: 8px 0 2px;
+}
+
+/* ── Shared block helpers ── */
+.swing-block-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #3a4d60;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.swing-block-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+/* ── Bar status ── */
+.swing-bars-block {
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e2d45;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.swing-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.bar-dot {
+  font-size: 12px;
+  font-weight: 700;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.bar-dot.above { color: #10b981; }
+.bar-dot.below { color: #ef4444; }
+.bar-dot.empty { color: #1e2d45; }
+
+.swing-bar-label { font-size: 12px; color: #4a6380; flex: 1; }
+
+.swing-bar-val { font-size: 12px; font-weight: 700; }
+.swing-bar-val.above { color: #10b981; }
+.swing-bar-val.below { color: #ef4444; }
+.swing-bar-val.empty { color: #2a3d59; }
+
+/* ── Momentum row (RSI + VWAP cross cards side by side) ── */
+.swing-momentum-row {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e2d45;
+}
+.swing-momentum-row .sc-card {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── ADX full-width panel ── */
+.swing-adx-panel {
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e2d45;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.adx-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.adx-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #3a4d60;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.adx-panel-badge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid;
+}
+
+.adx-panel-strength {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+}
+
+.adx-panel-slope {
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: auto;
+}
+
+.adx-slope-delta {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.adx-val-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.adx-val-row {
+  display: grid;
+  grid-template-columns: 28px 44px 1fr 60px;
+  align-items: center;
+  gap: 8px;
+}
+
+.adx-val-lbl {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.adx-val-num {
+  font-size: 18px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: right;
+}
+
+.adx-val-track {
+  height: 6px;
+  background: #090d18;
+  border-radius: 3px;
+  position: relative;
+  overflow: visible;
+}
+
+.adx-val-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.adx-val-21 {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  left: 35%;       /* 21/60 ≈ 35% of BAR_MAX */
+  width: 2px;
+  background: #f59e0b;
+  border-radius: 1px;
+  opacity: 0.8;
+}
+
+.adx-val-check {
+  font-size: 11px;
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+
+.adx-panel-verdict {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  padding-top: 2px;
+  border-top: 1px solid #0d1624;
+  letter-spacing: 0.2px;
+}
+
+/* ── RSI + ADX 2-column signal grid (legacy, kept for reference) ── */
+.swing-signal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e2d45;
+}
+
+.sc-card {
+  background: #090d18;
+  border: 1px solid #1e2d45;
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.sc-name {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #3a4d60;
+  text-transform: uppercase;
+}
+
+.sc-badge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.sc-big {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-sub {
+  font-size: 11px;
+  color: #4a6380;
+  font-variant-numeric: tabular-nums;
+}
+
+/* RSI mini gauge */
+.sc-gauge-track {
+  position: relative;
+  height: 5px;
+  background: #0d1624;
+  border-radius: 3px;
+  margin: 3px 0;
+  overflow: visible;
+}
+
+.sc-gauge-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(250, 204, 21, 0.15);
+  border-left:  1px solid rgba(250, 204, 21, 0.3);
+  border-right: 1px solid rgba(250, 204, 21, 0.3);
+}
+
+.sc-gauge-ema {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: #4a6380;
+  border-radius: 1px;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.sc-gauge-pip {
+  position: absolute;
+  top: -5px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  border: 2px solid #090d18;
+  z-index: 3;
+}
+
+/* ADX mini bars */
+.sc-adx-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 3px 0;
+}
+
+.sc-adx-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sc-adx-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  width: 18px;
+  flex-shrink: 0;
+  letter-spacing: 0.3px;
+}
+
+.sc-adx-track {
+  flex: 1;
+  height: 5px;
+  background: #0d1624;
+  border-radius: 3px;
+  position: relative;
+  overflow: visible;
+}
+
+.sc-adx-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+
+.sc-adx-21 {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: 21%;
+  width: 2px;
+  background: #f59e0b;
+  border-radius: 1px;
+  opacity: 0.6;
+}
+
+.sc-adx-num {
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 20px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-alert-line {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 1px;
+  letter-spacing: 0.2px;
+}
+
+/* ── VWAP strip ── */
+.swing-vwap-strip {
+  padding: 8px 16px;
+  border-bottom: 1px solid #1e2d45;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.vwap-strip-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.vwap-strip-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #3a4d60;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.vwap-strip-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: #c4d4e4;
+  font-variant-numeric: tabular-nums;
+}
+
+.vwap-strip-pct {
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.vwap-strip-pos {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  margin-left: auto;
+}
+
+.vwap-strip-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border-radius: 5px;
+  border: 1px solid;
+  font-size: 12px;
+}
+
+.vwap-strip-alert-desc {
+  color: #6b8099;
+  font-weight: 500;
+}
+
+/* ── MA Stack · S&R Ladder ── */
+.swing-ma-block {
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e2d45;
+}
+
+.ma-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ma-above-count {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ma-badge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid;
+}
+
+.ma-stack-verdict {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  border: 1px solid;
+  margin-bottom: 8px;
+}
+
+.ma-sr-ladder {
+  display: flex;
+  flex-direction: column;
+}
+
+.ma-sr-zone {
+  display: flex;
+  flex-direction: column;
+}
+
+.ma-sr-zone-lbl {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 5px 0 3px;
+}
+
+.ma-resist-zone .ma-sr-zone-lbl { color: #7f2020; }
+.ma-support-zone .ma-sr-zone-lbl { color: #065f46; }
+
+.ma-sr-row {
+  display: grid;
+  grid-template-columns: 62px 1fr 46px 46px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  margin: 1px 0;
+}
+
+.ma-sr-nearest { background: #0c1420; }
+.ma-sr-nearest-resist { background: #160808; }
+.ma-sr-nearest-support { background: #081410; }
+
+.ma-sr-period {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.ma-sr-price {
+  font-size: 12px;
+  font-weight: 700;
+  color: #a0b4c8;
+  font-variant-numeric: tabular-nums;
+}
+
+.ma-sr-dist {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.ma-sr-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #3a5070;
+  text-transform: uppercase;
+  text-align: right;
+}
+
+.ma-price-anchor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  margin: 2px 0;
+}
+
+.ma-price-anchor-line {
+  flex: 1;
+  height: 1px;
+  background: #2a3d59;
+}
+
+.ma-price-anchor-val {
+  font-size: 13px;
+  font-weight: 800;
+  color: #c4d4e4;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ma-price-anchor-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  color: #3a5070;
+  letter-spacing: 1px;
+}
+
+/* ── Golden / Death Cross ── */
+.ma-cross-divider {
+  height: 1px;
+  background: #1a2535;
+  margin: 10px 0 8px;
+}
+
+.ma-cross-section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ma-cross-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ma-cross-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #3a5070;
+  text-transform: uppercase;
+}
+
+.ma-cross-badge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid;
+}
+
+.ma-cross-gap {
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: auto;
+}
+
+.ma-cross-levels {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ma-cross-ma-lbl {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.ma-cross-ma-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: #a0b4c8;
+}
+
+.ma-cross-vs {
+  font-size: 13px;
+  font-weight: 900;
+  margin: 0 2px;
+}
+
+.ma-cross-recency {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* ── Pattern Detection compact ── */
+.swing-pattern-block {
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e2d45;
+}
+
+.pattern-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.pat-card {
+  border: 1px solid;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #090d18;
+}
+
+.pat-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px 5px;
+  flex-wrap: wrap;
+}
+
+.pat-type {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  border: 1px solid;
+}
+
+.pat-status {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid;
+}
+
+.pat-str {
+  font-size: 11px;
+  margin-left: auto;
+}
+
+.pat-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 10px 4px;
+  border-top: 1px solid #0d1624;
+}
+
+.pat-row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid #080c16;
+  font-size: 12px;
+}
+
+.pat-row.pat-neck {
+  border-top: 1px dashed #1e2d45;
+  margin-top: 2px;
+}
+
+.pat-lbl {
+  font-size: 11px;
+  color: #3a4d60;
+  font-weight: 600;
+}
+
+.pat-val {
+  font-weight: 700;
+  color: #a0b4c8;
+  font-variant-numeric: tabular-nums;
+}
+
+.pat-date {
+  font-size: 11px;
+  color: #2a3d59;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.pat-meta {
+  font-size: 11px;
+  color: #2a3d59;
+  padding: 4px 10px 5px;
+  letter-spacing: 0.2px;
+}
+
+.pattern-empty {
+  font-size: 12px;
+  color: #2a3d59;
+  padding: 6px 0;
+}
+
+/* ── Pattern sub-type badges in pat-head ── */
+.pat-bigw-badge {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #34d399;
+  background: #011c10;
+  border: 1px solid #047857;
+}
+
+/* Adam & Adam badge — amber/gold to differentiate from Big W teal */
+.pat-aa-badge {
+  color: #fbbf24;
+  background: #1a1000;
+  border-color: #92400e;
+}
+
+/* Adam & Eve badge — violet/purple */
+.pat-ae-badge {
+  color: #a78bfa;
+  background: #130d1f;
+  border-color: #5b21b6;
+}
+
+/* Eve & Adam badge — rose/pink */
+.pat-ea-badge {
+  color: #fb7185;
+  background: #1f0a0d;
+  border-color: #9f1239;
+}
+
+/* Eve & Eve badge — sky blue */
+.pat-ee-badge {
+  color: #38bdf8;
+  background: #041420;
+  border-color: #0369a1;
+}
+
+/* ── Double Top sub-type badges ───────────────────────────────────────────── */
+/* Big M — deep orange/burnt */
+.pat-top-bigm-badge {
+  color: #f97316;
+  background: #1a0500;
+  border-color: #9a3412;
+}
+/* Adam & Eve Top — orange */
+.pat-top-ae-badge {
+  color: #fb923c;
+  background: #1a0800;
+  border-color: #c2410c;
+}
+/* Eve & Adam Top — rose */
+.pat-top-ea-badge {
+  color: #f87171;
+  background: #1c0202;
+  border-color: #991b1b;
+}
+/* Adam & Adam Top — amber */
+.pat-top-aa-badge {
+  color: #fbbf24;
+  background: #1a1000;
+  border-color: #92400e;
+}
+/* Eve & Eve Top — violet */
+.pat-top-ee-badge {
+  color: #c084fc;
+  background: #130820;
+  border-color: #6b21a8;
+}
+
+/* Double Top guide — subtle red tint on header */
+.pat-top-guide .pat-guide-title {
+  color: #f87171;
+}
+.pat-top-guide .pat-guide-src {
+  color: #7f4040;
+}
+
+/* ── Big W stats panel ── */
+.bigw-panel {
+  border-top: 1px solid #0d1624;
+  padding: 8px 10px 10px;
+  background: #07101c;
+}
+
+.bigw-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+
+.bigw-badge {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  color: #34d399;
+  background: #011c10;
+  border: 1px solid #047857;
+  flex-shrink: 0;
+}
+
+.bigw-desc {
+  font-size: 11px;
+  color: #4a6380;
+  line-height: 1.3;
+}
+
+.bigw-ranks-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.bigw-rank-pill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 8px;
+  background: #0a1320;
+  border: 1px solid #1a2d45;
+  border-radius: 5px;
+}
+
+.bigw-rank-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #3a4d60;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.bigw-rank-val {
+  font-size: 16px;
+  font-weight: 900;
+  color: #34d399;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.bigw-rank-of {
+  font-size: 11px;
+  color: #4a6380;
+  font-weight: 600;
+}
+
+.bigw-stats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.bigw-stat {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.bigw-stat-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  color: #3a4d60;
+  width: 80px;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.bigw-stat-vals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bigw-stat-bull    { font-size: 12px; font-weight: 700; color: #10b981; }
+.bigw-stat-bear    { font-size: 12px; font-weight: 700; color: #f87171; }
+.bigw-stat-neutral { font-size: 12px; font-weight: 700; color: #a0b4c8; }
+
+.bigw-stat-ctx {
+  font-size: 11px;
+  font-weight: 500;
+  color: #3a4d60;
+}
+
+.bigw-ctx-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 6px;
+  border-top: 1px solid #0d1624;
+}
+
+.bigw-ctx-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.bigw-ctx-label {
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.bigw-ctx-bull .bigw-ctx-label { color: #10b981; }
+.bigw-ctx-bear .bigw-ctx-label { color: #f87171; }
+.bigw-ctx-bull { color: #4a8060; }
+.bigw-ctx-bear { color: #6a4a50; }
+
+/* ── Adam & Adam panel overrides ── */
+.aa-panel .bigw-badge    { color: #fbbf24; background: #1a1000; border-color: #92400e; }
+.aa-panel .bigw-rank-val { color: #fbbf24; }
+
+/* ── Adam & Eve panel overrides ── */
+.ae-panel .bigw-badge    { color: #a78bfa; background: #130d1f; border-color: #5b21b6; }
+.ae-panel .bigw-rank-val { color: #a78bfa; }
+
+/* ── Eve & Adam panel overrides ── */
+.ea-panel .bigw-badge    { color: #fb7185; background: #1f0a0d; border-color: #9f1239; }
+.ea-panel .bigw-rank-val { color: #fb7185; }
+
+/* ── Eve & Eve panel overrides ── */
+.ee-panel .bigw-badge    { color: #38bdf8; background: #041420; border-color: #0369a1; }
+.ee-panel .bigw-rank-val { color: #38bdf8; }
+
+.aa-no-bear {
+  font-size: 11px;
+  color: #2a3d59;
+  font-style: italic;
+  padding: 2px 0;
+}
+
+.aa-note {
+  font-size: 11px;
+  color: #4a5568;
+  padding: 6px 0 0;
+  border-top: 1px solid #0d1624;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* ── Section dividers ── */
+.swing-section-div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px 4px;
+  border-top: 1px solid #1a2535;
+}
+
+.swing-section-div span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #2a3d59;
+  white-space: nowrap;
+}
+
+.swing-section-div::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #111e2e;
+}
+
+/* ── Pattern detection status pills ── */
+.pat-status-pills {
+  display: flex;
+  gap: 5px;
+}
+
+.pat-pill {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.pat-pill-bull { color: #10b981; background: #011c10; border-color: #065f46; }
+.pat-pill-bear { color: #ef4444; background: #1c0101; border-color: #7f1d1d; }
+.pat-pill-none { color: #2a3d59; background: #0a0f1a; border-color: #1a2535; }
+
+.pat-none {
+  font-size: 12px;
+  color: #2a3d59;
+  padding: 10px 0 6px;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ── Pattern Hero Card ── */
+.pat-hero {
+  border: 1px solid;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #090d18;
+  margin-bottom: 8px;
+  margin-top: 6px;
+}
+
+/* ── Per-state action guidance row ── */
+.pat-hero-action {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid;
+  border-bottom: 1px solid transparent;
+}
+
+.pha-icon {
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-top: 3px;
+  font-weight: 900;
+}
+
+.pha-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pha-text {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+}
+
+.pha-sub {
+  font-size: 12px;
+  color: #6a90b0;
+  line-height: 1.4;
+}
+
+.pat-hero-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px 7px;
+  border-bottom: 1px solid #0d1624;
+  flex-wrap: wrap;
+}
+
+.pat-hero-icon {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.pat-hero-typename {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.pat-hero-badges {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.pat-hero-badge {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.pat-hero-status {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid;
+  white-space: nowrap;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ── Hero stats bar (Bulkowski) ── */
+.pat-hero-stats {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid #0d1624;
+  background: #07101c;
+}
+
+.phs-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 6px;
+}
+
+.phs-label {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #2a3d59;
+  white-space: nowrap;
+}
+
+.phs-val {
+  font-size: 17px;
+  font-weight: 900;
+  color: #a0b4c8;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.phs-of {
+  font-size: 11px;
+  color: #4a6380;
+  font-weight: 600;
+}
+
+.phs-divider {
+  width: 1px;
+  background: #0d1624;
+  flex-shrink: 0;
+  margin: 6px 0;
+}
+
+/* ── Hero price levels ── */
+.pat-hero-levels {
+  padding: 4px 12px 4px;
+  border-bottom: 1px solid #0d1624;
+}
+
+.phl-row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid #080c16;
+  font-size: 11px;
+}
+
+.phl-neck {
+  border-top: 1px dashed #1e2d45;
+  margin-top: 2px;
+}
+
+.phl-tgt { border-bottom: none; }
+
+.phl-lbl {
+  font-size: 11px;
+  color: #3a4d60;
+  font-weight: 600;
+}
+
+.phl-val {
+  font-weight: 700;
+  color: #c4d4e4;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+
+.phl-date {
+  font-size: 11px;
+  color: #2a3d59;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Hero meta footer ── */
+.pat-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px 6px;
+  font-size: 11px;
+  color: #2a3d59;
+  flex-wrap: wrap;
+}
+
+.phmeta-sep { color: #1a2535; }
+
+/* ── Double Bottom Pattern Guide ── */
+.pat-guide {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #1a2535;
+}
+
+.pat-guide-header-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.pat-guide-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #3a4d60;
+  text-transform: uppercase;
+}
+
+.pat-guide-src {
+  font-size: 11px;
+  color: #2a3d59;
+}
+
+.pg-col-headers {
+  display: grid;
+  grid-template-columns: 1fr 40px 42px 44px 44px 32px;
+  gap: 3px;
+  padding: 0 4px 5px;
+  border-bottom: 1px solid #0d1624;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #2a3d59;
+}
+
+.pg-row {
+  display: grid;
+  grid-template-columns: 1fr 40px 42px 44px 44px 32px;
+  align-items: start;
+  gap: 3px;
+  padding: 5px 4px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  margin-top: 3px;
+  transition: background 0.15s;
+}
+
+.pg-row-hit {
+  border: 1px solid;
+}
+
+.pgc-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pg-type-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b8099;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1.2;
+}
+
+.pg-hit-check {
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.pg-type-shape {
+  font-size: 12px;
+  color: #4a6380;
+  line-height: 1.4;
+}
+
+.pg-type-note {
+  font-size: 11px;
+  color: #6a90b0;
+  font-style: italic;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.pgc-num {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4a6380;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  padding-top: 1px;
+}
+
+/* ── Fibonacci compact ── */
+.swing-fib-block {
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e2d45;
+}
+
+.fib-dir-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+.fib-dir-tag.bull { background: #022c1e; color: #10b981; border: 1px solid #065f46; }
+.fib-dir-tag.bear { background: #2c0202; color: #ef4444; border: 1px solid #7f1d1d; }
+
+.fib-range-compact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #4a6380;
+  margin-bottom: 8px;
+}
+
+.fib-range-compact strong { color: #c4d4e4; }
+.fib-range-sep { color: #2a3d59; }
+
+/* Fib cross alerts */
+.fib-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.fib-alert {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  border-radius: 5px;
+  border: 1px solid;
+  font-size: 12px;
+}
+
+.fib-alert > span:first-child {
+  font-size: 14px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.fib-alert strong { font-weight: 800; }
+
+.fib-alert-bear {
+  background: #1c0101;
+  border-color: #7f1d1d;
+  color: #ef4444;
+}
+
+.fib-alert-bear span { color: #6b8099; }
+.fib-alert-bear strong,
+.fib-alert-bear > span:first-child { color: #ef4444; }
+
+.fib-alert-bull {
+  background: #011c10;
+  border-color: #065f46;
+  color: #10b981;
+}
+
+.fib-alert-bull span { color: #6b8099; }
+.fib-alert-bull strong,
+.fib-alert-bull > span:first-child { color: #10b981; }
+
+/* Fib level rows */
+.fib-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.fib-row-compact {
+  display: grid;
+  grid-template-columns: 42px 1fr 66px 16px;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px solid #080c16;
+}
+
+.fib-row-compact.fib-mid {
+  background: #1a1500;
+  border: 1px solid #4d3800;
+  border-radius: 4px;
+  padding: 4px 5px;
+  margin: 2px -5px;
+}
+
+.fib-row-compact.fib-key {
+  background: #0d1624;
+  border-radius: 3px;
+  padding: 3px 3px;
+  margin: 0 -3px;
+}
+
+.fib-row-compact.fib-886 {
+  background: #1a0f00;
+  border: 1px solid #7a4400;
+  border-radius: 4px;
+  padding: 4px 5px;
+  margin: 2px -5px;
+}
+
+.fib-ratio-compact {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a6380;
+  letter-spacing: 0.2px;
+}
+
+.fib-row-compact.fib-mid  .fib-ratio-compact { color: #f59e0b; font-size: 12px; }
+.fib-row-compact.fib-886  .fib-ratio-compact { color: #f97316; font-size: 12px; font-weight: 800; }
+.fib-row-compact.fib-key  .fib-ratio-compact { color: #7aabce; }
+
+.fib-mid-tag {
+  font-size: 7px;
+  color: #a07020;
+}
+
+.fib-bar-compact {
+  height: 3px;
+  background: #090d18;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.fib-bar-fill-compact {
+  height: 100%;
+  background: linear-gradient(90deg, #1e3a5c, #2a5c8f);
+  border-radius: 2px;
+}
+
+.fib-row-compact.fib-mid  .fib-bar-fill-compact { background: linear-gradient(90deg, #4d3800, #f59e0b); }
+.fib-row-compact.fib-886  .fib-bar-fill-compact { background: linear-gradient(90deg, #7a2800, #f97316); }
+.fib-row-compact.fib-key  .fib-bar-fill-compact { background: linear-gradient(90deg, #1a4a6a, #3a8fc4); }
+
+.fib-price-compact {
+  font-size: 12px;
+  font-weight: 700;
+  color: #a0b4c8;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fib-row-compact.fib-mid  .fib-price-compact { color: #f59e0b; font-size: 11px; }
+.fib-row-compact.fib-886  .fib-price-compact { color: #f97316; font-size: 11px; }
+
+.fib-price-marker {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 5px;
+  background: #1a2535;
+  border: 1px solid #2a4060;
+  border-radius: 4px;
+  margin: 2px 0;
+}
+
+.fib-marker-arrow { font-size: 11px; color: #4a90c4; }
+.fib-marker-price { font-size: 11px; font-weight: 700; color: #4a90c4; font-variant-numeric: tabular-nums; }
+.fib-marker-label { font-size: 11px; color: #2a4060; }
+
+/* ── Warnings ── */
+.swing-warnings-block {
+  padding: 8px 16px;
+  background: #160808;
+  border-bottom: 1px solid #3a0a0a;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.swing-warning-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fca5a5;
+  line-height: 1.4;
+}
+
+.swing-warn-icon { flex-shrink: 0; }
+
+/* ── Rules ── */
+.swing-rules-block {
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.swing-rule {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: #6b8099;
+}
+
+.swing-rule-icon { font-size: 12px; font-weight: 800; flex-shrink: 0; }
+.swing-rule.bull .swing-rule-icon { color: #10b981; }
+.swing-rule.bear .swing-rule-icon { color: #ef4444; }
+.swing-rule.vwap .swing-rule-icon { color: #4a90c4; }
+.swing-rule strong { color: #e2e8f0; }
+
+/* ── Header: signal + grade badge row ── */
+.swing-header-signal-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.swing-signal {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+  margin-bottom: 0;
+}
+
+.swing-grade-badge {
+  font-size: 18px;
+  font-weight: 900;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  align-self: flex-end;
+  margin-bottom: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Action banner ── */
+.swing-action-banner {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  border: 1px solid;
+}
+
+.action-banner-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #3a4d60;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.action-banner-text {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+  margin-bottom: 3px;
+}
+
+.action-banner-sub {
+  font-size: 12px;
+  color: #6b8099;
+  line-height: 1.3;
+}
+
+/* ── VIX warning banner ── */
+.vix-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-top: none;
+  border-bottom: 1px solid;
+  flex-wrap: wrap;
+}
+
+.vix-banner-val {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.vix-banner-msg {
+  font-size: 11px;
+  color: #6b8099;
+  line-height: 1.4;
+}
+
+/* ── Side-by-side RS + Sector RS grid ── */
+.swing-rs-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  border-bottom: 1px solid #1e2d45;
+}
+
+.swing-rs-pair .swing-rs-strip {
+  border-bottom: none;
+  border-right: 1px solid #1e2d45;
+  padding: 8px 12px;
+}
+
+.swing-rs-pair .swing-rs-strip:last-child { border-right: none; }
+
+.swing-rs-pair .sector-strip {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  border-right: 1px solid #1e2d45;
+  padding: 8px 12px;
+}
+
+.swing-rs-pair .sector-strip:last-child { border-right: none; }
+
+/* ── Relative Strength strip ── */
+.swing-rs-strip {
+  padding: 8px 16px;
+  border-bottom: 1px solid #1e2d45;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rs-strip-main {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.rs-strip-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #3a4d60;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.rs-strip-badge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.rs-strip-score {
+  font-size: 13px;
+  font-weight: 800;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.rs-strip-sub {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #4a6380;
+  font-variant-numeric: tabular-nums;
+}
+
+.rs-sep {
+  color: #2a3d59;
+}
+
+.rs-edge {
+  font-style: italic;
+}
+
+/* ── ADX slope row ── */
+.sc-adx-slope-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.sc-adx-slope {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* ── Volume spike flag ── */
+.sc-vol {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: rgba(245,158,11,0.08);
+  margin-top: 1px;
+}
+
+/* ── VWAP volume flag ── */
+.vwap-vol-flag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #f59e0b;
+  background: rgba(245,158,11,0.1);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+/* ── Fib extension rows ── */
+.fib-row-compact.fib-ext {
+  background: #0d1120;
+  border: 1px solid #2a3a5c;
+  border-radius: 4px;
+  padding: 3px 5px;
+  margin: 2px -5px;
+}
+
+.fib-row-compact.fib-ext .fib-ratio-compact {
+  color: #5a8fc4;
+}
+
+.fib-row-compact.fib-ext .fib-price-compact {
+  color: #5a8fc4;
+}
+
+.fib-ext-bar {
+  background: linear-gradient(90deg, #1a2a4d, #2a4a8c) !important;
+}
+
+.fib-ext-tag {
+  font-size: 7px;
+  font-weight: 700;
+  color: #2a4060;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ── Setup Grade Checklist ── */
+.swing-grade-block {
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e2d45;
+}
+
+.grade-summary {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.grade-checks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 8px;
+  margin-bottom: 8px;
+}
+
+.grade-check {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 0;
+  border-bottom: 1px solid #090d18;
+}
+
+.grade-check-icon {
+  font-size: 12px;
+  font-weight: 900;
+  flex-shrink: 0;
+  width: 12px;
+}
+
+.grade-check.pass .grade-check-icon { color: #10b981; }
+.grade-check.fail .grade-check-icon { color: #ef4444; }
+
+.grade-check-name {
+  font-size: 11px;
+  color: #6b8099;
+  line-height: 1.2;
+}
+
+.grade-check.pass .grade-check-name { color: #a0b4c8; }
+
+.grade-rule {
+  padding-top: 6px;
+  border-top: 1px solid #1e2d45;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* ── Daily bias tag in header ── */
+.swing-eyebrow-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.daily-bias-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  border: 1px solid;
+  text-transform: uppercase;
+}
+
+.daily-bias-bullish  { color: #10b981; background: #011c10; border-color: #065f46; }
+.daily-bias-bearish  { color: #ef4444; background: #1c0101; border-color: #7f1d1d; }
+.daily-bias-neutral  { color: #6b7280; background: #0f1623; border-color: #1e2d45; }
+
+/* ── IV Rank strip ── */
+.iv-strip {
+  margin: 0 0 0;
+  padding: 8px 16px;
+  border-top: 1px solid;
+  border-bottom: 1px solid transparent;
+}
+
+.iv-strip-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.iv-strip-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #3a4d60;
+  text-transform: uppercase;
+}
+
+.iv-strip-rank {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.iv-strip-atm {
+  font-size: 12px;
+  color: #6b8099;
+}
+
+.iv-strip-pct {
+  font-size: 12px;
+  color: #4a6380;
+}
+
+.iv-strip-verdict {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-left: auto;
+}
+
+.iv-strip-samples {
+  font-size: 11px;
+  color: #3a4d60;
+  margin-top: 3px;
+}
+
+/* ── Weekly alignment strip ── */
+.weekly-strip {
+  margin: 0 16px 10px;
+  padding: 8px 12px;
+  background: #07101c;
+  border: 1px solid #1e2d45;
+  border-radius: 7px;
+}
+
+.weekly-strip-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+
+.weekly-strip-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #3a4d60;
+  text-transform: uppercase;
+}
+
+.weekly-strip-sig {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid;
+}
+
+.weekly-strip-ema {
+  font-size: 12px;
+  color: #6b8099;
+}
+
+.weekly-strip-range {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  color: #4a6380;
+}
+
+.weekly-range-sep { color: #2a3d59; }
+
+/* ── Sector RS strip ── */
+.sector-strip {
+  margin: 0 16px 10px;
+  padding: 8px 12px;
+  background: #07101c;
+  border: 1px solid #1e2d45;
+  border-radius: 7px;
+}
+
+.sector-strip-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.sector-strip-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #3a4d60;
+  text-transform: uppercase;
+}
+
+.sector-strip-sector {
+  font-size: 11px;
+  color: #4a6380;
+  background: #0c1420;
+  padding: 2px 6px;
+  border-radius: 10px;
+  border: 1px solid #1e2d45;
+}
+
+.sector-strip-verdict {
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: auto;
+}
+
+.sector-strip-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sector-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sector-row-label {
+  font-size: 11px;
+  color: #4a6380;
+  min-width: 90px;
+}
+
+.sector-row-rs {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sector-row-sig {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ── Pattern state: retest alert ── */
+.pat-retest-alert {
+  background: #1a1000;
+  border: 1px solid #f59e0b;
+  border-radius: 5px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: #f59e0b;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* ── Continuation patterns ── */
+.cont-panel {
+  margin: 8px 16px 4px;
+}
+
+.cont-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #3a4d60;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.cont-card {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid;
+  margin-bottom: 6px;
+}
+
+.cont-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.cont-card-type {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cont-card-score {
+  font-size: 11px;
+  color: #4a6380;
+}
+
+.cont-card-stats {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  color: #6b8099;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.cont-sep { color: #2a3d59; }
+
+.cont-vol {
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.cont-card-levels {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: #6b8099;
+}
+
+.cont-card-levels strong {
+  color: #e2e8f0;
+}
+
+/* ── Pat status pills update (continuation) ── */
+.pat-pill-cont {
+  color: #4a90c4;
+  background: #04182e;
+  border-color: #1e3d5c;
+}
+

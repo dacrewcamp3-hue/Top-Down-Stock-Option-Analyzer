@@ -1,0 +1,278 @@
+﻿.mx-root {
+  background: #090d18;
+  border: 1px solid #1e2d45;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 0 0 0;
+}
+
+/* ── Director gate row ─────────────────────────────────────────────────────── */
+.mx-gate-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  background: #0c1220;
+  border-bottom: 1px solid #1e2d45;
+  flex-wrap: wrap;
+}
+
+.mx-gate-row-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: #2a3d59;
+  text-transform: uppercase;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.mx-gate-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border: 1px solid;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.mx-gate-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a6380;
+  letter-spacing: 0.5px;
+}
+
+.mx-gate-icon {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.mx-gate-status {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+}
+
+.mx-gate-block-warn {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ef4444;
+  letter-spacing: 0.3px;
+  margin-left: 4px;
+}
+
+/* ── Table ─────────────────────────────────────────────────────────────────── */
+.mx-table-wrap {
+  overflow-x: auto;
+}
+
+.mx-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.mx-th {
+  padding: 5px 10px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #2a3d59;
+  text-transform: uppercase;
+  background: #0c1220;
+  border-bottom: 1px solid #1a2a3a;
+  white-space: nowrap;
+}
+
+.mx-th-tf {
+  text-align: left;
+  padding-left: 14px;
+  min-width: 72px;
+}
+
+.mx-th-score {
+  text-align: right;
+  padding-right: 14px;
+  min-width: 56px;
+}
+
+.mx-td {
+  padding: 5px 10px;
+  text-align: center;
+  border-bottom: 1px solid #0e1624;
+}
+
+.mx-td-tf {
+  text-align: left;
+  padding-left: 14px;
+}
+
+.mx-td-score {
+  text-align: right;
+  padding-right: 14px;
+}
+
+.mx-row:last-child .mx-td {
+  border-bottom: none;
+}
+
+/* Director rows (Weekly/Daily) get a subtle left accent */
+.mx-director-row .mx-td-tf {
+  border-left: 2px solid #1e3d5c;
+}
+
+.mx-row:hover .mx-td {
+  background: #0c1520;
+}
+
+/* ── TF badge ──────────────────────────────────────────────────────────────── */
+.mx-tf-badge {
+  font-size: 12px;
+  font-weight: 800;
+  color: #6a90b0;
+  letter-spacing: 0.5px;
+  margin-right: 4px;
+}
+
+.mx-tf-wt {
+  font-size: 11px;
+  color: #2a3d59;
+  font-weight: 600;
+}
+
+/* ── Signal cells ──────────────────────────────────────────────────────────── */
+.mx-cell {
+  font-size: 13px;
+  line-height: 1;
+  display: inline-block;
+}
+
+.mx-bull    { color: #10b981; }
+.mx-bear    { color: #ef4444; }
+.mx-neutral { color: #2a3d59; }
+.mx-na      { color: #1a2a38; font-size: 12px; }
+
+/* ── Score column ──────────────────────────────────────────────────────────── */
+.mx-score-txt {
+  display: flex;
+  gap: 5px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.mx-score-bull,
+.mx-score-bear {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mx-no-data {
+  font-size: 12px;
+  color: #1e2d45;
+}
+
+/* ── Legend ────────────────────────────────────────────────────────────────── */
+.mx-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 14px;
+  border-top: 1px solid #0e1624;
+  flex-wrap: wrap;
+}
+
+.mx-leg-bull    { font-size: 11px; color: #10b981; }
+.mx-leg-bear    { font-size: 11px; color: #ef4444; }
+.mx-leg-neutral { font-size: 11px; color: #2a3d59; }
+.mx-leg-na      { font-size: 11px; color: #1e2d45; }
+
+.mx-leg-note {
+  font-size: 11px;
+  color: #2a3d59;
+  margin-left: auto;
+  letter-spacing: 0.3px;
+}
+
+/* ── Per-TF signal badge ───────────────────────────────────────────────────── */
+.mx-sig-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.mx-sig-badge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.mx-sig-call {
+  background: #03230f;
+  color: #10b981;
+  border: 1px solid #065f3680;
+}
+
+.mx-sig-put {
+  background: #220306;
+  color: #ef4444;
+  border: 1px solid #7f1d1d80;
+}
+
+.mx-sig-wait {
+  background: #0c1220;
+  color: #3a5070;
+  border: 1px solid #1e2d4580;
+}
+
+.mx-sig-counts {
+  display: flex;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* ── Crowd / Contrarian signal ─────────────────────────────────────────────── */
+.mx-crowd {
+  border: 1px solid;
+  border-left: 3px solid;
+  border-radius: 0 0 6px 6px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 0;
+}
+
+.mx-crowd-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.mx-crowd-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mx-crowd-signal {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+}
+
+.mx-crowd-detail {
+  font-size: 11px;
+  color: #6888a8;
+  line-height: 1.6;
+}

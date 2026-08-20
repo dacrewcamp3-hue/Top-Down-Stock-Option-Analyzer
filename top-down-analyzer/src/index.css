@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ── Design Tokens ─────────────────────────────────────────────────────────── */
+/* Single source of truth for all recurring colors and surfaces.               */
+/* Use var(--token) in new CSS; existing hex values are unchanged for compat.  */
+:root {
+  /* Directional signals */
+  --clr-bull:      #10b981;   /* bullish / green */
+  --clr-bull-dim:  #34d399;   /* lighter green */
+  --clr-bull-bg:   #001a0d;   /* bull card background */
+  --clr-bull-bdr:  #064e2e;   /* bull card border */
+  --clr-bear:      #ef4444;   /* bearish / red */
+  --clr-bear-bg:   #1a0000;   /* bear card background */
+  --clr-bear-bdr:  #6b0000;   /* bear card border */
+  --clr-neutral:   #6b7280;   /* neutral / no trade */
+  --clr-warn:      #f59e0b;   /* caution / warning amber */
+  --clr-info:      #60a5fa;   /* informational blue */
+
+  /* Text */
+  --text-primary:   #c4daf0;  /* headings, prices, key labels */
+  --text-secondary: #8aacc8;  /* secondary values */
+  --text-muted:     #4a6380;  /* subtitles, metadata */
+  --text-dim:       #3a5070;  /* placeholder, disabled */
+  --text-faint:     #2a4060;  /* hairline details */
+
+  /* Surfaces */
+  --surface:          #090d18;   /* page background */
+  --surface-card:     #0f1623;   /* default card */
+  --surface-elevated: #0a1628;   /* slightly elevated card */
+  --surface-deep:     #060b16;   /* deeper panel */
+  --surface-deeper:   #050a14;   /* section headers */
+  --surface-inset:    #030c18;   /* inset / well */
+
+  /* Borders */
+  --border:     #1e2d45;   /* standard border */
+  --border-dim: #0e1e32;   /* lighter border inside cards */
+  --border-sub: #1a2e48;   /* mid-level border */
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--surface);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}

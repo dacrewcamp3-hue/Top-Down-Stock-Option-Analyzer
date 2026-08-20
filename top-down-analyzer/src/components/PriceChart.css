@@ -1,0 +1,349 @@
+.pc-wrap {
+  background: #040b16;
+  border: 1px solid #162030;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.pc-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60px;
+  font-size: 12px;
+  color: #4a6888;
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────────────── */
+.pc-topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid #0e1e32;
+  flex-wrap: wrap;
+  min-height: 36px;
+}
+
+/* ── OHLCV bar ───────────────────────────────────────────────────────────── */
+.pc-ohlcv-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px;
+  background: #030c18;
+  border-bottom: 1px solid #0a1928;
+  flex-wrap: wrap;
+  font-family: monospace;
+  font-size: 11.5px;
+}
+
+.pc-ohlcv-ts {
+  color: #3a5a7a;
+  font-size: 10.5px;
+  letter-spacing: 0.3px;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.pc-ohlcv-item {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.pc-ohlcv-lbl {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #2a4a6a;
+  font-family: sans-serif;
+}
+
+.pc-ohlcv-val {
+  font-weight: 600;
+  color: #8ab0cc;
+  letter-spacing: 0.3px;
+}
+
+.pc-ohlcv-chg {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  margin-left: 2px;
+}
+
+.pc-title {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #7a9aba;
+  flex-shrink: 0;
+}
+
+.pc-price {
+  font-size: 17px;
+  font-weight: 800;
+  color: #c4daf0;
+  letter-spacing: -0.2px;
+  flex-shrink: 0;
+}
+
+.pc-chg {
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.pc-green { color: #10b981; }
+.pc-red   { color: #ef4444; }
+
+.pc-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #5a7a9a;
+  font-weight: 600;
+  flex-wrap: wrap;
+  width: 100%;
+  order: 1;
+  padding: 5px 0 1px;
+  border-top: 1px solid #091624;
+  margin-top: 1px;
+  line-height: 1.4;
+}
+
+.pc-leg-sep {
+  width: 1px;
+  height: 11px;
+  background: #1e3456;
+  flex-shrink: 0;
+  align-self: center;
+  margin: 0 2px;
+}
+
+.pc-leg-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+/* ── OHLCV readout (shown when hovering a bar) ────────────────────────────── */
+.pc-ohlcv {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.pc-ohlcv-sym {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #6a8aaa;
+  flex-shrink: 0;
+}
+
+.pc-ohlcv-item {
+  font-size: 12px;
+  font-weight: 700;
+  color: #b0cce0;
+  font-family: monospace;
+  flex-shrink: 0;
+}
+
+.pc-ohlcv-lbl {
+  font-size: 9px;
+  font-weight: 800;
+  color: #4a6888;
+  letter-spacing: 0.3px;
+  margin-right: 3px;
+}
+
+.pc-ohlcv-chg {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: monospace;
+  flex-shrink: 0;
+}
+
+.pc-ohlcv-vol {
+  font-size: 11px;
+  font-weight: 600;
+  color: #5a7a9a;
+  font-family: monospace;
+  flex-shrink: 0;
+}
+
+.pc-ohlcv-date {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4a6888;
+  flex-shrink: 0;
+}
+
+/* ── Zoom controls ───────────────────────────────────────────────────────── */
+.pc-zoom-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+  order: 0;
+}
+
+.pc-zbtn {
+  background: #0c1a2e;
+  border: 1px solid #1a2e48;
+  border-radius: 4px;
+  color: #6a8aaa;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 7px;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.pc-zbtn:hover {
+  border-color: #2a4e78;
+  color: #90bae0;
+  background: #102040;
+}
+
+.pc-zbtn-live {
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  color: #10b981;
+  border-color: #065f46;
+  background: #00100a;
+}
+.pc-zbtn-live:hover {
+  background: #011c10;
+  border-color: #10b981;
+}
+
+.pc-zbtn-reset {
+  font-size: 13px;
+  padding: 2px 6px;
+}
+
+.pc-zcnt {
+  font-size: 10px;
+  font-weight: 700;
+  color: #4a6888;
+  font-family: monospace;
+  min-width: 28px;
+  text-align: center;
+  cursor: default;
+}
+
+
+/* ── SVG ─────────────────────────────────────────────────────────────────── */
+.pc-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── Reversal / pattern tooltip (fixed position) ─────────────────────────── */
+.pc-rev-tooltip {
+  background: #080f1c;
+  border: 1px solid #1e3050;
+  border-radius: 8px;
+  padding: 10px 13px;
+  width: 224px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pc-tt-head {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  line-height: 1;
+}
+
+.pc-tt-sub {
+  font-size: 10px;
+  font-weight: 700;
+  color: #4a6888;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.pc-tt-kind {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.pc-tt-desc {
+  font-size: 11px;
+  color: #7a9ab8;
+  line-height: 1.6;
+  border-top: 1px solid #0d1a2e;
+  padding-top: 6px;
+}
+
+.pc-tt-rate-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #0d1a2e;
+  padding-top: 6px;
+}
+
+.pc-tt-rate-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: #4a6888;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.pc-tt-rate-val {
+  font-size: 17px;
+  font-weight: 900;
+  font-family: monospace;
+  letter-spacing: -0.5px;
+}
+
+.pc-tf-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: #2a5080;
+  background: #050f1c;
+  border: 1px solid #1e3456;
+  border-radius: 3px;
+  padding: 1px 5px;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+.pc-ohlcv-ema {
+  font-size: 9px;
+  font-weight: 700;
+  font-family: monospace;
+  letter-spacing: 0.2px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.05);
+}
+
+@media (max-width: 480px) {
+  .pc-rev-tooltip { width: min(224px, calc(100vw - 32px)); }
+  .pc-topbar { gap: 6px; padding: 6px 10px; }
+  .pc-price { font-size: 15px; }
+}

@@ -1,0 +1,180 @@
+﻿.risk-panel {
+  margin: 0 16px 12px;
+  padding: 12px 14px;
+  background: #070c16;
+  border: 1px solid #1e3d5c;
+  border-radius: 8px;
+}
+
+.risk-conflict {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #1a0f00;
+  border: 1px solid #92400e;
+  border-radius: 6px;
+  margin-top: 2px;
+}
+
+.risk-conflict-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  color: #f59e0b;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.risk-conflict-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.risk-conflict-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #f59e0b;
+  line-height: 1.2;
+}
+
+.risk-conflict-sub {
+  font-size: 11px;
+  color: #a07030;
+  line-height: 1.5;
+}
+
+.risk-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.risk-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #4a90c4;
+  text-transform: uppercase;
+}
+
+.risk-pattern-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+}
+
+.risk-inputs-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.risk-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.risk-input-label {
+  font-size: 11px;
+  color: #4a6380;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.risk-input {
+  background: #0f1623;
+  border: 1px solid #1e3d5c;
+  border-radius: 4px;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  width: 110px;
+  outline: none;
+}
+
+.risk-input-small {
+  width: 60px;
+}
+
+.risk-input:focus {
+  border-color: #4a90c4;
+}
+
+.risk-calc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.risk-cell {
+  background: #0c1420;
+  border: 1px solid #1e2d45;
+  border-radius: 5px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.risk-cell-label {
+  font-size: 11px;
+  color: #3a4d60;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.risk-cell-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.risk-options-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid #1e2d45;
+  margin-bottom: 8px;
+}
+
+.risk-opt-label {
+  font-size: 11px;
+  color: #3a4d60;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.risk-opt-dte {
+  font-size: 12px;
+  color: #a0b4c8;
+  font-weight: 600;
+}
+
+.risk-opt-delta {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.risk-log-btn {
+  width: 100%;
+  padding: 7px;
+  background: #0c1d30;
+  border: 1px solid #1e3d5c;
+  border-radius: 5px;
+  color: #4a90c4;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.risk-log-btn:hover {
+  background: #112540;
+}

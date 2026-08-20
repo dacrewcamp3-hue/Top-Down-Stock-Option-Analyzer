@@ -1,0 +1,330 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   TradeJournal — simple thought journal
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.tj-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 0 48px;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.tj-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tj-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tj-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: #5a7898;
+}
+
+.tj-sub {
+  font-size: 12px;
+  color: #3a5878;
+  line-height: 1.5;
+}
+
+.tj-add-btn {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  background: #0a1628;
+  border: 1px solid #1e3a5f;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6a9ab8;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.tj-add-btn:hover {
+  border-color: #3a6a9a;
+  color: #90bae0;
+}
+
+/* ── Form ─────────────────────────────────────────────────────────────────── */
+.tj-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #070d1c;
+  border: 1px solid #1e3a5f;
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.tj-ticker-input {
+  width: 180px;
+  padding: 8px 12px;
+  background: #0a1628;
+  border: 1px solid #1e3a5f;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #90b0cc;
+  letter-spacing: 0.5px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.tj-ticker-input:focus {
+  border-color: #3a6a9a;
+}
+
+.tj-ticker-input::placeholder {
+  color: #2a4a68;
+  font-weight: 400;
+}
+
+/* ── Textarea wrapper (positions mic button inside) ──────────────────────── */
+.tj-textarea-wrap {
+  position: relative;
+}
+
+.tj-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 46px 12px 14px; /* right padding reserves space for mic button */
+  background: #0a1628;
+  border: 1px solid #1e3a5f;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #90b0cc;
+  line-height: 1.7;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.tj-textarea:focus {
+  border-color: #3a6a9a;
+}
+
+.tj-textarea.tj-textarea-listening {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.12);
+}
+
+.tj-textarea::placeholder {
+  color: #2a4a68;
+  font-style: italic;
+}
+
+/* ── Mic button ───────────────────────────────────────────────────────────── */
+.tj-mic-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid #1e3a5f;
+  background: #0a1628;
+  color: #4a7aa8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.tj-mic-btn:hover {
+  border-color: #3a6a9a;
+  color: #90bae0;
+}
+
+.tj-mic-btn.tj-mic-listening {
+  background: #2a0505;
+  border-color: #ef4444;
+  color: #ef4444;
+  animation: tj-mic-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes tj-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  50%       { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
+/* ── Mic status / error / unsupported ─────────────────────────────────────── */
+.tj-mic-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #ef4444;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.tj-mic-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  flex-shrink: 0;
+  animation: tj-dot-blink 1s step-start infinite;
+}
+
+@keyframes tj-dot-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+.tj-mic-error {
+  font-size: 11px;
+  color: #ef4444;
+  background: #1a0505;
+  border: 1px solid #5f1a1a;
+  border-radius: 6px;
+  padding: 8px 12px;
+  line-height: 1.5;
+}
+
+.tj-mic-unsupported {
+  font-size: 11px;
+  color: #3a5878;
+  background: #060c18;
+  border: 1px solid #1a2e48;
+  border-radius: 6px;
+  padding: 8px 12px;
+  line-height: 1.5;
+}
+
+.tj-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.tj-save-btn {
+  padding: 9px 22px;
+  background: #0a3060;
+  border: 1px solid #1e5a9a;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #5aa0e0;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.tj-save-btn:hover:not(:disabled) {
+  background: #0d3d7a;
+  border-color: #3070ba;
+  color: #80c0ff;
+}
+
+.tj-save-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+.tj-empty {
+  padding: 32px 20px;
+  text-align: center;
+  font-size: 13px;
+  color: #3a5878;
+  background: #060c18;
+  border: 1px solid #1a2e48;
+  border-radius: 10px;
+  line-height: 1.8;
+}
+
+.tj-empty strong {
+  color: #5a7898;
+}
+
+/* ── Entries list ─────────────────────────────────────────────────────────── */
+.tj-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tj-entry {
+  background: #070d1c;
+  border: 1px solid #1a3050;
+  border-radius: 9px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tj-entry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tj-entry-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tj-entry-ticker {
+  padding: 3px 8px;
+  background: #0a1e38;
+  border: 1px solid #1e3a60;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #5a90cc;
+  text-transform: uppercase;
+}
+
+.tj-entry-date {
+  font-size: 11px;
+  font-weight: 600;
+  color: #3a5878;
+  letter-spacing: 0.3px;
+}
+
+.tj-del-btn {
+  padding: 3px 7px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #2a4060;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.tj-del-btn:hover {
+  border-color: #5f1a1a;
+  color: #ef4444;
+  background: #1a0505;
+}
+
+.tj-entry-text {
+  margin: 0;
+  font-size: 13.5px;
+  color: #7a9ab8;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

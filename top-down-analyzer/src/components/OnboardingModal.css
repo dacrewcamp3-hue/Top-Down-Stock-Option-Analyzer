@@ -1,0 +1,296 @@
+.ob-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  z-index: 99998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.ob-modal {
+  background: #07111f;
+  border: 1px solid #1e3456;
+  border-radius: 12px;
+  padding: 28px 26px 22px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.ob-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: transparent;
+  border: none;
+  color: #3a5070;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px 6px;
+}
+.ob-close:hover { color: #8ab0cc; }
+
+/* Progress dots */
+.ob-dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.ob-dot {
+  height: 6px;
+  width: 6px;
+  border-radius: 3px;
+  background: #1e2d45;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s;
+}
+.ob-dot-active {
+  width: 22px;
+}
+.ob-dot-done {
+  background: #2a4060;
+}
+
+.ob-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.ob-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #e2e8f0;
+  margin-bottom: 14px;
+  line-height: 1.2;
+}
+
+.ob-body {
+  font-size: 13px;
+  color: #7a9ab8;
+  line-height: 1.75;
+  white-space: pre-line;
+  margin-bottom: 18px;
+}
+
+/* Gates */
+.ob-gates {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.ob-gate {
+  border: 1px solid;
+  border-radius: 8px;
+  padding: 11px 13px;
+}
+.ob-gate-num {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+.ob-gate-name {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+.ob-gate-desc {
+  font-size: 12px;
+  color: #6a88a8;
+  line-height: 1.55;
+}
+
+/* Grade table */
+.ob-grades {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.ob-grade-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #060e1a;
+  border-radius: 6px;
+}
+.ob-grade-badge {
+  font-size: 11px;
+  font-weight: 800;
+  border: 1px solid;
+  border-radius: 4px;
+  padding: 2px 7px;
+  min-width: 30px;
+  text-align: center;
+}
+.ob-grade-range {
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 55px;
+}
+.ob-grade-size {
+  font-size: 12px;
+  color: #6a88a8;
+}
+
+/* Checklist */
+.ob-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ob-check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.ob-check-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.ob-check-text {
+  font-size: 12.5px;
+  color: #7a9ab8;
+  line-height: 1.55;
+}
+
+.ob-footer-note {
+  font-size: 12px;
+  color: #4a6380;
+  font-style: italic;
+  line-height: 1.6;
+  margin-bottom: 4px;
+  margin-top: 8px;
+}
+
+/* ── App navigation tour ───────────────────────────────────────────────────── */
+.ob-nav-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.ob-nav-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  background: #060e1a;
+  border: 1px solid #1a2d45;
+  border-radius: 7px;
+}
+
+.ob-nav-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.ob-nav-desc {
+  font-size: 11.5px;
+  color: #5a7a9a;
+  line-height: 1.5;
+}
+
+/* ── EMA family display ────────────────────────────────────────────────────── */
+.ob-ema-section {
+  margin-bottom: 18px;
+}
+
+.ob-ema-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.ob-ema-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 13px;
+  background: #060e1a;
+  border: 1px solid #1a2d45;
+  border-left: 3px solid;
+  border-radius: 7px;
+}
+
+.ob-ema-badge {
+  font-size: 10px;
+  font-weight: 800;
+  font-family: monospace;
+  border: 1px solid;
+  border-radius: 4px;
+  padding: 2px 6px;
+  min-width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.ob-ema-name {
+  font-size: 13px;
+  font-weight: 800;
+  min-width: 72px;
+  flex-shrink: 0;
+}
+
+.ob-ema-role {
+  font-size: 11px;
+  color: #5a7a9a;
+  line-height: 1.4;
+}
+
+.ob-ema-footer {
+  font-size: 11.5px;
+  color: #4a6380;
+  font-style: italic;
+  line-height: 1.55;
+  padding: 10px 13px;
+  background: #050d18;
+  border: 1px solid #1a2d45;
+  border-radius: 6px;
+}
+
+/* Navigation */
+.ob-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #1e2d45;
+}
+.ob-btn {
+  padding: 9px 20px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s;
+}
+.ob-btn:hover { opacity: 0.82; }
+.ob-btn-back {
+  background: transparent;
+  color: #4a6380;
+  border: 1px solid #1e2d45;
+}
+.ob-btn-next,
+.ob-btn-start {
+  color: #020c16;
+}

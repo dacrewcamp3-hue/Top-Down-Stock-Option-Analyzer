@@ -1,0 +1,235 @@
+.vpc-root {
+  background: #090d18;
+  border: 1px solid #1e2d45;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.vpc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid #0e1a2b;
+  gap: 10px;
+}
+.vpc-header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.vpc-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #3a5070;
+  text-transform: uppercase;
+}
+.vpc-sub {
+  font-size: 9.5px;
+  color: #2a3d59;
+}
+.vpc-position-tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #4a7aa8;
+  background: #060f1e;
+  border: 1px solid #1a2d45;
+  border-radius: 4px;
+  padding: 2px 7px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+/* ── Body ── */
+.vpc-body {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 0;
+  border-bottom: 1px solid #0e1a2b;
+}
+
+/* ── Mini profile chart ── */
+.vpc-chart-col {
+  border-right: 1px solid #0e1a2b;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vpc-bars-wrap {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  align-items: stretch;
+}
+.vpc-bars-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 7.5px;
+  color: #2a4060;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  padding: 1px 0;
+}
+.vpc-bars-poc {
+  color: #7a6000;
+  font-weight: 700;
+}
+.vpc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.vpc-leg-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 8px;
+  color: #2a4060;
+}
+.vpc-leg-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Info column ── */
+.vpc-info-col {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Key levels ── */
+.vpc-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.vpc-level-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.vpc-level-vah { background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.18); }
+.vpc-level-poc { background: rgba(250,204,21,0.07); border: 1px solid rgba(250,204,21,0.2); }
+.vpc-level-val { background: rgba(239,68,68,0.07);  border: 1px solid rgba(239,68,68,0.18); }
+
+.vpc-level-lbl {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #6b8099;
+  width: 28px;
+  flex-shrink: 0;
+}
+.vpc-level-val {
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #c4d4e4;
+  flex: 1;
+}
+.vpc-level-dist {
+  font-size: 10px;
+  font-weight: 700;
+  color: #4a6380;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.vpc-level-vah .vpc-level-dist { color: #10b981; }
+.vpc-level-poc .vpc-level-dist { color: #ca8a04; }
+.vpc-level-val .vpc-level-dist { color: #ef4444; }
+
+.vpc-levels-note {
+  font-size: 10.5px;
+  color: #4a6380;
+  line-height: 1.5;
+  padding: 4px 2px;
+}
+
+/* ── Fast-move zones ── */
+.vpc-fast-title {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #2a4060;
+  text-transform: uppercase;
+}
+.vpc-zones {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vpc-zone {
+  border: 1px solid;
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.vpc-zone-dir {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.vpc-zone-range {
+  font-size: 13px;
+  font-weight: 800;
+  color: #c4d4e4;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3px;
+}
+.vpc-zone-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.vpc-zone-pct {
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.vpc-zone-gap {
+  font-size: 10px;
+  color: #3a5070;
+  background: rgba(0,0,0,0.3);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+.vpc-zone-note {
+  font-size: 10px;
+  color: #4a6380;
+  line-height: 1.4;
+}
+.vpc-no-zones {
+  font-size: 11px;
+  color: #3a5070;
+  font-style: italic;
+  padding: 6px 0;
+}
+
+/* ── Explanation footer ── */
+.vpc-explain {
+  font-size: 10.5px;
+  color: #3a5070;
+  line-height: 1.6;
+  padding: 9px 14px;
+}
+.vpc-explain strong { color: #4a7090; }
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .vpc-body { grid-template-columns: 1fr; }
+  .vpc-chart-col { border-right: none; border-bottom: 1px solid #0e1a2b; }
+  .vpc-bars-wrap svg { height: 100px; }
+}

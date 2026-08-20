@@ -1,0 +1,145 @@
+.sr-root {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 4px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sr-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
+.sr-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #a0c0dc;
+  letter-spacing: 0.5px;
+}
+
+.sr-subtitle {
+  font-size: 11px;
+  color: #3a5070;
+}
+
+.sr-legend {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: #3a5070;
+}
+
+.sr-leg-pip {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  margin-right: 3px;
+}
+.sr-leg-bull { background: #10b981; opacity: 0.75; }
+.sr-leg-bear { background: #ef4444; opacity: 0.55; }
+
+.sr-loading {
+  font-size: 12px;
+  color: #3a5070;
+  padding: 32px 16px;
+  text-align: center;
+  border: 1px solid #0e1e30;
+  border-radius: 8px;
+  background: #060c18;
+}
+
+/* ── Row ── */
+.sr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sr-row {
+  display: grid;
+  grid-template-columns: 130px 1fr 58px 52px 28px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  background: #060c18;
+  border: 1px solid #0e1e30;
+  border-radius: 6px;
+}
+
+.sr-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sr-etf {
+  font-size: 12px;
+  font-weight: 800;
+  color: #8aacc8;
+  font-family: monospace;
+}
+
+.sr-name {
+  font-size: 10px;
+  color: #3a5070;
+}
+
+.sr-bar-wrap {
+  height: 7px;
+  background: #0a1628;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.sr-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+  min-width: 2px;
+}
+
+.sr-chg {
+  font-size: 12px;
+  font-weight: 800;
+  font-family: monospace;
+  text-align: right;
+}
+
+.sr-pips {
+  display: flex;
+  gap: 3px;
+  justify-content: flex-start;
+}
+
+.sr-pip {
+  font-size: 8px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.sr-rank {
+  font-size: 9px;
+  font-weight: 700;
+  color: #10b981;
+  text-align: right;
+}
+
+.sr-footer {
+  font-size: 11px;
+  color: #2a4060;
+  line-height: 1.5;
+  padding: 10px 14px;
+  background: #060c18;
+  border: 1px solid #0e1e30;
+  border-radius: 6px;
+  font-style: italic;
+}

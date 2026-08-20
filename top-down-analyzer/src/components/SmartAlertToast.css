@@ -1,0 +1,243 @@
+/* ── SmartAlertToast — sat- prefix ────────────────────────────────────────── */
+
+/* Stack container — fixed bottom-right */
+.sat-stack {
+  position: fixed;
+  bottom: 80px;         /* above the verdict bar */
+  right: 18px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none; /* let clicks pass through gap between cards */
+  width: 340px;
+  max-width: calc(100vw - 24px);
+}
+
+/* Individual toast card */
+.sat-card {
+  pointer-events: all;
+  background: #070d1c;
+  border: 1px solid;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  animation: sat-slide-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes sat-slide-in {
+  from { opacity: 0; transform: translateX(60px) scale(0.96); }
+  to   { opacity: 1; transform: translateX(0)    scale(1); }
+}
+
+/* Blinking state — card pulses every 0.6s */
+@keyframes sat-card-pulse {
+  0%, 100% { box-shadow: 0 0 18px 0 currentColor, inset 0 0 0 1px transparent; }
+  50%       { box-shadow: 0 0 32px 4px currentColor; }
+}
+
+.sat-blinking {
+  animation: sat-slide-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both,
+             sat-card-pulse 0.6s ease-in-out 0.25s 8 alternate;
+}
+
+/* ── Progress bar ── */
+.sat-progress-track {
+  height: 2px;
+  background: #0e1a28;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.sat-progress-bar {
+  height: 100%;
+  transition: width 0.1s linear;
+  border-radius: 0 1px 1px 0;
+}
+
+/* ── Header ── */
+.sat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 6px;
+  gap: 8px;
+}
+
+.sat-header-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.sat-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Pulsing LED dot */
+.sat-led {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+@keyframes sat-led-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.3; transform: scale(0.7); }
+}
+
+.sat-led-pulse {
+  animation: sat-led-pulse 0.6s ease-in-out infinite;
+}
+
+.sat-type-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.sat-time {
+  font-size: 10px;
+  color: #2e4060;
+}
+
+.sat-close {
+  background: none;
+  border: none;
+  color: #2e4060;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  transition: color 0.15s;
+}
+.sat-close:hover { color: #6b7280; }
+
+/* ── Main row: ticker + direction + score ── */
+.sat-main-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px 8px;
+  flex-wrap: wrap;
+}
+
+/* Blinking ticker text */
+@keyframes sat-ticker-blink {
+  0%, 100% { opacity: 1; }
+  45%       { opacity: 1; }
+  50%       { opacity: 0.1; }
+  55%       { opacity: 1; }
+}
+
+.sat-ticker {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.sat-ticker-blink {
+  animation: sat-ticker-blink 0.8s ease-in-out 0.4s 6;
+}
+
+.sat-direction {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  flex: 1;
+  white-space: nowrap;
+}
+
+.sat-score {
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* ── What changed row ── */
+.sat-change-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sat-change-from { opacity: 0.7; }
+
+.sat-change-arrow {
+  color: #3a5070;
+  font-size: 12px;
+}
+
+/* ── Context body ── */
+.sat-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 8px;
+  flex-wrap: wrap;
+}
+
+.sat-bull-bear {
+  font-size: 11px;
+  font-weight: 700;
+  background: #0a1220;
+  border-radius: 4px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+.sat-body-text {
+  font-size: 11px;
+  color: #4a6888;
+  line-height: 1.4;
+}
+
+/* ── Time-of-day warning ── */
+.sat-time-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #d97706;
+  background: #100a00;
+  border-top: 1px solid #2a1a00;
+  padding: 7px 12px;
+  line-height: 1.4;
+}
+
+.sat-warn-icon {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+/* ── Load button ── */
+.sat-load-btn {
+  background: transparent;
+  border: none;
+  border-top: 1px solid #0e1a28;
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, opacity 0.15s;
+}
+.sat-load-btn:hover { background: #0a1220; opacity: 0.85; }
