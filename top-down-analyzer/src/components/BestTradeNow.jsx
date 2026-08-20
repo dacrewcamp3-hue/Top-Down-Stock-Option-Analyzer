@@ -18,7 +18,7 @@ export default function BestTradeNow({ watchlist, onLoadTicker, currentTicker })
         fetchQuickSignal(w.ticker).catch(e => ({ ticker: w.ticker, error: true }))
       )
       const raw  = await Promise.all(promises)
-      const hits = raw.filter(r => !r.error && (r.signal === 'CALL' || r.signal === 'PUT'))
+      const hits = raw.filter(r => r != null && !r.error && (r.signal === 'CALL' || r.signal === 'PUT'))
 
       const ranked = [...hits].sort((a, b) => {
         // Strength = distance from 50. CALL strength = score, PUT strength = 100 - score.

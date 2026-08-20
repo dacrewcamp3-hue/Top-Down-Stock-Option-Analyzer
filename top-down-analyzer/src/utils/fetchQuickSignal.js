@@ -133,9 +133,9 @@ export async function fetchQuickSignal(ticker) {
     // Requires 10M+ avg daily volume to filter out low-liquidity whipsaw setups.
     const recentVols = daily.volumes.slice(-20).filter(v => v > 0)
     const avgVol     = recentVols.length ? recentVols.reduce((s, v) => s + v, 0) / recentVols.length : 0
-    const meetsVolume = avgVol >= 10_000_000
+    const meetsVolume = avgVol >= 500_000
 
-    // Gate: skip tickers below 10M avg daily volume entirely
+    // Gate: skip tickers below 500K avg daily volume (illiquid options)
     if (!meetsVolume) return null
 
     let orb = null
