@@ -195,7 +195,7 @@ export default function PriceChart({
   const [showEntryEmas, setShowEntryEmas] = useState(true)     // EMA 8, 15, 30
   const [showTrendEmas, setShowTrendEmas] = useState(true)     // EMA 65, 200
   const [showFib,       setShowFib]       = useState(true)     // Fibonacci levels
-  const [showRSI,       setShowRSI]       = useState(true)     // RSI sub-panel
+  const [showRSI,       setShowRSI]       = useState(false)    // RSI sub-panel
 
   const svgRef         = useRef(null)
   const barCountRef    = useRef(TF_DEFAULT_BARS[timeframe] ?? 80)
@@ -819,6 +819,41 @@ export default function PriceChart({
     const rC = closes.slice(s, endIdx)
     const smcData = calcSMC(rH, rL, rC, timeframe)
 
+    // ── Major S/R Zones (4H and 1H only — pivot clusters tested 2+ times) ──────
+    const srZones = []
+    if ((timeframe === '4H' || timeframe === '1H') && rH.length >= 15) {
+      const win = 5
+      const tol = 0.003
+      const pivH = [], pivL = []
+      for (let i = win; i < rH.length - win; i++) {
+        if (rH.slice(i - win, i).every(v => v <= rH[i]) && rH.slice(i + 1, i + win + 1).every(v => v <= rH[i]))
+          pivH.push(rH[i])
+        if (rL.slice(i - win, i).every(v => v >= rL[i]) && rL.slice(i + 1, i + win + 1).every(v => v >= rL[i]))
+          pivL.push(rL[i])
+      }
+      const clusterPivots = (pivots, kind) => {
+        const sorted = [...pivots].sort((a, b) => a - b)
+        let grp = []
+        const flush = () => {
+          if (grp.length >= 2) {
+            const avg = grp.reduce((s, x) => s + x, 0) / grp.length
+            const spread = Math.max(grp[grp.length - 1] - grp[0], avg * tol * 1.5)
+            srZones.push({ kind, price: avg, top: avg + spread / 2, bot: avg - spread / 2, touches: grp.length })
+          }
+          grp = []
+        }
+        for (let i = 0; i < sorted.length; i++) {
+          if (grp.length === 0 || Math.abs(sorted[i] - grp[0]) / grp[0] < tol * 4) grp.push(sorted[i])
+          else { flush(); grp = [sorted[i]] }
+        }
+        flush()
+      }
+      clusterPivots(pivH, 'resistance')
+      clusterPivots(pivL, 'support')
+      srZones.sort((a, b) => b.touches - a.touches)
+      srZones.splice(6)
+    }
+
     // ── Volume profile (price-at-volume histogram) ───────────────────────────
     // Distribute each bar's volume across its full high-low range
     const priceRange = priceMax - priceMin
@@ -880,7 +915,7 @@ export default function PriceChart({
       volSpikes, prevDayH, prevDayL, signalBarSet, vwapCrosses,
       goldDeathCrosses, trendState,
       vahPrice, valPrice, vaLo, vaHi, lvnThresh, profAvg,
-      preMarketSet, sessionOpens, rsiArr, ribbonSegs }
+      preMarketSet, sessionOpens, rsiArr, ribbonSegs, srZones }
   }, [closes, highs, lows, opens, volumes, timestamps, barCount, panOffset, timeframe])
 
   // ── Mouse handlers ────────────────────────────────────────────────────────
@@ -1052,7 +1087,7 @@ export default function PriceChart({
     profBins, profMax, pocIdx, priceRange, volAvgPoints, ema8Crosses, pullbackMarkers,
     volSpikes, prevDayH, prevDayL, signalBarSet, vwapCrosses,
     goldDeathCrosses, trendState,
-    preMarketSet, sessionOpens, rsiArr, ribbonSegs } = d
+    preMarketSet, sessionOpens, rsiArr, ribbonSegs, srZones } = d
 
   // Use real closes (not Heikin-Ashi) for the price label and day-change % so the chart
   // topbar matches the app header and trading platforms. HA prices (c[]) are only for drawing.
@@ -1099,6 +1134,7 @@ export default function PriceChart({
     : []
 
   const { bos, choch, sweeps, fvgs } = smcData ?? { bos: [], choch: [], sweeps: [], fvgs: [] }
+  const showSMC = ['4H', '1H', '15M', '5M'].includes(timeframe)
   const isLive   = panOffset === 0
 
   // OHLCV display — uses hovered bar when crosshair is active, otherwise the last visible bar
@@ -1150,7 +1186,7 @@ export default function PriceChart({
               <span className="pc-leg-dot" style={{ background: '#ffffff' }} />VWAP
               <span className="pc-leg-dot" style={{ background: '#64748b' }} />Avg Vol
               {/* ── Signals (only when present) ── */}
-              {(vwapCrosses.length > 0 || ema8Crosses.length > 0 || goldDeathCrosses.length > 0 || pullbackMarkers.length > 0 || reversals.length > 0 || volSpikes.length > 0) && (
+              {(vwapCrosses.length > 0 || ema8Crosses.length > 0 || goldDeathCrosses.length > 0 || reversals.length > 0 || volSpikes.length > 0) && (
                 <span className="pc-leg-sep" />
               )}
               {vwapCrosses.some(c => c.kind === 'bull') && <span style={{ color: '#10b981' }}>⬆ VWAP</span>}
@@ -1159,28 +1195,28 @@ export default function PriceChart({
               {ema8Crosses.some(s => s.kind === 'bear') && <span style={{ color: '#ef4444' }}>◎ Exit</span>}
               {goldDeathCrosses.some(g => g.kind === 'golden') && <span style={{ color: '#facc15' }}>★ Golden×</span>}
               {goldDeathCrosses.some(g => g.kind === 'death') && <span style={{ color: '#ef4444' }}>✖ Death×</span>}
-              {pullbackMarkers.some(m => m.kind === 'pullback') && <span style={{ color: '#10b981' }} title="Shallow dip (stayed above EMA 15) — trend continues, low-risk entry">↑↓ Pullback</span>}
-              {pullbackMarkers.some(m => m.kind === 'retrace') && <span style={{ color: '#f59e0b' }} title="Deeper dip (reached EMA 15) — more significant pause, still in trend">↑↓ Retrace</span>}
               {reversals.some(r => r.kind === 'bull') && <span style={{ color: '#10b981' }}>▲ Rev</span>}
               {reversals.some(r => r.kind === 'bear') && <span style={{ color: '#ef4444' }}>▼ Rev</span>}
               {volSpikes.length > 0 && <span style={{ color: '#94a3b8' }}>× Spike</span>}
-              {/* ── Levels (only when present) ── */}
-              {(orbHigh != null || prevDayH != null || prevDayL != null || gapBands.length > 0) && (
+              {/* ── Levels ── */}
+              {(orbHigh != null || prevDayH != null || prevDayL != null || gapBands.length > 0 || srZones.length > 0) && (
                 <span className="pc-leg-sep" />
               )}
               {orbHigh != null && <span style={{ color: '#f59e0b' }}>— ORB</span>}
               {prevDayH != null && <span style={{ color: '#f97316' }}>— PDH</span>}
               {prevDayL != null && <span style={{ color: '#38bdf8' }}>— PDL</span>}
               {gapBands.length > 0 && <span style={{ color: '#38bdf8' }}>▬ Gap</span>}
-              {/* ── SMC (always show when data present) ── */}
-              {(bos.length > 0 || choch.length > 0 || sweeps.length > 0 || fvgs.length > 0) && <span className="pc-leg-sep" />}
-              {bos.some(b => b.kind === 'bull')   && <span style={{ color: '#10b981', fontWeight: 700 }}>↑ BOS</span>}
-              {bos.some(b => b.kind === 'bear')   && <span style={{ color: '#ef4444', fontWeight: 700 }}>↓ BOS</span>}
-              {choch.some(c => c.kind === 'bull') && <span style={{ color: '#34d399', fontWeight: 700 }}>↑ CHoCH</span>}
-              {choch.some(c => c.kind === 'bear') && <span style={{ color: '#f87171', fontWeight: 700 }}>↓ CHoCH</span>}
-              {sweeps.length > 0                  && <span style={{ color: '#a78bfa', fontWeight: 700 }}>~ Sweep</span>}
-              {fvgs.some(f => f.kind === 'bull')  && <span style={{ color: '#2dd4bf', fontWeight: 700 }}>▬ FVG↑</span>}
-              {fvgs.some(f => f.kind === 'bear')  && <span style={{ color: '#f43f5e', fontWeight: 700 }}>▬ FVG↓</span>}
+              {srZones.some(z => z.kind === 'resistance') && <span style={{ color: '#ef4444' }}>▬ Res</span>}
+              {srZones.some(z => z.kind === 'support')    && <span style={{ color: '#10b981' }}>▬ Sup</span>}
+              {/* ── SMC (intraday only) ── */}
+              {showSMC && (bos.length > 0 || choch.length > 0 || sweeps.length > 0 || fvgs.length > 0) && <span className="pc-leg-sep" />}
+              {showSMC && bos.some(b => b.kind === 'bull')   && <span style={{ color: '#10b981', fontWeight: 700 }}>↑ BOS</span>}
+              {showSMC && bos.some(b => b.kind === 'bear')   && <span style={{ color: '#ef4444', fontWeight: 700 }}>↓ BOS</span>}
+              {showSMC && choch.some(c => c.kind === 'bull') && <span style={{ color: '#34d399', fontWeight: 700 }}>↑ CHoCH</span>}
+              {showSMC && choch.some(c => c.kind === 'bear') && <span style={{ color: '#f87171', fontWeight: 700 }}>↓ CHoCH</span>}
+              {showSMC && sweeps.length > 0                  && <span style={{ color: '#a78bfa', fontWeight: 700 }}>~ Sweep</span>}
+              {showSMC && fvgs.some(f => f.kind === 'bull')  && <span style={{ color: '#2dd4bf', fontWeight: 700 }}>▬ FVG↑</span>}
+              {showSMC && fvgs.some(f => f.kind === 'bear')  && <span style={{ color: '#f43f5e', fontWeight: 700 }}>▬ FVG↓</span>}
             </span>
           </>
 
@@ -1539,8 +1575,35 @@ export default function PriceChart({
           )
         })()}
 
+        {/* ── Major S/R Zones (4H and 1H only) — drawn below everything ── */}
+        {srZones.map((z, i) => {
+          const isRes = z.kind === 'resistance'
+          const col   = isRes ? '#ef4444' : '#10b981'
+          const fill  = isRes ? '#ef444418' : '#10b98118'
+          const topY  = yOf(Math.min(z.top, d.priceMax))
+          const botY  = yOf(Math.max(z.bot, d.priceMin))
+          const zoneH = Math.max(2, botY - topY)
+          const clampTop = Math.max(PT, topY)
+          const clampH   = Math.min(zoneH, PH - clampTop)
+          if (topY > PH || botY < PT || clampH <= 0) return null
+          const midY = clampTop + clampH / 2
+          return (
+            <g key={`sr-${i}`} pointerEvents="none">
+              <rect x={PL} y={clampTop} width={VW - PL - PR} height={clampH} fill={fill} />
+              <line x1={PL} y1={topY} x2={VW - PR} y2={topY}
+                stroke={col} strokeWidth="1.4" strokeDasharray="5,3" opacity="0.85" />
+              <line x1={PL} y1={botY} x2={VW - PR} y2={botY}
+                stroke={col} strokeWidth="0.8" strokeDasharray="4,3" opacity="0.45" />
+              <rect x={VW - PR - 64} y={clampTop - 1} width={60} height={10} rx="2" fill="#040b16" opacity="0.88" />
+              <text x={VW - PR - 34} y={clampTop + 7} textAnchor="middle" fontSize="7" fill={col} fontWeight="800">
+                {isRes ? 'RES' : 'SUP'} {fmtPx(z.price)}
+              </text>
+            </g>
+          )
+        })}
+
         {/* ── Fair Value Gaps (drawn below candles so bars render on top) ── */}
-        {fvgs.map((fvg, i) => {
+        {showSMC && fvgs.map((fvg, i) => {
           if (fvg.startI < 0 || fvg.startI >= nb) return null
           const x1   = xOf(fvg.startI)
           const x2   = xOf(Math.min((fvg.endI ?? nb - 1), nb - 1) + 1)
@@ -1561,7 +1624,7 @@ export default function PriceChart({
         })}
 
         {/* ── Liquidity Sweeps ── */}
-        {sweeps.map((sw, i) => {
+        {showSMC && sweeps.map((sw, i) => {
           if (sw.i < 0 || sw.i >= nb) return null
           const x1   = xOf(Math.max(0, sw.swingI))
           const x2   = xOf(sw.i)
@@ -1584,7 +1647,7 @@ export default function PriceChart({
         })}
 
         {/* ── BOS (Break of Structure) ── */}
-        {bos.map((b, i) => {
+        {showSMC && bos.map((b, i) => {
           if (b.i < 0 || b.i >= nb) return null
           const x1  = xOf(Math.max(0, b.swingI))
           const x2  = xOf(b.i)
@@ -1608,7 +1671,7 @@ export default function PriceChart({
         })}
 
         {/* ── CHoCH (Change of Character) — dashed, lighter weight ── */}
-        {choch.map((ch, i) => {
+        {showSMC && choch.map((ch, i) => {
           if (ch.i < 0 || ch.i >= nb) return null
           const x1  = xOf(Math.max(0, ch.swingI))
           const x2  = xOf(ch.i)
@@ -1829,71 +1892,7 @@ export default function PriceChart({
           </g>
         )}
 
-        {/* ── Reversal markers — volume-confirmed signal badges ── */}
-        {reversals.map((r, i) => {
-          const col       = r.kind === 'bull' ? '#10b981' : '#ef4444'
-          const darkCol   = r.kind === 'bull' ? '#064e35' : '#4a0f0f'
-          const isBullSig = r.kind === 'bull'
-          const badgeW    = 50
-          const badgeH    = 15
-          if (r.yMark < PT + 4 || r.yMark > PH - 4) return null
-          const active    = tooltip?.x === r.x && tooltip?.yMark === r.yMark
-
-          // Badge sits below the wick (bull) or above (bear) — clamped to chart bounds
-          const rawBadgeY = isBullSig ? r.yMark + 7 : r.yMark - badgeH - 7
-          const badgeY    = Math.max(PT + 2, Math.min(PH - badgeH - 2, rawBadgeY))
-          const badgeX    = Math.max(PL + 1, Math.min(VW - PR - badgeW - 1, r.x - badgeW / 2))
-          const midX      = badgeX + badgeW / 2
-
-          // Connector: badge edge → wick tip
-          const connY1 = isBullSig ? badgeY : badgeY + badgeH
-          const connY2 = r.yMark
-
-          // Volume dot intensity: stronger glow at higher vol ratios
-          const dotSize = r.volRatio >= 2.0 ? 3.5 : r.volRatio >= 1.5 ? 2.8 : 2.2
-
-          return (
-            <g key={`rev-${i}`} style={{ cursor: 'help' }}
-              onMouseEnter={e => setTooltip({ ...r, clientX: e.clientX, clientY: e.clientY })}
-              onMouseMove={e  => setTooltip(t => t ? { ...t, clientX: e.clientX, clientY: e.clientY } : null)}
-              onMouseLeave={() => setTooltip(null)}>
-
-              {/* Connector line — links badge to the bar */}
-              <line x1={midX} y1={connY1} x2={r.x} y2={connY2}
-                stroke={col} strokeWidth="0.9" strokeDasharray="2,2" opacity="0.55" />
-
-              {/* Badge shadow / glow backdrop */}
-              {active && (
-                <rect x={badgeX - 2} y={badgeY - 2} width={badgeW + 4} height={badgeH + 4} rx="5"
-                  fill={col} fillOpacity="0.18" />
-              )}
-
-              {/* Badge body */}
-              <rect x={badgeX} y={badgeY} width={badgeW} height={badgeH} rx="3.5"
-                fill="#050d18" stroke={col} strokeWidth={active ? 1.4 : 0.9}
-                fillOpacity={active ? 0.98 : 0.92} />
-
-              {/* Left color accent bar inside badge */}
-              <rect x={badgeX} y={badgeY} width={3.5} height={badgeH} rx="3"
-                fill={col} fillOpacity="0.9" />
-
-              {/* Badge text: short label + success rate */}
-              <text x={badgeX + badgeW / 2 + 2} y={badgeY + badgeH - 4}
-                textAnchor="middle" fontSize="7.2" fill={col}
-                fontWeight="800" letterSpacing="0.15">
-                {r.label} {r.rate}%
-              </text>
-
-              {/* Volume dot — intensity signals how far above average volume is */}
-              <circle cx={badgeX + badgeW - 5} cy={badgeY + badgeH / 2}
-                r={dotSize} fill={col} opacity={active ? 1 : 0.75} />
-
-              {/* Invisible hit area for hover */}
-              <rect x={badgeX - 4} y={badgeY - 4} width={badgeW + 8} height={badgeH + 8}
-                fill="transparent" />
-            </g>
-          )
-        })}
+        {/* Reversal column glows — subtle background, no text badges */}
 
         {/* ── EMA 8 two-bar cross markers (entry/exit signals) ── */}
         {ema8Crosses.map((sig, i) => {
@@ -1947,81 +1946,7 @@ export default function PriceChart({
           )
         })}
 
-        {/* ── Pullback / Retracement badges ──
-              PULLBACK  = shallow dip (stayed above EMA 15), trend continues
-                          → small solid badge, trend-direction color (green bull / red bear)
-              RETRACE   = deeper dip (reached EMA 15), still within trend
-                          → taller dashed badge, always amber so it stands out from pullbacks
-        ── */}
-        {pullbackMarkers.map((mk, i) => {
-          const isPull = mk.kind === 'pullback'
-          const isBull = mk.trend === 'bull'
-
-          // Pullback color tracks the trend (green = bull dip-to-buy, red = bear bounce-to-sell)
-          // Retracement is always amber — it's a more significant move regardless of direction
-          const col   = isPull ? (isBull ? '#10b981' : '#ef4444') : '#f59e0b'
-          const bgCol = isPull
-            ? (isBull ? '#020f08' : '#100303')
-            : '#110d00'
-
-          // Labels: full words so the difference is unambiguous
-          const arrow = isBull ? '↑' : '↓'
-          const label = isPull ? `${arrow} PULLBACK` : `${arrow} RETRACE`
-
-          const cx = xOf(mk.idx)
-          // Pullback: compact (60 × 13). Retracement: same height, slightly wider
-          const rw = isPull ? 60 : 66
-          const rh = isPull ? 13 : 13
-
-          let stemY1, ry
-          if (isBull) {
-            stemY1 = yOf(l[mk.idx])
-            ry = Math.min(PH - rh - 2, stemY1 + 6)
-          } else {
-            stemY1 = yOf(h[mk.idx])
-            ry = Math.max(PT + 2, stemY1 - rh - 6)
-          }
-
-          const badgeX = Math.max(PL + 2, Math.min(VW - PR - rw - 2, cx - rw / 2))
-
-          return (
-            <g key={`pbr-${i}`} pointerEvents="none">
-              {/* Stem line from badge to the wick tip */}
-              <line
-                x1={cx} y1={stemY1}
-                x2={cx} y2={isBull ? ry : ry + rh}
-                stroke={col} strokeWidth="0.9"
-                strokeDasharray="2,2" opacity="0.6"
-              />
-
-              {/* Badge background */}
-              <rect
-                x={badgeX} y={ry} width={rw} height={rh} rx="3"
-                fill={bgCol} opacity="0.96"
-                stroke={col}
-                strokeWidth={isPull ? 1.0 : 1.5}
-                strokeDasharray={isPull ? undefined : '5,2.5'}
-              />
-
-              {/* Left accent stripe — solid even on dashed retracement border */}
-              <rect x={badgeX} y={ry} width={3} height={rh} rx="2"
-                fill={col} opacity="0.85" />
-
-              {/* Label text */}
-              <text
-                x={badgeX + rw / 2 + 1.5}
-                y={ry + rh / 2 + 2.5}
-                textAnchor="middle"
-                fontSize={isPull ? 7 : 7}
-                fill={col}
-                fontWeight="900"
-                letterSpacing="0.4"
-              >
-                {label}
-              </text>
-            </g>
-          )
-        })}
+        {/* Pullback/Retracement detection kept for internal use; badges removed for chart clarity */}
 
         {/* ── Golden Cross / Death Cross — EMA 65 × EMA 200 ── */}
         {goldDeathCrosses.map((gc, i) => {
