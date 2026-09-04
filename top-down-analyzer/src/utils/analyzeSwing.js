@@ -5,10 +5,8 @@
 // Trend filter and market conditions generate warnings but don't block the signal.
 
 export function analyzeSwing(catStates, categories, vwapSignal = null) {
-  const s4h    = catStates.fourHSignal     ?? {}
-  const trend  = catStates.trendFilter     ?? {}
-  const market = catStates.marketConditions ?? {}
-  const risk   = catStates.riskSetup       ?? {}
+  const s4h    = catStates.fourHSignal ?? {}
+  const trend  = catStates.trendFilter ?? {}
 
   const lastBar = s4h.lastBar  // 'above' | 'below' | null
   const prevBar = s4h.prevBar  // 'above' | 'below' | null
@@ -34,19 +32,11 @@ export function analyzeSwing(catStates, categories, vwapSignal = null) {
   if (signal === 'LONG') {
     if (daily === 'bear')  warnings.push('Daily trend is bearish — consider waiting')
     if (weekly === 'bear') warnings.push('Weekly trend is bearish — higher risk trade')
-    if (market.marketState === 'bear') warnings.push('Market in downtrend — avoid long entries')
   }
   if (signal === 'EXIT') {
     if (daily === 'bull')  warnings.push('Daily trend is bullish — may be a temporary dip')
     if (weekly === 'bull') warnings.push('Weekly trend is bullish — watch for reversal')
   }
-  if (risk.rrRatio === 'below2') {
-    warnings.push('Risk/Reward below 2:1 — wait for a better setup')
-  }
-  if (risk.stopPlacement === 'unclear') {
-    warnings.push('No clear stop level — define your stop before entering')
-  }
-
   // VWAP 2-bar cross confirmation / conflict
   const vwapCrossAbove = vwapSignal?.crossAbove ?? false
   const vwapCrossBelow = vwapSignal?.crossBelow ?? false
