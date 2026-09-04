@@ -10,7 +10,7 @@ export const MIN_SIGNALS = 3
 // Priority order for blocker analysis — trend and entry signals matter most
 const PRIORITY_FIELDS  = ['trend', 'ema8Cross', 'priceVsEMA', 'adx', 'rsi', 'structure', 'macd']
 const PRIORITY_LABELS  = {
-  trend: 'Trend', ema8Cross: 'EMA8 Cross', priceVsEMA: 'EMA30',
+  trend: 'Trend', ema8Cross: 'EMA5 Cross', priceVsEMA: 'EMA30',
   adx: 'ADX', rsi: 'RSI', structure: 'Structure', macd: 'MACD',
 }
 

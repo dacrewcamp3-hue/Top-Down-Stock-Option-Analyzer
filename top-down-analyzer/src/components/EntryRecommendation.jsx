@@ -11,7 +11,7 @@ function fmt(price) {
 
 // ── 5-Min OR Break & Retest ───────────────────────────────────────────────────
 const ORB_CFG = {
-  INSIDE:      { color: '#6b7280', bg: '#0f1623', border: '#1e2d45', icon: '○', label: 'Inside Opening Range',  sub: 'Price is between ORH and ORL — no break yet. Play moving averages: 8 EMA 2-bar cross-and-close on the 5M chart for intraday entries.' },
+  INSIDE:      { color: '#6b7280', bg: '#0f1623', border: '#1e2d45', icon: '○', label: 'Inside Opening Range',  sub: 'Price is between ORH and ORL — no break yet. Play moving averages: 5 EMA 2-bar cross-and-close on the 5M chart for intraday entries.' },
   BREAK:       { color: '#60a5fa', bg: '#0a1424', border: '#1e3a5f', icon: '→', label: 'OR Level Broken',       sub: 'ORH/ORL broken on 5M — wait for price to pull back and retest the broken level before entering.' },
   RETEST:      { color: '#f59e0b', bg: '#1a1000', border: '#92400e', icon: '◎', label: 'Retest in Progress',    sub: 'Price is touching the break level — this is the retest bar. Wait for the NEXT 5M bar to open AND close on the break side before entering.' },
   ENTER:       { color: '#10b981', bg: '#011c10', border: '#065f46', icon: '✓', label: 'BREAK & RETEST CONFIRMED', sub: 'Retest held — next 5M bar opened and closed above ORH (bull) or below ORL (bear). Take position or add to existing.' },
@@ -20,10 +20,10 @@ const ORB_CFG = {
   FAILED:      { color: '#ef4444', bg: '#1c0101', border: '#7f1d1d', icon: '✗', label: 'Retest Failed',         sub: 'Price collapsed back inside the opening range after the break — setup is invalid. Stand aside.' },
 }
 
-const EMA8_CFG = {
-  bull:    { color: '#10b981', bg: '#011c10', border: '#065f46', icon: '↑', label: '2 Bars Above 8 EMA — Bull Entry', sub: 'Two consecutive 5-min bars closed above the 8 EMA — take the long' },
-  bear:    { color: '#ef4444', bg: '#1c0101', border: '#7f1d1d', icon: '↓', label: '2 Bars Below 8 EMA — Bear Entry', sub: 'Two consecutive 5-min bars closed below the 8 EMA — take the short' },
-  neutral: { color: '#f59e0b', bg: '#1a1000', border: '#92400e', icon: '◌', label: 'Cross Forming — Wait',            sub: 'Need 2 consecutive bars on the same side of the 8 EMA before entering' },
+const EMA5_CFG = {
+  bull:    { color: '#10b981', bg: '#011c10', border: '#065f46', icon: '↑', label: '2 Bars Above 5 EMA — Bull Entry', sub: 'Two consecutive 5-min bars closed above the 5 EMA — take the long' },
+  bear:    { color: '#ef4444', bg: '#1c0101', border: '#7f1d1d', icon: '↓', label: '2 Bars Below 5 EMA — Bear Entry', sub: 'Two consecutive 5-min bars closed below the 5 EMA — take the short' },
+  neutral: { color: '#f59e0b', bg: '#1a1000', border: '#92400e', icon: '◌', label: 'Cross Forming — Wait',            sub: 'Need 2 consecutive bars on the same side of the 5 EMA before entering' },
 }
 
 function OrbSteps({ signal }) {
@@ -65,13 +65,13 @@ function OrbRetestPanel({ data }) {
   const e8n      = emaNames[8]
   const rawCfg   = ORB_CFG[data.signal] ?? ORB_CFG.INSIDE
   const cfg      = data.signal === 'INSIDE'
-    ? { ...rawCfg, sub: `Price is between ORH and ORL — no break yet. Play moving averages: ${e8n} (EMA 8) 2-bar cross-and-close on the 5M chart for intraday entries.` }
+    ? { ...rawCfg, sub: `Price is between ORH and ORL — no break yet. Play moving averages: ${e8n} (EMA 5) 2-bar cross-and-close on the 5M chart for intraday entries.` }
     : rawCfg
   const isBull   = data.breakDir === 'bull'
   const isBear   = data.breakDir === 'bear'
   const isInside = data.signal === 'INSIDE'
   const pctSign  = data.pctFromLevel >= 0 ? '+' : ''
-  const ema8Cfg  = isInside ? (EMA8_CFG[data.ema8Signal] ?? EMA8_CFG.neutral) : null
+  const ema5Cfg  = isInside ? (EMA5_CFG[data.ema5Signal] ?? EMA5_CFG.neutral) : null
 
   return (
     <div className="orb-panel">
@@ -114,14 +114,14 @@ function OrbRetestPanel({ data }) {
       </div>
 
       {/* Inside OR: play moving averages (8 EMA 2-bar cross-and-close) */}
-      {isInside && ema8Cfg && (
+      {isInside && ema5Cfg && (
         <>
           <div className="orb-section-label">Inside Range — Play Moving Averages</div>
-          <div className="orb-signal" style={{ background: ema8Cfg.bg, borderColor: ema8Cfg.border }}>
-            <span className="orb-signal-icon" style={{ color: ema8Cfg.color }}>{ema8Cfg.icon}</span>
+          <div className="orb-signal" style={{ background: ema5Cfg.bg, borderColor: ema5Cfg.border }}>
+            <span className="orb-signal-icon" style={{ color: ema5Cfg.color }}>{ema5Cfg.icon}</span>
             <div className="orb-signal-body">
-              <span className="orb-signal-label" style={{ color: ema8Cfg.color }}>{ema8Cfg.label}</span>
-              <span className="orb-signal-sub">{ema8Cfg.sub}</span>
+              <span className="orb-signal-label" style={{ color: ema5Cfg.color }}>{ema5Cfg.label}</span>
+              <span className="orb-signal-sub">{ema5Cfg.sub}</span>
             </div>
           </div>
         </>
@@ -331,16 +331,16 @@ function GateRow({ weeklyGate, dailyGate, signal, swingResult, orbRetest, vwapSi
   const g3Tip = g3Full
     ? (orbConfirmed
         ? `Gate 3: ORB ${orbRetest.signal === 'RECAPTURED' ? 'recaptured & confirmed' : 'break & retest confirmed (ENTER)'} — execute with defined risk.`
-        : `Gate 3: 4H 2-bar ${e8n} (EMA 8) rule confirmed — entry signal active.`)
+        : `Gate 3: 4H 2-bar ${e8n} (EMA 5) rule confirmed — entry signal active.`)
     : g3Part
       ? (orbInProgress
           ? (orbRetest?.signal === 'BREAK'
               ? 'Gate 3: ORB broken — wait for price to pull back and retest the level (RETEST → ENTER).'
               : 'Gate 3: ORB retest forming — wait for the next bar to open and close on the break side (ENTER signal).')
           : swingPartial
-            ? `Gate 3: 4H 1-bar ${isCall ? 'above' : 'below'} ${e8n} (EMA 8) — wait for a second bar to close on the same side.`
+            ? `Gate 3: 4H 1-bar ${isCall ? 'above' : 'below'} ${e8n} (EMA 5) — wait for a second bar to close on the same side.`
             : 'Gate 3: VWAP 2-bar cross forming — watch for 4H bar confirm.')
-      : `Gate 3: No entry trigger yet. Need 4H 2-bar ${e8n} (EMA 8) cross, confirmed ORB entry (ENTER signal), or VWAP 2-bar cross.`
+      : `Gate 3: No entry trigger yet. Need 4H 2-bar ${e8n} (EMA 5) cross, confirmed ORB entry (ENTER signal), or VWAP 2-bar cross.`
 
   return (
     <div className={`rec-gate-row${blocked ? ' rec-gate-blocked' : ''}`}>
@@ -436,8 +436,8 @@ function SignalExplainer({ signal, gateBlocked, weeklyGate, dailyGate, gate3, co
         {allGreen
           ? 'All 3 gates are green. Size your position, confirm your stop, and execute. Buy CALL options — you profit when price moves higher.'
           : g3Forming
-            ? `Gates 1 & 2 cleared. Gate 3 is forming — wait for 4H 2nd bar close above ${e8n} (EMA 8), confirmed ORB entry (ENTER signal), or VWAP 2-bar cross above before entering.`
-            : `Buy CALL options — you profit when price moves higher. Wait for Gate 3: 4H 2-bar close above ${e8n} (EMA 8), confirmed ORB entry (ENTER signal), or VWAP 2-bar cross above.`}
+            ? `Gates 1 & 2 cleared. Gate 3 is forming — wait for 4H 2nd bar close above ${e8n} (EMA 5), confirmed ORB entry (ENTER signal), or VWAP 2-bar cross above before entering.`
+            : `Buy CALL options — you profit when price moves higher. Wait for Gate 3: 4H 2-bar close above ${e8n} (EMA 5), confirmed ORB entry (ENTER signal), or VWAP 2-bar cross above.`}
       </span>
     </div>
   )
@@ -452,8 +452,8 @@ function SignalExplainer({ signal, gateBlocked, weeklyGate, dailyGate, gate3, co
         {allGreen
           ? 'All 3 gates are green. Size your position, confirm your stop, and execute. Buy PUT options — you profit when price moves lower.'
           : g3Forming
-            ? `Gates 1 & 2 cleared. Gate 3 is forming — wait for 4H 2nd bar close below ${e8n} (EMA 8), confirmed ORB entry (ENTER signal), or VWAP 2-bar cross below before entering.`
-            : `Buy PUT options — you profit when price moves lower. Wait for Gate 3: 4H 2-bar close below ${e8n} (EMA 8), confirmed ORB entry (ENTER signal), or VWAP 2-bar cross below.`}
+            ? `Gates 1 & 2 cleared. Gate 3 is forming — wait for 4H 2nd bar close below ${e8n} (EMA 5), confirmed ORB entry (ENTER signal), or VWAP 2-bar cross below before entering.`
+            : `Buy PUT options — you profit when price moves lower. Wait for Gate 3: 4H 2-bar close below ${e8n} (EMA 5), confirmed ORB entry (ENTER signal), or VWAP 2-bar cross below.`}
       </span>
     </div>
   )

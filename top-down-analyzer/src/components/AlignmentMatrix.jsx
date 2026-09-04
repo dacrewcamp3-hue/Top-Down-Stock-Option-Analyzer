@@ -9,7 +9,7 @@ const COLS = [
   { id: 'rsi',          label: 'RSI'   },
   { id: 'macd',         label: 'MACD'  },
   { id: 'adx',          label: 'ADX'   },
-  { id: 'ema8Cross',    label: 'EMA8'  },
+  { id: 'ema8Cross',    label: 'EMA5'  },
   { id: 'orbBreak',     label: 'ORB'   },
   { id: 'volume',       label: 'VOL'   },
   { id: 'priceVsVWAP',  label: 'VWAP'  },

@@ -88,9 +88,9 @@ function confluenceAt(closes, highs, lows) {
   }
 
   if (n >= 10) {
-    const ema8s = calcEMASeries(closes, 8)
-    const la = closes[n - 1] > ema8s[n - 1]
-    const pa = closes[n - 2] > ema8s[n - 2]
+    const ema5s = calcEMASeries(closes, 5)
+    const la = closes[n - 1] > ema5s[n - 1]
+    const pa = closes[n - 2] > ema5s[n - 2]
     if (la && pa)   bull++
     if (!la && !pa) bear++
   }

@@ -26,7 +26,7 @@ export const GLOSSARY = {
     'The final confirmation to pull the trigger — a bullish or bearish candle pattern, breakout, or momentum confirmation.',
 
   ema8Cross:
-    '2-bar 8 EMA rule: two consecutive bars closing above the 8 EMA confirms bull momentum. Two bars below confirms bear momentum. One bar isn\'t enough.',
+    '2-bar 5 EMA rule: two consecutive bars closing above the 5 EMA confirms bull momentum. Two bars below confirms bear momentum. One bar isn\'t enough.',
 
   orbBreak:
     'Opening Range Breakout — the first 15-minute candle sets the ORH (high) and ORL (low). A close above ORH = bullish breakout. A close below ORL = bearish breakdown.',

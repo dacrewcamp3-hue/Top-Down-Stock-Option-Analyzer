@@ -470,15 +470,15 @@ export function calcORBreakRetest(bars5m, bars15m) {
 
   if (!breakDir) {
     const lastClose = c5[c5.length - 1]
-    // Inside range — 8 EMA 2-bar cross-and-close is the entry/exit guide
-    let ema8Signal = 'neutral'
+    // Inside range — 5 EMA 2-bar cross-and-close is the entry/exit guide
+    let ema5Signal = 'neutral'
     if (c5.length >= 10) {
-      const ema8s = calcEMASeries(c5, 8)
+      const ema5s = calcEMASeries(c5, 5)
       const n = c5.length
-      const aboveLast = c5[n - 1] > ema8s[n - 1]
-      const abovePrev = c5[n - 2] > ema8s[n - 2]
-      if (aboveLast && abovePrev)    ema8Signal = 'bull'
-      else if (!aboveLast && !abovePrev) ema8Signal = 'bear'
+      const aboveLast = c5[n - 1] > ema5s[n - 1]
+      const abovePrev = c5[n - 2] > ema5s[n - 2]
+      if (aboveLast && abovePrev)    ema5Signal = 'bull'
+      else if (!aboveLast && !abovePrev) ema5Signal = 'bear'
     }
 
     // Session VWAP cross — 2-bar confirmation using intraday 5m bars
@@ -506,7 +506,7 @@ export function calcORBreakRetest(bars5m, bars15m) {
       pctFromHigh: +((orHigh - lastClose) / orHigh * 100).toFixed(2),
       pctFromLow:  +((lastClose - orLow)  / orLow  * 100).toFixed(2),
       signal: 'INSIDE',
-      ema8Signal,
+      ema5Signal,
       vwapCrossSignal,
     }
   }
@@ -1113,28 +1113,28 @@ export function detectDoublePatterns(highs, lows, closes, timestamps = null, loo
   return { doubleTop, doubleBottom }
 }
 
-// ── Weekly alignment using weekly EMA 8 / EMA 15 ─────────────────────────────
+// ── Weekly alignment using weekly EMA 5 / EMA 15 ─────────────────────────────
 export function calcWeeklyAlignment(closes, highs, lows) {
   const n = closes.length
   if (n < 16) return null
-  const e8  = calcEMASeries(closes, 8)
+  const e5  = calcEMASeries(closes, 5)
   const e15 = calcEMASeries(closes, 15)
   const price    = closes[n - 1]
-  const curEma8  = e8[n - 1]
+  const curEma5  = e5[n - 1]
   const curEma15 = e15[n - 1]
-  if (curEma8 == null || curEma15 == null) return null
-  const aboveEma8  = price > curEma8
+  if (curEma5 == null || curEma15 == null) return null
+  const aboveEma5  = price > curEma5
   const aboveEma15 = price > curEma15
-  const bullStack  = curEma8 > curEma15
-  const signal = (aboveEma8 && aboveEma15 && bullStack) ? 'BULLISH'
-    : (!aboveEma8 && !aboveEma15 && !bullStack) ? 'BEARISH' : 'MIXED'
+  const bullStack  = curEma5 > curEma15
+  const signal = (aboveEma5 && aboveEma15 && bullStack) ? 'BULLISH'
+    : (!aboveEma5 && !aboveEma15 && !bullStack) ? 'BEARISH' : 'MIXED'
   const weekTrend  = price > closes[Math.max(0, n - 3)] ? 'UP' : 'DOWN'
   const year52H = highs.length >= 52 ? Math.max(...highs.slice(-52)) : Math.max(...highs)
   const year52L = lows.length  >= 52 ? Math.min(...lows.slice(-52))  : Math.min(...lows)
   return {
-    price: +price.toFixed(2), ema8: +curEma8.toFixed(2), ema15: +curEma15.toFixed(2),
-    aboveEma8, aboveEma15, bullStack, signal, weekTrend,
-    pctFromEma8:  +((price - curEma8)  / curEma8  * 100).toFixed(1),
+    price: +price.toFixed(2), ema5: +curEma5.toFixed(2), ema15: +curEma15.toFixed(2),
+    aboveEma5, aboveEma15, bullStack, signal, weekTrend,
+    pctFromEma5:  +((price - curEma5)  / curEma5  * 100).toFixed(1),
     pctFromEma15: +((price - curEma15) / curEma15 * 100).toFixed(1),
     year52H: +year52H.toFixed(2), year52L: +year52L.toFixed(2),
     pctFrom52H: +((price - year52H) / year52H * 100).toFixed(1),

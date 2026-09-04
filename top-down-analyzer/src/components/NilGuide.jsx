@@ -202,14 +202,14 @@ const CONCEPTS = [
 // ── EMA Family Framework ──────────────────────────────────────────────────────
 const EMA_FAMILY = [
   {
-    ema: 8, name: 'Sister', role: 'Momentum', col: '#06b6d4',
-    desc: 'Sister (EMA 8) is the most reactive — she feels every move first. She shows pure short-term momentum. When price is above Sister and she\'s rising, momentum is strong. She\'s the first to warn you something is changing. If Sister is flattening while price pushes higher, that\'s a sign of exhaustion.',
-    signal: 'Price accelerating away from EMA 8 = possible exhaustion, be cautious. Price bouncing off EMA 8 while trending = momentum still strong, stay in.',
+    ema: 5, name: 'Sister', role: 'Momentum', col: '#06b6d4',
+    desc: 'Sister (EMA 5) is the most reactive — she feels every move first. She shows pure short-term momentum. When price is above Sister and she\'s rising, momentum is strong. She\'s the first to warn you something is changing. If Sister is flattening while price pushes higher, that\'s a sign of exhaustion.',
+    signal: 'Price accelerating away from EMA 5 = possible exhaustion, be cautious. Price bouncing off EMA 5 while trending = momentum still strong, stay in.',
   },
   {
     ema: 15, name: 'Dad', role: 'Entries & Exits', col: '#f97316',
     desc: 'Dad (EMA 15) confirms what Sister felt. He doesn\'t react to noise — he validates the move. When price and Sister are both above Dad and all three are rising, that\'s your entry signal. When they cross below Dad, that\'s the exit. Dad is the difference between a real signal and a fake-out.',
-    signal: 'EMA 8 crossing above EMA 15 with price = entry signal. EMA 8 crossing below EMA 15 = exit. Dad confirms what Sister first detected.',
+    signal: 'EMA 5 crossing above EMA 15 with price = entry signal. EMA 5 crossing below EMA 15 = exit. Dad confirms what Sister first detected.',
   },
   {
     ema: 30, name: 'Brothers', role: 'Direction', col: '#84cc16',
@@ -668,7 +668,7 @@ export default function NilGuide({ vixData, breadthData }) {
         <div className="ng-ema-fam-quote">
           "Without Grandma (200), there would be no Mom (65). The whole family is connected." EMA 200 defines
           the regime. EMA 65 builds on it for major support and resistance. EMA 30 reveals direction.
-          EMA 15 confirms entries and exits. EMA 8 feels every move first.
+          EMA 15 confirms entries and exits. EMA 5 feels every move first.
         </div>
         {/* ── Personalize names ── */}
         <div className="ng-ema-edit-wrap">

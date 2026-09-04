@@ -22,7 +22,7 @@ const PLAYBOOKS = {
     tagline: 'Market is in bull mode. Play the trend — buy dips to EMA 15 (Dad), not breakouts.',
     play: [
       { ticker: 'QQQ',  name: 'Nasdaq 100', mult: '1×', role: 'Core', col: '#10b981',
-        entry: 'Dip to Dad (EMA 15) while Sister (EMA 8) is rising and price is above Mom (EMA 65). DCA monthly regardless.',
+        entry: 'Dip to Dad (EMA 15) while Sister (EMA 5) is rising and price is above Mom (EMA 65). DCA monthly regardless.',
         exit:  'Close below Brothers (EMA 30) — trim. Close below Mom (EMA 65) — exit entirely.' },
       { ticker: 'TQQQ', name: '3× Bull Nasdaq', mult: '3×', role: 'Leverage', col: '#34d399', risk: true,
         entry: 'High conviction only. Sister above Dad above Brothers — all three rising. Confirm QQQ above all 5 EMAs. Max 5% position.',
@@ -115,7 +115,7 @@ const PLAYBOOKS = {
         entry: 'DCA fixed monthly amount on schedule. Mixed market is exactly why you hold the foundation — it runs on autopilot.',
         exit:  'SPY below Mom (EMA 65) — reduce. SPY below Grandma (EMA 200) — regime shifted, reassess everything.' },
       { ticker: 'QQQ',  name: 'Nasdaq 100', mult: '1×', role: 'Core', col: '#fbbf24',
-        entry: 'Hold existing position. Add on dips to EMA 65 only after Sister (EMA 8) has turned upward from that level.',
+        entry: 'Hold existing position. Add on dips to EMA 65 only after Sister (EMA 5) has turned upward from that level.',
         exit:  'QQQ below Grandma (EMA 200) — cut exposure. Shift to SCHD and defensive until regime clears.' },
       { ticker: 'SCHD', name: 'Dividend ETF', mult: '1×', role: 'Income', col: '#fde68a',
         entry: 'All-weather income position. DCA monthly. Dividends keep compounding in any regime. DRIP on.',

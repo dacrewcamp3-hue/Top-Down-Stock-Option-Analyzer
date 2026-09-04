@@ -6,7 +6,7 @@ const NOTES = {
   call:  [523, 659, 784],   // C5-E5-G5 ascending — bullish
   put:   [784, 659, 523],   // G5-E5-C5 descending — bearish
   orb:   [880, 1046],       // A5-C6 — ORB break alert
-  ema8:  [660, 880],        // E5-A5 — 8 EMA cross
+  ema8:  [660, 880],        // E5-A5 — 5 EMA cross
   price: [1046, 880, 1046], // C6-A5-C6 — price level hit
   scan:  [523, 784],        // C5-G5 — scanner found setup
 }

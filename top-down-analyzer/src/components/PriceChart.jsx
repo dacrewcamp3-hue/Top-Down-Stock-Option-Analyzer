@@ -192,7 +192,7 @@ export default function PriceChart({
   const [drawTool,      setDrawTool]      = useState('none')  // 'none'|'hline'|'trend'|'erase'
   const [drawings,      setDrawings]      = useState({})       // keyed by `${title}-${timeframe}`
   const [draftLine,     setDraftLine]     = useState(null)     // in-progress trendline {x1,y1,x2,y2}
-  const [showEntryEmas, setShowEntryEmas] = useState(true)     // EMA 8, 15, 30
+  const [showEntryEmas, setShowEntryEmas] = useState(true)     // EMA 5, 15, 30
   const [showTrendEmas, setShowTrendEmas] = useState(true)     // EMA 65, 200
   const [showFib,       setShowFib]       = useState(true)     // Fibonacci levels
   const [showRSI,       setShowRSI]       = useState(false)    // RSI sub-panel
@@ -277,7 +277,7 @@ export default function PriceChart({
     const ts = (timestamps ?? []).slice(s, endIdx)
 
     // EMAs seeded from full history so values are stable regardless of zoom window
-    const e8   = calcEMA(closes, 8).slice(s, endIdx)
+    const e8   = calcEMA(closes, 5).slice(s, endIdx)
     const e15  = calcEMA(closes, 15).slice(s, endIdx)
     const e30  = calcEMA(closes, 30).slice(s, endIdx)
     const e65  = calcEMA(closes, 65).slice(s, endIdx)
@@ -692,7 +692,7 @@ export default function PriceChart({
       }
     }
 
-    // ── EMA 8 two-bar cross signals — entry & exit markers ───────────────────
+    // ── EMA 5 two-bar cross signals — entry & exit markers ───────────────────
     const ema8Crosses = []
     for (let i = 2; i < nb; i++) {
       const aboveCurr = c[i]     > e8[i]
@@ -702,7 +702,7 @@ export default function PriceChart({
       const crossVolOk = volAvgArr[i] <= 0 || v[i] >= volAvgArr[i]
 
       if (aboveCurr && abovePrev && !above2 && crossVolOk) {
-        // 2-bar confirmed bull: both bars above EMA 8, previous was below → ENTRY
+        // 2-bar confirmed bull: both bars above EMA 5, previous was below → ENTRY
         const yBase = yOf(Math.min(l[i - 1], l[i]))
         ema8Crosses.push({
           kind: 'bull', i,
@@ -712,7 +712,7 @@ export default function PriceChart({
           labelY: Math.min(yBase + 22, PH - 2),
         })
       } else if (!aboveCurr && !abovePrev && above2 && crossVolOk) {
-        // 2-bar confirmed bear: both bars below EMA 8, previous was above → EXIT
+        // 2-bar confirmed bear: both bars below EMA 5, previous was above → EXIT
         const yBase = yOf(Math.max(h[i - 1], h[i]))
         ema8Crosses.push({
           kind: 'bear', i,
@@ -1764,7 +1764,7 @@ export default function PriceChart({
           <polyline points={toPoints(e15)} fill="none" stroke="#84cc16" strokeWidth="1.8" strokeLinejoin="round" />
         )}
 
-        {/* EMA 8 */}
+        {/* EMA 5 */}
         {showEntryEmas && (
           <polyline points={toPoints(e8)} fill="none" stroke="#f472b6" strokeWidth="2.2" strokeLinejoin="round" />
         )}
@@ -1894,7 +1894,7 @@ export default function PriceChart({
 
         {/* Reversal column glows — subtle background, no text badges */}
 
-        {/* ── EMA 8 two-bar cross markers (entry/exit signals) ── */}
+        {/* ── EMA 5 two-bar cross markers (entry/exit signals) ── */}
         {ema8Crosses.map((sig, i) => {
           const col    = sig.kind === 'bull' ? '#10b981' : '#ef4444'
           const shadow = sig.kind === 'bull' ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)'

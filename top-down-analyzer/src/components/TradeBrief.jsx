@@ -665,7 +665,7 @@ function GateLock({ direction, confluenceResult, weeklyAlign, swingResult, orbRe
         {[
           { num: '1', name: 'WEEKLY',  state: g1State, label: g1Label, sub: g1Sub, tip: 'Gate 1 — Weekly Structure: The weekly chart must be net bullish (more bull signals than bear). RSI ≥ 44 is the momentum threshold. If locked, you are trading against institutional money — no entries.' },
           { num: '2', name: 'DAILY',   state: g2State, label: g2Label, sub: g2Sub, tip: 'Gate 2 — Daily Momentum: The daily chart must be net bullish (more daily bull signals than bear signals). Any combination of aligned daily indicators satisfies this gate. Locked = the daily is net against the signal direction.' },
-          { num: '3', name: 'ENTRY',   state: g3State, label: g3Label, sub: g3Sub, tip: `Gate 3 — Entry Trigger: The intraday go-signal. TRIGGERED when: 2 consecutive 4H bars close on the right side of ${e8n} (EMA 8), OR an ORB ENTER/RECAPTURED signal confirms. PARTIAL (forming) when: 4H 1-bar in direction, ORB BREAK/RETEST in progress, or VWAP 2-bar cross. All three gates green = TRADE UNLOCKED.` },
+          { num: '3', name: 'ENTRY',   state: g3State, label: g3Label, sub: g3Sub, tip: `Gate 3 — Entry Trigger: The intraday go-signal. TRIGGERED when: 2 consecutive 4H bars close on the right side of ${e8n} (EMA 5), OR an ORB ENTER/RECAPTURED signal confirms. PARTIAL (forming) when: 4H 1-bar in direction, ORB BREAK/RETEST in progress, or VWAP 2-bar cross. All three gates green = TRADE UNLOCKED.` },
         ].map((g, i) => {
           const s = gStyle(g.state)
           return (

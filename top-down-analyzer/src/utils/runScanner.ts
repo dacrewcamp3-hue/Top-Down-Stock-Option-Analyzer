@@ -200,9 +200,9 @@ function tfSignal(closes, highs, lows) {
   }
 
   if (n >= 10) {
-    const ema8s = calcEMASeries(closes, 8)
-    const la = closes[n - 1] > ema8s[n - 1]
-    const pa = closes[n - 2] > ema8s[n - 2]
+    const ema5s = calcEMASeries(closes, 5)
+    const la = closes[n - 1] > ema5s[n - 1]
+    const pa = closes[n - 2] > ema5s[n - 2]
     if (la && pa)   bull++
     if (!la && !pa) bear++
   }
@@ -216,10 +216,10 @@ function tfSignal(closes, highs, lows) {
 function shortTermDir(closes) {
   const n = closes.length
   if (n < 10) return 'neutral'
-  const ema8s = calcEMASeries(closes, 8)
-  if (ema8s[n - 1] == null || ema8s[n - 2] == null) return 'neutral'
-  const cur  = closes[n - 1] > ema8s[n - 1]
-  const prev = closes[n - 2] > ema8s[n - 2]
+  const ema5s = calcEMASeries(closes, 5)
+  if (ema5s[n - 1] == null || ema5s[n - 2] == null) return 'neutral'
+  const cur  = closes[n - 1] > ema5s[n - 1]
+  const prev = closes[n - 2] > ema5s[n - 2]
   if (cur && prev)   return 'bull'
   if (!cur && !prev) return 'bear'
   return 'neutral'

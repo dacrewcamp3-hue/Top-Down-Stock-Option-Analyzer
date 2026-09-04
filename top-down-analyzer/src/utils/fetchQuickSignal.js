@@ -80,7 +80,7 @@ export async function fetchQuickSignal(ticker) {
 
     // Weekly indicators
     const wRSI    = rsiLast(wc)
-    const wEMA8   = ema(wc, 8)[wn - 1]
+    const wEMA5   = ema(wc, 5)[wn - 1]
     const wEMA15  = ema(wc, 15)[wn - 1]
     const wEMA12  = ema(wc, 12)
     const wEMA26  = ema(wc, 26)
@@ -89,7 +89,7 @@ export async function fetchQuickSignal(ticker) {
 
     // Daily indicators
     const dRSI    = rsiLast(dc)
-    const dEMA8   = ema(dc, 8)[dn - 1]
+    const dEMA5   = ema(dc, 5)[dn - 1]
     const dEMA15  = ema(dc, 15)[dn - 1]
     const dEMA12  = ema(dc, 12)
     const dEMA26  = ema(dc, 26)
@@ -98,12 +98,12 @@ export async function fetchQuickSignal(ticker) {
 
     // Bull checks (8 total)
     const checks = [
-      cur    > wEMA8,           // W: price above 8W EMA
+      cur    > wEMA5,           // W: price above 8W EMA
       cur    > wEMA15,          // W: price above 15W EMA
       wMACD  > 0,               // W: MACD positive
       wMACD  > wMACDp,          // W: MACD rising
       wRSI   > 50,              // W: RSI bullish
-      dClose > dEMA8,           // D: price above 8D EMA
+      dClose > dEMA5,           // D: price above 8D EMA
       dMACD  > 0,               // D: daily MACD positive
       dRSI   > 50,              // D: daily RSI bullish
     ]

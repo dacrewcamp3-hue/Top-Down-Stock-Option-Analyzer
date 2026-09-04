@@ -84,13 +84,13 @@ const ENTRY_TRIGGER_FIELD = {
   ],
 }
 
-// 2-bar 8 EMA cross confirmation — the primary entry trigger
+// 2-bar 5 EMA cross confirmation — the primary entry trigger
 const EMA8_CROSS_FIELD = {
   id: 'ema8Cross',
-  label: '8 EMA Cross  (2 Bars)',
+  label: '5 EMA Cross  (2 Bars)',
   options: [
-    { label: '2 Bars Above 8 EMA ↑', value: 'bull' },
-    { label: '2 Bars Below 8 EMA ↓', value: 'bear' },
+    { label: '2 Bars Above 5 EMA ↑', value: 'bull' },
+    { label: '2 Bars Below 5 EMA ↓', value: 'bear' },
     { label: 'Unconfirmed', value: 'neutral' },
   ],
 }

@@ -364,7 +364,7 @@ const MA_META = {
   65:  { color: '#4a90c4', label: 'EMA 65'  },
   30:  { color: '#f59e0b', label: 'EMA 30'  },
   15:  { color: '#8b7cf8', label: 'EMA 15'  },
-  8:   { color: '#6b7280', label: 'EMA 8'   },
+  5:   { color: '#6b7280', label: 'EMA 5'   },
 }
 
 function MaStackPanel({ data, currentPrice: cpProp }) {
@@ -504,7 +504,7 @@ function MaStackPanel({ data, currentPrice: cpProp }) {
 // ── Weekly alignment strip ────────────────────────────────────────────────────
 function WeeklyAlignStrip({ data }) {
   if (!data) return null
-  const { signal, ema8, ema15, weekTrend, pctFromEma8, pctFromEma15, year52H, year52L, pctFrom52H, pctFrom52L } = data
+  const { signal, ema5, ema15, weekTrend, pctFromEma5, pctFromEma15, year52H, year52L, pctFrom52H, pctFrom52L } = data
   const sigColor = signal === 'BULLISH' ? '#10b981' : signal === 'BEARISH' ? '#ef4444' : '#f59e0b'
   const sigBg    = signal === 'BULLISH' ? '#011c10' : signal === 'BEARISH' ? '#1c0101' : '#1a1000'
   const sigBord  = signal === 'BULLISH' ? '#065f46' : signal === 'BEARISH' ? '#7f1d1d' : '#4d3000'
@@ -516,8 +516,8 @@ function WeeklyAlignStrip({ data }) {
           {weekTrend === 'UP' ? '↑' : '↓'} {signal}
         </span>
         <span className="weekly-strip-ema">
-          <span style={{ color: '#8b7cf8' }}>W8</span> ${fmt(ema8)}
-          <span style={{ color: pctFromEma8 >= 0 ? '#10b981' : '#ef4444' }}> {pctFromEma8 > 0 ? '+' : ''}{pctFromEma8}%</span>
+          <span style={{ color: '#8b7cf8' }}>W5</span> ${fmt(ema5)}
+          <span style={{ color: pctFromEma5 >= 0 ? '#10b981' : '#ef4444' }}> {pctFromEma5 > 0 ? '+' : ''}{pctFromEma5}%</span>
         </span>
         <span className="weekly-strip-ema">
           <span style={{ color: '#d4a017' }}>W15</span> ${fmt(ema15)}

@@ -57,7 +57,7 @@ Your job isn't to predict where markets go. It's to execute the system when cond
       {
         num: '3', color: '#a78bfa',
         name: 'ENTRY TIMING',
-        desc: 'The go signal. Two 4-hour bars close on your side of EMA 8, OR an opening range breakout confirms, OR a VWAP 2-bar cross fires. Check the Timing view in Analyze. All 3 gates green = TRADE UNLOCKED.',
+        desc: 'The go signal. Two 4-hour bars close on your side of EMA 5, OR an opening range breakout confirms, OR a VWAP 2-bar cross fires. Check the Timing view in Analyze. All 3 gates green = TRADE UNLOCKED.',
       },
     ],
   },

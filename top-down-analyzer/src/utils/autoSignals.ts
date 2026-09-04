@@ -74,12 +74,12 @@ function deriveField(fieldId, bars) {
 
     case 'ema8Cross': {
       if (closes.length < 10) return null
-      const ema8Series = calcEMASeries(closes, 8)
+      const ema5Series = calcEMASeries(closes, 5)
       const n = closes.length
-      const lastAbove = closes[n - 1] > ema8Series[n - 1]
-      const prevAbove = closes[n - 2] > ema8Series[n - 2]
-      if (lastAbove && prevAbove)   return 'bull'  // 2 bars closed above 8 EMA
-      if (!lastAbove && !prevAbove) return 'bear'  // 2 bars closed below 8 EMA
+      const lastAbove = closes[n - 1] > ema5Series[n - 1]
+      const prevAbove = closes[n - 2] > ema5Series[n - 2]
+      if (lastAbove && prevAbove)   return 'bull'  // 2 bars closed above 5 EMA
+      if (!lastAbove && !prevAbove) return 'bear'  // 2 bars closed below 5 EMA
       return 'neutral'                             // only 1 bar — not confirmed yet
     }
 
@@ -112,12 +112,12 @@ function deriveField(fieldId, bars) {
       if (last > orbHigh) return 'bull'  // broke above opening range high
       if (last < orbLow)  return 'bear'  // broke below opening range low
 
-      // Inside range — 8 EMA 2-bar cross-and-close is the entry/exit trigger
+      // Inside range — 5 EMA 2-bar cross-and-close is the entry/exit trigger
       if (closes.length < 10) return 'neutral'
-      const ema8s = calcEMASeries(closes, 8)
+      const ema5s = calcEMASeries(closes, 5)
       const n = closes.length
-      const aboveLast = closes[n - 1] > ema8s[n - 1]
-      const abovePrev = closes[n - 2] > ema8s[n - 2]
+      const aboveLast = closes[n - 1] > ema5s[n - 1]
+      const abovePrev = closes[n - 2] > ema5s[n - 2]
       if (aboveLast && abovePrev)   return 'bull'
       if (!aboveLast && !abovePrev) return 'bear'
       return 'neutral'
@@ -145,19 +145,19 @@ export function deriveConfluenceSignals(tfDataMap, timeframes) {
 
 // ── Swing tab (4H 8 EMA system) ─────────────────────────────────────────────
 
-// Auto-detects whether the last two 4H bars closed above or below the 8 EMA
+// Auto-detects whether the last two 4H bars closed above or below the 5 EMA
 export function derive4HSwingSignals(fourHBars) {
   if (!fourHBars) return {}
   const { closes } = fourHBars
   if (closes.length < 8) return {}
 
-  const ema8 = calcEMASeries(closes, 8)
+  const ema5 = calcEMASeries(closes, 5)
   const n = closes.length
 
   return {
     fourHSignal: {
-      lastBar: closes[n - 1] > ema8[n - 1] ? 'above' : 'below',
-      prevBar: closes[n - 2] > ema8[n - 2] ? 'above' : 'below',
+      lastBar: closes[n - 1] > ema5[n - 1] ? 'above' : 'below',
+      prevBar: closes[n - 2] > ema5[n - 2] ? 'above' : 'below',
     },
   }
 }
@@ -195,14 +195,14 @@ export function deriveMarketAndRisk(spyBars: BarData | null, fourHBars: BarData 
     }
   }
 
-  // Stop placement from 4H bar position vs 8 EMA
+  // Stop placement from 4H bar position vs 5 EMA
   if (fourHBars && fourHBars.closes.length >= 8) {
     const { closes } = fourHBars
-    const ema8 = calcEMASeries(closes, 8)
+    const ema5 = calcEMASeries(closes, 5)
     const n = closes.length
-    const lastAbove = closes[n - 1] > ema8[n - 1]
+    const lastAbove = closes[n - 1] > ema5[n - 1]
     result.riskSetup = {
-      stopPlacement: lastAbove ? 'below8ema' : 'above8ema',
+      stopPlacement: lastAbove ? 'below5ema' : 'above5ema',
       rrRatio: '2to1',  // high risk tolerance — accepts 2:1 minimum
     }
   }

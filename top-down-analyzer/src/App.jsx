@@ -559,9 +559,9 @@ export default function App() {
   useEffect(() => {
     const sig  = confluenceResult.signal
     const orb  = orbRetest?.signal    ?? null
-    const ema8 = orbRetest?.ema8Signal ?? null
+    const ema5 = orbRetest?.ema5Signal ?? null
     if (!liveLoaded) {
-      prevSigRef.current = sig; prevOrbRef.current = orb; prevEma8Ref.current = ema8
+      prevSigRef.current = sig; prevOrbRef.current = orb; prevEma8Ref.current = ema5
       lastEma8AlertRef.current = null
       pendingSignalRef.current = null
       return
@@ -629,7 +629,7 @@ export default function App() {
         direction: vwapCross === 'bull' ? 'CALL' : 'PUT',
       })
     }
-    prevSigRef.current = sig; prevOrbRef.current = orb; prevEma8Ref.current = ema8
+    prevSigRef.current = sig; prevOrbRef.current = orb; prevEma8Ref.current = ema5
   }, [confluenceResult.signal, orbRetest, liveLoaded, notifEnabled, ticker, chainFetchDone, optionsChain])
 
   // ── Fire or discard held signal alert once chain confirms options exist ───
