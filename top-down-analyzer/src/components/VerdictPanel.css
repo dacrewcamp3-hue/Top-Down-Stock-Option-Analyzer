@@ -152,6 +152,110 @@
   line-height: 1.45;
 }
 
+/* ── Option contract action card (GO only) ── */
+.vp-opt-card {
+  background: #030e1a;
+  border: 1px solid #0d3a5e;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.vp-opt-card-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.3px;
+  color: #2a6080;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.vp-opt-live-badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: #10b981;
+  letter-spacing: 0.5px;
+}
+
+.vp-opt-est-badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: #f59e0b;
+  letter-spacing: 0.5px;
+}
+
+.vp-opt-warn {
+  font-size: 11px;
+  color: #fbbf24;
+  background: #1a1000;
+  border: 1px solid #78350f;
+  border-radius: 5px;
+  padding: 7px 10px;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.vp-opt-row-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.vp-opt-row-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.vp-opt-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vp-opt-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #2a4a60;
+  text-transform: uppercase;
+}
+
+.vp-opt-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: #c8dff0;
+  line-height: 1.2;
+}
+
+.vp-opt-action {
+  font-size: 13px;
+  color: #7dd3fc;
+}
+
+.vp-opt-stop {
+  color: #f87171;
+}
+
+.vp-opt-target {
+  color: #4ade80;
+}
+
+.vp-opt-sub {
+  font-size: 10px;
+  color: #2a4a60;
+}
+
+.vp-opt-meta {
+  font-size: 10px;
+  color: #2a5070;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #0d2a3e;
+}
+
 /* ── WAIT blockers ── */
 .vp-blockers {
   background: #070d1c;

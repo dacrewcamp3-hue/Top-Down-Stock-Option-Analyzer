@@ -46,7 +46,7 @@ const TYPE_META = {
   cycle:    { label: 'CYCLE',     color: '#d97706' },
   earnings: { label: 'EARNINGS',  color: '#a855f7' },
   orb:      { label: 'ORB BREAK', color: '#f59e0b' },
-  ema8:     { label: 'EMA CROSS', color: '#60a5fa' },
+  ema8:     { label: 'VWAP CROSS', color: '#60a5fa' },
   price:    { label: 'PRICE HIT', color: '#c084fc' },
 }
 

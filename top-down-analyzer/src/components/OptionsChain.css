@@ -537,6 +537,18 @@
   color: #a07030;
 }
 
+/* ── No-liquid-contract warning inside rec card ────────────────────────────── */
+.opt-chain-warn {
+  font-size: 11px;
+  color: #fbbf24;
+  background: #1a1000;
+  border: 1px solid #78350f;
+  border-radius: 5px;
+  padding: 7px 10px;
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
 /* ── IV size warning inside card ───────────────────────────────────────────── */
 .opt-iv-size-warn {
   font-size: 12px;
@@ -1075,6 +1087,41 @@
   border-radius: 3px;
   padding: 1px 4px;
   background: #0a1628;
+}
+
+.opt-strikes-live-badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: #10b981;
+  background: #003d1a;
+  border: 1px solid #065f46;
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.opt-strikes-est-badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: #8a7020;
+  background: #1a1200;
+  border: 1px solid #4d3a00;
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.opt-st-live-dot {
+  font-size: 7px;
+  color: #10b981;
+  margin-left: 4px;
+  opacity: 0.7;
+  cursor: help;
+}
+.opt-st-bid-ask {
+  font-size: 10px;
+  color: #4a6888;
+  margin-left: 4px;
 }
 
 .opt-strikes-legend {

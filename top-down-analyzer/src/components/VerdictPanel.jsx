@@ -36,6 +36,8 @@ export default function VerdictPanel({
   allGatesOpen,
   ivData,
   breadthData,
+  rec,
+  qty,
 }) {
   const emaNames = useEmaNames()
   const e8n  = emaNames[8]
@@ -129,6 +131,17 @@ export default function VerdictPanel({
       whyText = 'Market breadth is HOSTILE — systemic headwind makes directional plays extremely risky. Stand aside.'
     }
   }
+
+  // ── Option contract details (GO only) ────────────────────────────────────────
+  let optStop   = null
+  let optTarget = null
+  if (rec?.premium != null) {
+    optStop   = rec.premium * 0.75
+    optTarget = rec.premium * 1.50
+  }
+
+  // rec.expDate is already a formatted string from makeRec ("Sep 19, '25")
+  const fmtExpiry = exp => exp ?? '—'
 
   // ── Entry plan (GO only) ─────────────────────────────────────────────────────
   let stopPrice = null
@@ -332,6 +345,67 @@ export default function VerdictPanel({
           {stopPrice != null && (
             <div className="vp-invalidation">
               Trade is wrong if price closes {isCall ? 'below' : 'above'} ${fmt(stopPrice)} — exit immediately.
+            </div>
+          )}
+
+          {/* ── Option contract action card ── */}
+          {rec && (
+            <div className="vp-opt-card">
+              <div className="vp-opt-card-title">
+                OPTIONS ACTION
+                {rec.isLive
+                  ? <span className="vp-opt-live-badge">● LIVE</span>
+                  : <span className="vp-opt-est-badge">◌ EST.</span>
+                }
+              </div>
+
+              {rec.chainChecked && !rec.isLive && (
+                <div className="vp-opt-warn">
+                  ⚠ No liquid contract found near target delta — chain was checked but nothing tradeable met the threshold.
+                  Prices below are theoretical. Verify at your broker before trading.
+                </div>
+              )}
+
+              <div className="vp-opt-row-grid">
+                <div className="vp-opt-col">
+                  <div className="vp-opt-label">BUY</div>
+                  <div className="vp-opt-val vp-opt-action">
+                    {direction} · ${rec.strike != null ? rec.strike.toFixed(2) : '—'}
+                  </div>
+                  <div className="vp-opt-sub">{fmtExpiry(rec.expDate)}</div>
+                </div>
+                <div className="vp-opt-col">
+                  <div className="vp-opt-label">PREMIUM</div>
+                  <div className="vp-opt-val">${rec.premium != null ? rec.premium.toFixed(2) : '—'}</div>
+                  <div className="vp-opt-sub">per contract</div>
+                </div>
+                <div className="vp-opt-col">
+                  <div className="vp-opt-label">CONTRACTS</div>
+                  <div className="vp-opt-val">{qty > 0 ? qty : '—'}</div>
+                  <div className="vp-opt-sub">based on risk %</div>
+                </div>
+              </div>
+
+              <div className="vp-opt-row-grid vp-opt-row-grid-2">
+                <div className="vp-opt-col">
+                  <div className="vp-opt-label">STOP OPTION</div>
+                  <div className="vp-opt-val vp-opt-stop">${optStop != null ? optStop.toFixed(2) : '—'}</div>
+                  <div className="vp-opt-sub">−25% of premium</div>
+                </div>
+                <div className="vp-opt-col">
+                  <div className="vp-opt-label">TARGET OPTION</div>
+                  <div className="vp-opt-val vp-opt-target">${optTarget != null ? optTarget.toFixed(2) : '—'}</div>
+                  <div className="vp-opt-sub">+50% of premium</div>
+                </div>
+              </div>
+
+              {rec.delta != null && (
+                <div className="vp-opt-meta">
+                  Delta {rec.delta.toFixed(2)}
+                  {rec.dte != null ? ` · ${rec.dte}d DTE` : ''}
+                  {rec.sigma != null ? ` · IV ${(rec.sigma * 100).toFixed(0)}%` : ''}
+                </div>
+              )}
             </div>
           )}
         </>

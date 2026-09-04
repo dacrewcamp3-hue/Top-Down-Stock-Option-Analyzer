@@ -1971,6 +1971,7 @@ export default function TradeBrief({
   vwapSignal,
   onNavigate,
   onRefreshBreadth,
+  onRec,
   optionsChain,
   volumeSpike,
   volumeProfile,
@@ -2003,7 +2004,10 @@ export default function TradeBrief({
       // spreads are optional — don't crash the brief
     }
 
-    return { rec: recs.primary, qty, spreads }
+    const result = { rec: recs.primary, qty, spreads }
+    // Bubble the primary rec up so the stock trade plan can use real delta/premium
+    if (onRec && recs.primary) setTimeout(() => onRec(recs.primary), 0)
+    return result
   }, [currentPrice, tradeScore?.direction, ivData, historicalVol, setupGrade, optionsChain])
 
   const pullbackData = useMemo(() => {
@@ -2020,7 +2024,7 @@ export default function TradeBrief({
 
   const [showShare, setShowShare] = useState(false)
   const [showBreakdown, setShowBreakdown] = useState(false)
-  const [quickMode, setQuickMode] = useState(false)
+  const [showDeep, setShowDeep] = useState(false)
 
   // ── Conditional Win Rate: run backtest in background when ticker+direction change ──
   const [condWinRate, setCondWinRate]       = useState(null)
@@ -2110,6 +2114,8 @@ export default function TradeBrief({
         allGatesOpen={allGatesOpen}
         ivData={ivData}
         breadthData={breadthData}
+        rec={rec}
+        qty={qty}
       />
 
       {/* ── Header: score + signal ── */}
@@ -2241,6 +2247,56 @@ export default function TradeBrief({
               </>
             )}
           </div>
+
+          {/* ── Liquidity + IV-edge row — critical for real trade execution ── */}
+          <div className="tb-option-stats tb-option-edge-row">
+            {rec.ivEdge && (
+              <span
+                className={`tb-iv-edge tb-iv-${rec.ivEdge.toLowerCase()}`}
+                data-tip={`IV Edge: this option's implied volatility is ${rec.ivVsHV != null ? (rec.ivVsHV * 100).toFixed(0) + '% of' : 'compared to'} the stock's 30-day historical volatility. CHEAP = IV below recent realized moves — you have a pricing edge buying premium. FAIR = in-line. RICH = IV is elevated — buying premium here costs more; consider a spread.`}
+              >
+                {rec.ivEdge === 'CHEAP' ? '▼ IV' : rec.ivEdge === 'RICH' ? '▲ IV' : '= IV'} {rec.ivEdge}
+                {rec.ivVsHV != null && ` (${(rec.ivVsHV * 100).toFixed(0)}% HV)`}
+              </span>
+            )}
+            {rec.oi != null && (
+              <>
+                <span className="tb-edge-sep">·</span>
+                <span
+                  className={rec.oi >= 500 ? 'tb-oi-good' : rec.oi >= 100 ? 'tb-oi-ok' : 'tb-oi-low'}
+                  data-tip="Open Interest: outstanding contracts at this exact strike + expiry. ≥500 = liquid (tight fills). 100–499 = acceptable. <100 = thin — use limit orders and expect wide fills."
+                >
+                  {rec.oi >= 1000 ? `${(rec.oi / 1000).toFixed(1)}K` : rec.oi} OI
+                </span>
+              </>
+            )}
+            {rec.contractVol != null && (
+              <>
+                <span className="tb-edge-sep">·</span>
+                <span
+                  data-tip="Daily volume: contracts traded today at this strike. High vol/OI ratio signals unusual or institutional activity."
+                >
+                  {rec.contractVol >= 1000 ? `${(rec.contractVol / 1000).toFixed(1)}K` : rec.contractVol} vol
+                </span>
+              </>
+            )}
+            {rec.gamma != null && (
+              <>
+                <span className="tb-edge-sep">·</span>
+                <span data-tip="Gamma: how fast your Delta grows per $1 stock move. Higher Gamma = your position gains delta (leverage) as the stock moves your way — this is the convexity that makes long options powerful.">
+                  Γ {rec.gamma.toFixed(4)}
+                </span>
+              </>
+            )}
+            {rec.vega != null && (
+              <>
+                <span className="tb-edge-sep">·</span>
+                <span data-tip="Vega: option value change per 1% move in implied volatility. Positive for long options — rising IV helps you, falling IV hurts you. High vega with high IV rank = elevated crush risk.">
+                  ν ${(rec.vega * 100).toFixed(2)}/1%IV
+                </span>
+              </>
+            )}
+          </div>
         </div>
       )}
 
@@ -2354,96 +2410,99 @@ export default function TradeBrief({
         </div>
       )}
 
-      {/* ── Macro Regime + Fear & Greed (context layer — below action items) ── */}
-      <MacroRegime breadthData={breadthData} />
-      <FearGreedMeter breadthData={breadthData} ivData={ivData} cycleData={cycleData} />
+      {/* ── Deep Analysis toggle — everything below is supplementary ── */}
+      <button
+        className={`tb-deep-toggle${showDeep ? ' tb-deep-open' : ''}`}
+        onClick={() => setShowDeep(v => !v)}
+      >
+        <span className="tb-deep-icon">{showDeep ? '▲' : '▾'}</span>
+        {showDeep ? 'Hide Deep Analysis' : 'Show Deep Analysis'}
+        <span className="tb-deep-sub">
+          {showDeep ? '' : 'Score breakdown · Signal intel · Macro · Levels · Win rate · Trade thesis'}
+        </span>
+      </button>
 
-      {/* ── Quick Mode toggle ── */}
-      <div className="tb-quickmode-row">
-        <button
-          className={`tb-quickmode-btn${quickMode ? ' tb-quickmode-on' : ''}`}
-          onClick={() => setQuickMode(v => !v)}
-          title={quickMode ? 'Show full analysis with explanations' : 'Collapse explanatory text — data only'}
-        >
-          {quickMode ? '▶ Show Details' : '◀ Quick Mode'}
-        </button>
-      </div>
-
-      {/* ── Trade Thesis (hidden in Quick Mode) ── */}
-      {!quickMode && (
-        <TradeThesis
-          ticker={ticker}
-          direction={direction}
-          confluenceResult={confluenceResult}
-          tradeScore={tradeScore}
-          weeklyAlign={weeklyAlign}
-          swingResult={swingResult}
-          adxSignal={adxSignal}
-          vwapSignal={vwapSignal}
-          ivData={ivData}
-          setupGrade={setupGrade}
-        />
-      )}
-
-      {/* ── Score breakdown (hidden in Quick Mode) ── */}
-      {!quickMode && tradeScore?.breakdown && (
+      {showDeep && (
         <>
-          <button className="tb-breakdown-toggle" onClick={() => setShowBreakdown(v => !v)}>
-            Score Breakdown {showBreakdown ? '▲' : '▾'}
-          </button>
-          {showBreakdown && <ScoreBreakdown breakdown={tradeScore.breakdown} />}
+          {/* ── Score breakdown ── */}
+          {tradeScore?.breakdown && (
+            <>
+              <button className="tb-breakdown-toggle" onClick={() => setShowBreakdown(v => !v)}>
+                Score Breakdown {showBreakdown ? '▲' : '▾'}
+              </button>
+              {showBreakdown && <ScoreBreakdown breakdown={tradeScore.breakdown} />}
+            </>
+          )}
+
+          {/* ── Conditional Win Rate ── */}
+          <ConditionalWinRate
+            condWinRate={condWinRate}
+            condWinLoading={condWinLoading}
+            direction={direction}
+            setupGrade={setupGrade}
+            adxSignal={adxSignal}
+          />
+
+          {/* ── Key levels ── */}
+          <KeyLevels
+            fibLevels={fibLevels}
+            orbRetest={orbRetest}
+            currentPrice={currentPrice}
+            direction={direction}
+          />
+
+          {/* ── Options Levels: Max Pain, Call Wall, Put Wall, UOA ── */}
+          <OptionsLevelsCard optionsChain={optionsChain} currentPrice={currentPrice} direction={direction} />
+
+          {/* ── Pullback vs Retracement Classifier ── */}
+          <PullbackMeter pullbackData={pullbackData} />
+
+          {/* ── Macro Regime + Fear & Greed ── */}
+          <MacroRegime breadthData={breadthData} />
+          <FearGreedMeter breadthData={breadthData} ivData={ivData} cycleData={cycleData} />
+
+          {/* ── Trade Thesis ── */}
+          <TradeThesis
+            ticker={ticker}
+            direction={direction}
+            confluenceResult={confluenceResult}
+            tradeScore={tradeScore}
+            weeklyAlign={weeklyAlign}
+            swingResult={swingResult}
+            adxSignal={adxSignal}
+            vwapSignal={vwapSignal}
+            ivData={ivData}
+            setupGrade={setupGrade}
+          />
+
+          {/* ── Signal Intelligence ── */}
+          <SignalIntel
+            confluenceResult={confluenceResult}
+            swingResult={swingResult}
+            cycleData={cycleData}
+            dailyBars={dailyBars}
+            insiderData={insiderData}
+            earningsDate={earningsDate}
+            sectorRS={sectorRS}
+            weeklyAlign={weeklyAlign}
+            tradeScore={tradeScore}
+            shortInterest={shortInterest}
+            onNavigate={onNavigate}
+          />
+
+          {/* ── Smart Money Analysis ── */}
+          <SmartMoneyCard
+            optionsChain={optionsChain}
+            insiderData={insiderData}
+            volumeSpike={volumeSpike}
+            volumeProfile={volumeProfile}
+            direction={direction}
+          />
+
+          {/* ── Signal history ── */}
+          <SignalHistory ticker={ticker} direction={direction} />
         </>
       )}
-
-      {/* ── Conditional Win Rate — historical probability under current conditions ── */}
-      <ConditionalWinRate
-        condWinRate={condWinRate}
-        condWinLoading={condWinLoading}
-        direction={direction}
-        setupGrade={setupGrade}
-        adxSignal={adxSignal}
-      />
-
-      {/* ── Key levels ── */}
-      <KeyLevels
-        fibLevels={fibLevels}
-        orbRetest={orbRetest}
-        currentPrice={currentPrice}
-        direction={direction}
-      />
-
-      {/* ── Options Levels: Max Pain, Call Wall, Put Wall, UOA ── */}
-      <OptionsLevelsCard optionsChain={optionsChain} currentPrice={currentPrice} direction={direction} />
-
-      {/* ── Pullback vs Retracement Classifier ── */}
-      <PullbackMeter pullbackData={pullbackData} />
-
-      {/* ── Signal Intelligence ── */}
-      <SignalIntel
-        confluenceResult={confluenceResult}
-        swingResult={swingResult}
-        cycleData={cycleData}
-        dailyBars={dailyBars}
-        insiderData={insiderData}
-        earningsDate={earningsDate}
-        sectorRS={sectorRS}
-        weeklyAlign={weeklyAlign}
-        tradeScore={tradeScore}
-        shortInterest={shortInterest}
-        onNavigate={onNavigate}
-      />
-
-      {/* ── Smart Money Analysis ── */}
-      <SmartMoneyCard
-        optionsChain={optionsChain}
-        insiderData={insiderData}
-        volumeSpike={volumeSpike}
-        volumeProfile={volumeProfile}
-        direction={direction}
-      />
-
-      {/* ── Signal history (feedback loop from paper trades) ── */}
-      <SignalHistory ticker={ticker} direction={direction} />
 
     </div>
   )

@@ -39,6 +39,7 @@ import EarningsMode from './components/EarningsMode'
 import AlertCenter from './components/AlertCenter'
 import LastAlertBanner from './components/LastAlertBanner'
 import TradeBrief from './components/TradeBrief'
+import StockTradePlan from './components/StockTradePlan'
 import MarketBreadth from './components/MarketBreadth'
 import BestTradeNow from './components/BestTradeNow'
 import OnboardingModal from './components/OnboardingModal'
@@ -53,6 +54,7 @@ import { fireNotification, requestNotifPermission } from './utils/browserAlerts'
 import SignalHistory from './components/SignalHistory'
 import WyckoffPanel from './components/WyckoffPanel'
 import { detectWyckoff } from './utils/wyckoff'
+import SPXGrowth from './components/SPXGrowth'
 import SmartAlertToast from './components/SmartAlertToast'
 import { pushAlert } from './components/AlertCenter'
 import './App.css'
@@ -75,7 +77,7 @@ function getMarketStatus() {
   return 'closed'
 }
 
-const SMART_INTERVALS = { open: 30, pre: 120, after: 120, closed: 900 }
+const SMART_INTERVALS = { open: 10, pre: 30, after: 60, closed: 300 }
 
 function buildInitialTfStates() {
   const state = {}
@@ -186,6 +188,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false)
   const [fetchError, setFetchError] = useState(null)
   const [liveLoaded, setLiveLoaded] = useState(false)
+  const [primaryRec, setPrimaryRec] = useState(null)
 
   // Confluence tab state
   const [tfStates, setTfStates] = useState(buildInitialTfStates)
@@ -264,9 +267,11 @@ export default function App() {
   const fetchingRef   = useRef(false)
   const tickerInputRef = useRef(null)
   const countdownRef  = useRef(null)
-  const prevSigRef    = useRef(null)
-  const prevOrbRef    = useRef(null)
-  const prevEma8Ref   = useRef(null)
+  const prevSigRef       = useRef(null)
+  const prevOrbRef       = useRef(null)
+  const prevEma8Ref      = useRef(null)
+  const lastEma8AlertRef = useRef(null)   // direction ('bull'|'bear') of last ema8 alert fired
+  const pendingSignalRef = useRef(null)   // holds CALL/PUT alert until chain confirms options exist
   const showPreMarketRef = useRef(false)
 
   // Keep ref in sync so handleFetch (stale closure) can always read current value
@@ -557,6 +562,8 @@ export default function App() {
     const ema8 = orbRetest?.ema8Signal ?? null
     if (!liveLoaded) {
       prevSigRef.current = sig; prevOrbRef.current = orb; prevEma8Ref.current = ema8
+      lastEma8AlertRef.current = null
+      pendingSignalRef.current = null
       return
     }
     if (prevSigRef.current !== null && sig !== prevSigRef.current) {
@@ -568,10 +575,7 @@ export default function App() {
         const dStr     = dBD ? (dBD.bull > dBD.bear ? 'D ↑' : dBD.bear > dBD.bull ? 'D ↓' : 'D —') : ''
         const scoreStr = sig === 'CALL' ? `+${score}%` : `-${score}%`
         const body     = `${prevSigRef.current} → ${sig} · Confluence ${scoreStr} · ${wStr} ${dStr}`
-        if (sig === 'CALL') playTone('call'); else playTone('put')
-        if (notifEnabled) fireNotification(`${ticker} Signal: ${sig}`, body, 'signal')
-        // Rich in-app toast
-        pushAlert({
+        const alertPayload = {
           title:      `${ticker} — ${sig === 'CALL' ? 'BUY CALLS' : 'BUY PUTS'}`,
           body:       `${wStr} ${dStr}`.trim(),
           type:       'signal',
@@ -581,7 +585,18 @@ export default function App() {
           score,
           bull:       confluenceResult.totalBull ?? 0,
           bear:       confluenceResult.totalBear ?? 0,
-        })
+        }
+        if (chainFetchDone) {
+          // Chain result is already known — only alert if options actually exist
+          if (!optionsChain?.empty) {
+            if (sig === 'CALL') playTone('call'); else playTone('put')
+            if (notifEnabled) fireNotification(`${ticker} Signal: ${sig}`, body, 'signal')
+            pushAlert(alertPayload)
+          }
+        } else {
+          // Chain not yet loaded — hold the alert; it fires (or not) when chain resolves
+          pendingSignalRef.current = { payload: alertPayload, body, sig }
+        }
       }
     }
     if (prevOrbRef.current === 'INSIDE' && orb === 'BREAK') {
@@ -600,20 +615,35 @@ export default function App() {
         direction: dir === 'bull' ? 'CALL' : dir === 'bear' ? 'PUT' : null,
       })
     }
-    if (orb === 'INSIDE' && prevEma8Ref.current === 'neutral' && (ema8 === 'bull' || ema8 === 'bear')) {
+    const vwapCross = orbRetest?.vwapCrossSignal ?? null
+    if (orb === 'INSIDE' && (vwapCross === 'bull' || vwapCross === 'bear') && vwapCross !== lastEma8AlertRef.current) {
+      lastEma8AlertRef.current = vwapCross
       playTone('ema8')
-      const ema8Body = `EMA 8 crossed ${ema8 === 'bull' ? '↑ above' : '↓ below'} EMA 15/30 inside the opening range — momentum building`
-      if (notifEnabled) fireNotification(`${ticker} EMA 8 Cross`, ema8Body, 'ema8')
+      const vwapBody = `Price crossed ${vwapCross === 'bull' ? '↑ above' : '↓ below'} VWAP inside the opening range — intraday momentum shifting`
+      if (notifEnabled) fireNotification(`${ticker} VWAP Cross`, vwapBody, 'ema8')
       pushAlert({
-        title:     `${ticker} — EMA 8 CROSS`,
-        body:      ema8Body,
+        title:     `${ticker} — VWAP CROSS`,
+        body:      vwapBody,
         type:      'ema8',
         ticker,
-        direction: ema8 === 'bull' ? 'CALL' : 'PUT',
+        direction: vwapCross === 'bull' ? 'CALL' : 'PUT',
       })
     }
     prevSigRef.current = sig; prevOrbRef.current = orb; prevEma8Ref.current = ema8
-  }, [confluenceResult.signal, orbRetest, liveLoaded, notifEnabled, ticker])
+  }, [confluenceResult.signal, orbRetest, liveLoaded, notifEnabled, ticker, chainFetchDone, optionsChain])
+
+  // ── Fire or discard held signal alert once chain confirms options exist ───
+  useEffect(() => {
+    if (!chainFetchDone) return
+    const pending = pendingSignalRef.current
+    if (!pending) return
+    pendingSignalRef.current = null
+    if (optionsChain?.empty) return   // no options — silently discard
+    const { payload, body, sig } = pending
+    if (sig === 'CALL') playTone('call'); else playTone('put')
+    if (notifEnabled) fireNotification(`${ticker} Signal: ${sig}`, body, 'signal')
+    pushAlert(payload)
+  }, [chainFetchDone, optionsChain, notifEnabled, ticker])
 
   // ── Log Trade → writes a quick-entry note to the journal ─────────────────
   function logTrade(entry) {
@@ -945,7 +975,7 @@ export default function App() {
                 <div className="settings-row">
                   <span className="settings-lbl">AUTO</span>
                   <div className="arf-pills">
-                    {[[0,'Off'],[30,'30s'],[60,'1m'],[120,'2m'],[300,'5m']].map(([s, label]) => (
+                    {[[0,'Off'],[10,'10s'],[15,'15s'],[30,'30s'],[60,'1m'],[120,'2m']].map(([s, label]) => (
                       <button
                         key={s}
                         className={`arf-pill${!smartRefresh && autoInterval === s ? ' active' : ''}`}
@@ -955,13 +985,13 @@ export default function App() {
                     <button
                       className={`arf-pill${smartRefresh ? ' active' : ''}`}
                       onClick={() => setSmartRefresh(v => !v)}
-                      title="Smart: 30s during market hours, 2m pre/after, 15m when closed"
+                      title="Smart: 10s during market hours, 30s pre-market, 60s after hours, 5m when closed"
                     >Smart</button>
                   </div>
                 </div>
                 {smartRefresh && (
                   <div className="settings-smart-note">
-                    Smart: {getMarketStatus() === 'open' ? '30s (market open)' : getMarketStatus() === 'pre' ? '2m (pre-market)' : getMarketStatus() === 'after' ? '2m (after hours)' : '15m (market closed)'}
+                    Smart: {getMarketStatus() === 'open' ? '10s (market open)' : getMarketStatus() === 'pre' ? '30s (pre-market)' : getMarketStatus() === 'after' ? '60s (after hours)' : '5m (market closed)'}
                   </div>
                 )}
                 <div className="settings-row">
@@ -969,7 +999,7 @@ export default function App() {
                   <button
                     className={`arf-pill${alertsOn ? ' active' : ''}`}
                     onClick={() => setAlertsOn(v => { setSoundEnabled(!v); return !v })}
-                    title="Sound alert when CALL/PUT fires, ORB breaks, or 8 EMA cross fires"
+                    title="Sound alert when CALL/PUT fires, ORB breaks, or price crosses VWAP in the ORB"
                   >{alertsOn ? 'On' : 'Off'}</button>
                 </div>
                 <div className="settings-row">
@@ -985,7 +1015,7 @@ export default function App() {
                         setNotifEnabled(false)
                       }
                     }}
-                    title="Browser push notification when signal flips, ORB breaks, or EMA 8 crosses — works while tab is open"
+                    title="Browser push notification when signal flips, ORB breaks, or price crosses VWAP in the ORB — works while tab is open"
                   >{notifEnabled ? 'Alerts On' : 'Alerts Off'}</button>
                 </div>
 
@@ -1054,6 +1084,7 @@ export default function App() {
           ['scanner',  'Scanner',  'Find setups across the market, track overall market health, watch where big money is flowing, and run your regime playbook.'],
           ['trades',   'Trades',   'Write your trade thoughts — why you entered, what you saw, why you exited. Your personal record of reasoning.'],
           ['backtest', 'Backtest', 'See how the strategy signals performed historically on the ticker you\'ve loaded — hit rate, average gain, and more.'],
+          ['spx',      'S&P 500',  'See what any amount invested in the S&P 500 in any year since 1986 would be worth today — the wealth escalator.'],
         ].map(([id, label, tip]) => (
           <button
             key={id}
@@ -1106,6 +1137,11 @@ export default function App() {
               onClick={() => setAnalyzeView('market')}
               data-tip="Market — overall market health: VIX fear level, how many stocks are rising vs falling, and which sectors are leading. Check this before every trade."
             >Market</button>
+            <button
+              className={`sub-btn${analyzeView === 'stock' ? ' active' : ''}`}
+              onClick={() => setAnalyzeView('stock')}
+              data-tip="Stock Plan — share-size calculator, daily profit goal, scaled exit rules (stop / T1 / T2 / trail), and how your stock exits coordinate with your option exits."
+            >Stock Plan</button>
 
             {/* ── Divider between primary and research tabs ── */}
             <span className="sub-divider" />
@@ -1193,10 +1229,20 @@ export default function App() {
               vwapSignal={vwapSignal}
               onRefreshBreadth={refreshBreadth}
               onNavigate={v => setAnalyzeView(v)}
+              onRec={r => setPrimaryRec(r)}
               optionsChain={optionsChain}
               volumeSpike={volumeSpike}
               volumeProfile={volumeProfile}
               wyckoff={wyckoffData}
+            />
+          )}
+
+          {analyzeView === 'stock' && (
+            <StockTradePlan
+              currentPrice={currentPrice}
+              direction={tradeScore?.direction}
+              ticker={ticker}
+              rec={primaryRec}
             />
           )}
 
@@ -1548,6 +1594,9 @@ export default function App() {
       {activeTab === 'backtest' && (
         <Backtest ticker={ticker} onResult={r => setBacktestResult(r)} />
       )}
+
+      {/* ── S&P 500 Wealth Escalator tab ── */}
+      {activeTab === 'spx' && <SPXGrowth />}
 
       {/* ── Persistent verdict bar (fixed bottom) ── */}
       {liveLoaded && (

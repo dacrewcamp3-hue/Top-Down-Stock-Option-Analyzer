@@ -15,10 +15,16 @@ export default function TradePlan({
 
   // ── Derive option math inputs before any early returns (hooks must be unconditional) ──
   const isCall  = direction === 'CALL'
-  const sigma   = (ivData?.atmIV != null ? ivData.atmIV / 100 : null) ?? historicalVol ?? 0.30
+  // Prefer the live contract's own IV (rec.sigma) for all option price projections.
+  // rec.sigma is set to the contract's actual impliedVolatility from the chain when live,
+  // or falls back to the ATM IV / historical vol when we're using Black-Scholes estimates.
+  const sigma   = rec?.sigma ?? (ivData?.atmIV != null ? ivData.atmIV / 100 : null) ?? historicalVol ?? 0.30
   const T       = rec ? Math.max(0.01, rec.dte / 365) : 0.01
   const K       = rec?.strike ?? 0
 
+  // Recompute Greeks at current price using the contract's own IV.
+  // We re-derive rather than using rec.delta/theta directly so the values
+  // stay current as spot price changes between data loads.
   const greeks = useMemo(
     () => (currentPrice && K > 0 && T > 0 && sigma > 0)
       ? calcGreeks(currentPrice, K, T, sigma, isCall)
@@ -82,9 +88,9 @@ export default function TradePlan({
     ? +(Math.abs(targetPx - currentPrice) / Math.abs(currentPrice - stopPx)).toFixed(1)
     : null
 
-  // ── Option exit levels ────────────────────────────────────────────────────
-  const stopPrem50   = +(optEntry * 0.50).toFixed(2)
-  const profitPrem50 = +(optEntry * 1.50).toFixed(2)
+  // ── Option exit levels — consistent with the -25% premium stop rule ─────
+  const stopPrem25   = +(optEntry * 0.75).toFixed(2)   // exit at -25% of premium
+  const profitPrem50 = +(optEntry * 1.50).toFixed(2)   // trail or exit at +50%
   const daysBeforeExpiry = Math.max(0, rec.dte - 7)
   const timeExitStr  = (() => {
     const d = new Date()
@@ -279,8 +285,8 @@ export default function TradePlan({
           <div className="tp-exit-rule">
             <span className="tp-xdot" style={{ color: '#ef4444' }}>●</span>
             <span>
-              <strong>Stop −50%</strong> — exit if premium ≤ ${f2(stopPrem50)}
-              {qty > 0 && ` · −$${f0((optEntry - stopPrem50) * 100 * qty)} at stop`}
+              <strong>Stop −25%</strong> — exit if premium ≤ ${f2(stopPrem25)}
+              {qty > 0 && ` · −$${f0((optEntry - stopPrem25) * 100 * qty)} at stop`}
             </span>
           </div>
           <div className="tp-exit-rule">

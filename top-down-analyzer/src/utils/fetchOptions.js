@@ -108,8 +108,9 @@ function chainDatesToExpiries(chainTimestamps) {
 }
 
 // ── Find a real liquid contract closest to the target delta ──────────────────
-// Returns the contract with enriched fields (mid, spreadPct, actualIV, greeks)
-// or null if liveContracts is unavailable or no usable contract is found.
+// Composite score: 55% delta match + 30% liquidity (OI + vol) + 15% spread quality.
+// A contract that fills your delta target but can't trade (no OI, wide spread)
+// is useless in the real market — this scoring mimics how a professional desk picks.
 function findLiveContract(liveContracts, expTimestamp, S, T, isCall, targetDelta, r = 0.045) {
   if (!liveContracts || !expTimestamp) return null
   const keys    = Object.keys(liveContracts).map(Number)
@@ -118,23 +119,48 @@ function findLiveContract(liveContracts, expTimestamp, S, T, isCall, targetDelta
   const bucket  = liveContracts[matchTs]
   const legs    = isCall ? (bucket?.calls ?? []) : (bucket?.puts ?? [])
 
-  let pool = legs.filter(c => c.bid > 0 && c.oi >= 100)
+  // Tiered liquidity gate: OI≥200 first (real markets), then OI≥50, then bid>0 fallback
+  let pool = legs.filter(c => c.bid > 0 && c.oi >= 200)
+  if (!pool.length) pool = legs.filter(c => c.bid > 0 && c.oi >= 50)
   if (!pool.length) pool = legs.filter(c => c.bid > 0)
   if (!pool.length) return null
 
-  let best = null, bestErr = Infinity
+  // Compute live Greeks for each candidate using the contract's own reported IV
+  const candidates = []
   for (const c of pool) {
     if (!c.iv || c.iv <= 0) continue
     const g = calcGreeks(S, c.strike, T, c.iv, isCall, r)
     if (!g) continue
-    const err = Math.abs(Math.abs(g.delta) - targetDelta)
-    if (err < bestErr) {
-      bestErr  = err
-      const mid = (c.bid + c.ask) / 2
-      const spreadPct = mid > 0 ? (c.ask - c.bid) / mid * 100 : 999
-      best = { ...c, ...g, mid: +mid.toFixed(2), spreadPct: +spreadPct.toFixed(1), wideSpread: spreadPct > 20, actualIV: c.iv }
-    }
+    const mid = (c.bid + c.ask) / 2
+    const spreadPct = mid > 0 ? (c.ask - c.bid) / mid * 100 : 999
+    candidates.push({ ...c, ...g, mid: +mid.toFixed(2), spreadPct: +spreadPct.toFixed(1), wideSpread: spreadPct > 20, actualIV: c.iv })
   }
+  if (!candidates.length) return null
+
+  const maxOI  = Math.max(...candidates.map(c => c.oi  || 0), 1)
+  const maxVol = Math.max(...candidates.map(c => c.vol || 0), 1)
+
+  let best = null, bestScore = -Infinity
+  for (const c of candidates) {
+    // Delta match: perfect at 0 error, zero score at ≥0.15 delta error
+    const deltaErr    = Math.abs(Math.abs(c.delta) - targetDelta)
+    const deltaScore  = Math.max(0, 1 - deltaErr / 0.15)
+    // Liquidity: OI (60%) + daily volume (40%), normalised 0–1
+    const liqScore    = (c.oi  || 0) / maxOI * 0.60 + (c.vol || 0) / maxVol * 0.40
+    // Spread: 0% = 1.0, ≥25% = 0.0
+    const spreadScore = Math.max(0, 1 - (c.spreadPct || 999) / 25)
+    // Composite
+    const score = deltaScore * 0.55 + liqScore * 0.30 + spreadScore * 0.15
+    if (score > bestScore) { bestScore = score; best = { ...c, liquidityScore: +liqScore.toFixed(2) } }
+  }
+
+  // ── Hard validity gate ────────────────────────────────────────────────────────
+  // Even the best composite-scored contract must clear a minimum delta floor.
+  // A contract with delta < 0.10 is so far OTM it's a lottery ticket, not a
+  // directional trade — return null so makeRec falls back to BS estimates instead
+  // of surfacing a misleading "live" recommendation.
+  if (best && Math.abs(best.delta ?? 0) < 0.10) return null
+
   return best
 }
 
@@ -181,6 +207,12 @@ function makeRec(label, S, sigma, isCall, expDate, expTimestamp, targetDelta, pa
   const be   = isCall ? K + prem : K - prem
   const fmt  = expDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
 
+  // IV Edge: compare contract IV to background historical vol (sigma param).
+  // CHEAP = option is priced below recent realized vol → buying premium has the edge.
+  // RICH  = option is overpriced relative to recent moves → spread preferred.
+  const ivVsHV = sigma > 0.03 ? ivUsed / sigma : 1
+  const ivEdge = ivVsHV < 0.85 ? 'CHEAP' : ivVsHV > 1.25 ? 'RICH' : 'FAIR'
+
   let patternClearance = null
   if (patternTarget != null) {
     patternClearance = isCall
@@ -192,6 +224,7 @@ function makeRec(label, S, sigma, isCall, expDate, expTimestamp, targetDelta, pa
     label,
     dte,
     expDate:          fmt,
+    expTimestamp:     expTimestamp ?? null,
     strike:           K,
     premium:          +prem.toFixed(2),
     contractCost:     Math.round(prem * 100),
@@ -211,12 +244,16 @@ function makeRec(label, S, sigma, isCall, expDate, expTimestamp, targetDelta, pa
     patternTarget,
     patternClearance,
     isLive:           !!live,
-    bid:              live?.bid         ?? null,
-    ask:              live?.ask         ?? null,
-    oi:               live?.oi          ?? null,
-    contractVol:      live?.vol         ?? null,
-    spreadPct:        live?.spreadPct   ?? null,
-    wideSpread:       live?.wideSpread  ?? false,
+    chainChecked:     !!liveContracts,
+    bid:              live?.bid             ?? null,
+    ask:              live?.ask             ?? null,
+    oi:               live?.oi              ?? null,
+    contractVol:      live?.vol             ?? null,
+    spreadPct:        live?.spreadPct       ?? null,
+    wideSpread:       live?.wideSpread      ?? false,
+    liquidityScore:   live?.liquidityScore  ?? null,
+    ivEdge,
+    ivVsHV:           +ivVsHV.toFixed(2),
     gexWall:          null,
   }
 }

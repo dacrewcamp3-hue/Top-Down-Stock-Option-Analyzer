@@ -438,7 +438,7 @@ export function detectVolume(volumes, avgPeriod = 20) {
 // and whether price has come back to retest the broken level.
 export function calcORBreakRetest(bars5m, bars15m) {
   if (!bars5m || !bars15m) return null
-  const { opens: o5, closes: c5, highs: h5, lows: l5, timestamps: ts5 } = bars5m
+  const { opens: o5, closes: c5, highs: h5, lows: l5, volumes: v5, timestamps: ts5 } = bars5m
   const { highs: h15, lows: l15, closes: c15, timestamps: ts15 } = bars15m
   if (!ts5 || !ts15 || c5.length < 3) return null
 
@@ -480,6 +480,26 @@ export function calcORBreakRetest(bars5m, bars15m) {
       if (aboveLast && abovePrev)    ema8Signal = 'bull'
       else if (!aboveLast && !abovePrev) ema8Signal = 'bear'
     }
+
+    // Session VWAP cross — 2-bar confirmation using intraday 5m bars
+    let vwapCrossSignal = 'neutral'
+    if (c5.length >= 3 && v5) {
+      let tpv = 0, vol = 0
+      for (let i = si5; i < c5.length; i++) {
+        const tp = (h5[i] + l5[i] + c5[i]) / 3
+        tpv += tp * (v5[i] ?? 0)
+        vol += v5[i] ?? 0
+      }
+      if (vol > 0) {
+        const vwap = tpv / vol
+        const n = c5.length
+        const aboveLast = c5[n - 1] > vwap
+        const abovePrev = c5[n - 2] > vwap
+        if (aboveLast && abovePrev)        vwapCrossSignal = 'bull'
+        else if (!aboveLast && !abovePrev) vwapCrossSignal = 'bear'
+      }
+    }
+
     return {
       orHigh, orLow, breakDir: null,
       lastClose,
@@ -487,6 +507,7 @@ export function calcORBreakRetest(bars5m, bars15m) {
       pctFromLow:  +((lastClose - orLow)  / orLow  * 100).toFixed(2),
       signal: 'INSIDE',
       ema8Signal,
+      vwapCrossSignal,
     }
   }
 

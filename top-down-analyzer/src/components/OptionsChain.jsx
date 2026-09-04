@@ -477,38 +477,82 @@ function PnLScenarios({ rec, currentPrice, qty }) {
 }
 
 // ── Strike Comparison Strip ───────────────────────────────────────────────────
-function StrikeComparison({ rec, currentPrice, ticker }) {
+function StrikeComparison({ rec, currentPrice, ticker, liveContracts }) {
   if (!rec || !currentPrice) return null
-  const { strike: kRec, dte, isCall, sigma: sig } = rec
-  const T   = dte / 365
-  const S   = currentPrice
+  const { strike: kRec, dte, isCall, sigma: sig, expTimestamp, premium: recPremium } = rec
+  const T = dte / 365
+  const S = currentPrice
 
-  const inc = S < 10 ? 0.5 : S < 25 ? 1 : S < 75 ? 2.5 : S < 500 ? 5 : 10
-  const strikes = [-2, -1, 0, 1, 2]
-    .map(i => Math.round((kRec + i * inc) / inc) * inc)
-    .filter(k => k > 0)
+  // ── Build the strike list from the live chain if available ──────────────────
+  // Find the chain bucket for this expiry (timestamp tolerance ±1 day)
+  let chainRows = []
+  if (liveContracts && expTimestamp) {
+    const keys    = Object.keys(liveContracts).map(Number)
+    const matchTs = keys.find(k => Math.abs(k - expTimestamp) < 86400)
+    if (matchTs != null) {
+      const side = liveContracts[matchTs]?.[isCall ? 'calls' : 'puts'] ?? []
+      if (side.length > 0) {
+        // Sort ascending by strike, find the recommended index, take ±2 neighbours
+        const sorted = [...side].sort((a, b) => a.strike - b.strike)
+        let idx = sorted.findIndex(c => Math.abs(c.strike - kRec) < 0.001)
+        // If exact match not found, insert a sentinel at the closest position
+        if (idx === -1) idx = sorted.findIndex(c => c.strike > kRec)
+        if (idx === -1) idx = sorted.length
+        const lo = Math.max(0, idx - 2)
+        const hi = Math.min(sorted.length, idx + 3)
+        chainRows = sorted.slice(lo, hi).map(c => ({
+          K:      c.strike,
+          mid:    +((c.bid + c.ask) / 2).toFixed(2),
+          bid:    c.bid,
+          ask:    c.ask,
+          oi:     c.oi,
+          isLive: true,
+        }))
+      }
+    }
+  }
+
+  // Fall back to BS-generated strikes if no live chain data for this expiry
+  const useLive = chainRows.length > 0
+  let strikeRows
+  if (useLive) {
+    strikeRows = chainRows
+  } else {
+    const inc = S < 10 ? 0.5 : S < 25 ? 1 : S < 75 ? 2.5 : S < 500 ? 5 : 10
+    strikeRows = [-2, -1, 0, 1, 2]
+      .map(i => Math.round((kRec + i * inc) / inc) * inc)
+      .filter(k => k > 0)
+      .map(K => ({ K, mid: null, bid: null, ask: null, oi: null, isLive: false }))
+  }
 
   return (
     <div className="opt-strikes-wrap">
       <div className="opt-strikes-header">
-        <span className="opt-strikes-title">Nearby Strikes — {rec.expDate}</span>
-        <span className="opt-strikes-sub">{ticker} {isCall ? 'CALL' : 'PUT'} · pick based on your risk tolerance</span>
+        <span className="opt-strikes-title">
+          Nearby Strikes — {rec.expDate}
+          {useLive
+            ? <span className="opt-strikes-live-badge">● LIVE</span>
+            : <span className="opt-strikes-est-badge">◌ EST.</span>
+          }
+        </span>
+        <span className="opt-strikes-sub">{ticker} {isCall ? 'CALL' : 'PUT'} · same expiry as the primary recommendation above</span>
       </div>
       <div className="opt-strikes-table">
         <div className="opt-st-row opt-st-hdr">
           <span>Strike</span>
-          <span>Premium</span>
+          <span>{useLive ? 'Market Price' : 'Est. Premium'}</span>
           <span>Delta</span>
           <span>Break-Even</span>
           <span>Prob ITM</span>
           <span>$/Contract</span>
         </div>
-        {strikes.map(K => {
-          const prem  = bsPrice(S, K, T, sig, isCall)
+        {strikeRows.map(({ K, mid, bid, ask, oi, isLive: rowLive }) => {
+          const isRec = Math.abs(K - kRec) < 0.001
+          // For the recommended strike: always use rec.premium (matches the card exactly)
+          const prem  = isRec ? recPremium : (rowLive && mid != null ? mid : bsPrice(S, K, T, sig, isCall))
           const g     = calcGreeks(S, K, T, sig, isCall)
-          if (!g) return null
+          if (!g || prem == null || prem <= 0) return null
           const be    = isCall ? K + prem : K - prem
-          const isRec = K === kRec
           const isITM = isCall ? K < S : K > S
 
           return (
@@ -519,8 +563,16 @@ function StrikeComparison({ rec, currentPrice, ticker }) {
                 </span>
                 {isRec && <span className="opt-st-badge">OUR PICK</span>}
                 {isITM && !isRec && <span className="opt-st-itm-tag">ITM</span>}
+                {rowLive && !isRec && bid != null && (
+                  <span className="opt-st-live-dot" title={`Bid $${bid} · Ask $${ask}${oi ? ` · OI ${oi}` : ''}`}>●</span>
+                )}
               </span>
-              <span>${prem.toFixed(2)}</span>
+              <span style={{ color: isRec ? '#f59e0b' : undefined }}>
+                ${prem.toFixed(2)}
+                {isRec && rec.bid != null && (
+                  <span className="opt-st-bid-ask"> ({rec.bid}–{rec.ask})</span>
+                )}
+              </span>
               <span style={{ color: Math.abs(g.delta) >= 0.35 && Math.abs(g.delta) <= 0.65 ? '#10b981' : '#6b8099' }}>
                 {Math.abs(g.delta).toFixed(2)}
               </span>
@@ -536,7 +588,9 @@ function StrikeComparison({ rec, currentPrice, ticker }) {
       <div className="opt-strikes-legend">
         <span>Delta 0.35–0.65 highlighted green = sweet spot for buyers</span>
         <span className="opt-st-itm-tag" style={{ marginLeft: 8 }}>ITM</span>
-        <span> = strike already in the money</span>
+        <span> = in the money</span>
+        {useLive && <span style={{ marginLeft: 12, color: '#4a6888', fontSize: 11 }}>● live bid/ask data</span>}
+        {!useLive && <span style={{ marginLeft: 12, color: '#6a5010', fontSize: 11 }}>premiums are Black-Scholes estimates</span>}
       </div>
     </div>
   )
@@ -781,6 +835,13 @@ function RecCard({ rec, ticker, maxRisk, currentPrice, ivRank, isQuickPlay, sigm
       {isQuickPlay && (
         <div className="opt-quick-note">
           High-gamma swing play · near ATM (Δ0.45) · {dte} days · verify 4H confirmation before entering
+        </div>
+      )}
+
+      {rec.chainChecked && !rec.isLive && (
+        <div className="opt-chain-warn">
+          ⚠ No liquid contract found near target delta — chain was checked but nothing tradeable met the threshold.
+          Prices are theoretical estimates. Verify at your broker before trading.
         </div>
       )}
 
@@ -1135,6 +1196,18 @@ export default function OptionsChain({
     </div>
   )
 
+  if (chainFetchDone && optionsChain?.empty) return (
+    <div className="opt-empty">
+      <div className="opt-empty-icon">🚫</div>
+      <div className="opt-empty-text">No options available for {ticker}</div>
+      <div className="opt-empty-sub">
+        This ticker has no listed options on Yahoo Finance.<br />
+        It may be an OTC stock, micro-cap, ETF, or index that does not support options trading.<br />
+        Switch to the <strong>Stock Plan</strong> tab to trade shares directly.
+      </div>
+    </div>
+  )
+
   return (
     <div className="opt-root">
       {/* Sub-view toggle */}
@@ -1226,20 +1299,6 @@ export default function OptionsChain({
       <MarketSentimentStrip optionsChain={optionsChain} currentPrice={currentPrice} />
 
       {/* Chain status banners */}
-      {chainFetchDone && optionsChain?.empty && (
-        <div className="opt-chain-noopt">
-          <span className="opt-chain-icon">✕</span>
-          <div>
-            <div className="opt-chain-noopt-title">No options listed for {ticker}</div>
-            <div className="opt-chain-noopt-sub">
-              This ticker has no active options on Yahoo Finance — it may be an OTC stock,
-              micro-cap, or a security that does not support options trading.
-              Recommendations below use Black-Scholes math and are for educational reference only —
-              verify that options are actually available at your broker before placing any order.
-            </div>
-          </div>
-        </div>
-      )}
       {chainFetchDone && !optionsChain && (
         <div className="opt-chain-unavail">
           <span className="opt-chain-icon">↺</span>
@@ -1347,12 +1406,13 @@ export default function OptionsChain({
             )
           })()}
 
-          {/* Strike comparison — primary expiry */}
+          {/* Strike comparison — primary expiry, real chain strikes when available */}
           {recs.primary && (
             <StrikeComparison
               rec={recs.primary}
               currentPrice={currentPrice}
               ticker={ticker}
+              liveContracts={optionsChain?.contracts}
             />
           )}
 
