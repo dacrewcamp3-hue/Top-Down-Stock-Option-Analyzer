@@ -143,7 +143,7 @@ export function deriveConfluenceSignals(tfDataMap, timeframes) {
   return newStates
 }
 
-// ── Swing tab (4H 8 EMA system) ─────────────────────────────────────────────
+// ── Swing tab (4H 5 EMA system) ─────────────────────────────────────────────
 
 // Auto-detects whether the last two 4H bars closed above or below the 5 EMA
 export function derive4HSwingSignals(fourHBars) {

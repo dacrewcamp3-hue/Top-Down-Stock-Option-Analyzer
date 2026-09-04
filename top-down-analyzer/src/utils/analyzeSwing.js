@@ -1,6 +1,6 @@
-// 4H 8 EMA swing trade signal logic.
-// Primary rule: 2 consecutive 4H bars close above 8 EMA = LONG ENTRY
-//               2 consecutive 4H bars close below 8 EMA = EXIT
+// 4H 5 EMA swing trade signal logic.
+// Primary rule: 2 consecutive 4H bars close above 5 EMA = LONG ENTRY
+//               2 consecutive 4H bars close below 5 EMA = EXIT
 // Secondary:    2 daily closes above/below 20D VWAP confirms or flags the signal.
 // Trend filter and market conditions generate warnings but don't block the signal.
 

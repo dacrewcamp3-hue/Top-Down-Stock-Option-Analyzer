@@ -113,7 +113,7 @@ function OrbRetestPanel({ data }) {
         </div>
       </div>
 
-      {/* Inside OR: play moving averages (8 EMA 2-bar cross-and-close) */}
+      {/* Inside OR: play moving averages (5 EMA 2-bar cross-and-close) */}
       {isInside && ema5Cfg && (
         <>
           <div className="orb-section-label">Inside Range — Play Moving Averages</div>

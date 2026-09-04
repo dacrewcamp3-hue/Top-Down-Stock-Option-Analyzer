@@ -1,13 +1,13 @@
-// Swing trade signal system — focused on the 4H 8 EMA rule.
-// Entry: 2 consecutive 4H bars close ABOVE 8 EMA
-// Exit:  2 consecutive 4H bars close BELOW 8 EMA
+// Swing trade signal system — focused on the 4H 5 EMA rule.
+// Entry: 2 consecutive 4H bars close ABOVE 5 EMA
+// Exit:  2 consecutive 4H bars close BELOW 5 EMA
 //
 // Options use `direction` (bull/bear/neutral) instead of points.
 
 export const SWING_CATEGORIES = [
   {
     id: 'fourHSignal',
-    label: '4H vs 8 EMA',
+    label: '4H vs 5 EMA',
     shortLabel: '4H',
     defaultCollapsed: false,
     fields: [
@@ -16,8 +16,8 @@ export const SWING_CATEGORIES = [
         label: 'Last Closed 4H Bar',
         type: 'single',
         options: [
-          { id: 'above', label: 'Closed Above 8 EMA', direction: 'bull' },
-          { id: 'below', label: 'Closed Below 8 EMA', direction: 'bear' },
+          { id: 'above', label: 'Closed Above 5 EMA', direction: 'bull' },
+          { id: 'below', label: 'Closed Below 5 EMA', direction: 'bear' },
         ],
       },
       {
@@ -25,8 +25,8 @@ export const SWING_CATEGORIES = [
         label: 'Previous 4H Bar',
         type: 'single',
         options: [
-          { id: 'above', label: 'Closed Above 8 EMA', direction: 'bull' },
-          { id: 'below', label: 'Closed Below 8 EMA', direction: 'bear' },
+          { id: 'above', label: 'Closed Above 5 EMA', direction: 'bull' },
+          { id: 'below', label: 'Closed Below 5 EMA', direction: 'bear' },
         ],
       },
     ],
@@ -88,8 +88,8 @@ export const SWING_CATEGORIES = [
         label: 'Stop Placement',
         type: 'single',
         options: [
-          { id: 'below8ema', label: 'Below 8 EMA (Long)', direction: 'bull' },
-          { id: 'above8ema', label: 'Above 8 EMA (Short)', direction: 'bear' },
+          { id: 'below8ema', label: 'Below 5 EMA (Long)', direction: 'bull' },
+          { id: 'above8ema', label: 'Above 5 EMA (Short)', direction: 'bear' },
           { id: 'unclear', label: 'No Clear Level', direction: 'neutral' },
         ],
       },

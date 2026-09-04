@@ -56,12 +56,12 @@ export default function TradePlan({
   const triggerDot   = tState === 'GO' ? '●' : tState === 'WATCH' ? '◑' : '○'
 
   // ── Stop price (EMA-based, ATR fallback) ──────────────────────────────────
-  const { e8, e15, e65 } = pullbackData ?? {}
+  const { e5, e15, e65 } = pullbackData ?? {}
   const stopCands = []
   if (e15 != null && (isCall ? e15 < currentPrice : e15 > currentPrice))
     stopCands.push({ label: '15 EMA', price: +e15.toFixed(2) })
-  if (e8 != null && (isCall ? e8 < currentPrice : e8 > currentPrice))
-    stopCands.push({ label: '8 EMA',  price: +e8.toFixed(2)  })
+  if (e5 != null && (isCall ? e5 < currentPrice : e5 > currentPrice))
+    stopCands.push({ label: '5 EMA',  price: +e5.toFixed(2)  })
   if (e65 != null && (isCall ? e65 < currentPrice : e65 > currentPrice))
     stopCands.push({ label: '65 EMA', price: +e65.toFixed(2) })
   const atrStop = atr != null

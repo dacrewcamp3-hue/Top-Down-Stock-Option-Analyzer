@@ -1049,7 +1049,7 @@ export default function SwingResult({
       <div className="swing-result-header">
         <div className="swing-eyebrow-row">
           <div className="swing-eyebrow-left">
-            <span className="swing-eyebrow" data-tip="4H Swing Signal: Our primary entry/exit trigger. Two consecutive 4-hour bars closing above the 8 EMA = LONG entry. Two closing below = EXIT. One bar is not enough — it takes two consecutive closes to confirm the momentum shift and filter out false signals.">4H SWING</span>
+            <span className="swing-eyebrow" data-tip="4H Swing Signal: Our primary entry/exit trigger. Two consecutive 4-hour bars closing above the 5 EMA = LONG entry. Two closing below = EXIT. One bar is not enough — it takes two consecutive closes to confirm the momentum shift and filter out false signals.">4H SWING</span>
             {ticker && <span className="swing-ticker">{ticker.toUpperCase()}</span>}
           </div>
           {dailyBias && (
@@ -1078,7 +1078,7 @@ export default function SwingResult({
             </div>
             <div className="swing-signal-desc" style={{ color: cfg.color, background: cfg.bg, borderColor: cfg.border }}>
               {confirmed
-                ? `2 consecutive 4H bars closed ${barsAbove === 2 ? 'above' : 'below'} 8 EMA`
+                ? `2 consecutive 4H bars closed ${barsAbove === 2 ? 'above' : 'below'} 5 EMA`
                 : `1 bar confirmed — waiting for next 4H close`}
             </div>
             <ActionBanner signal={signal} grade={setupGrade} />
@@ -1103,14 +1103,14 @@ export default function SwingResult({
             <BarDot value={lastBar} />
             <span className="swing-bar-label">Last bar</span>
             <span className={`swing-bar-val ${lastBar ?? 'empty'}`}>
-              {lastBar === 'above' ? 'Above 8 EMA' : lastBar === 'below' ? 'Below 8 EMA' : '—'}
+              {lastBar === 'above' ? 'Above 5 EMA' : lastBar === 'below' ? 'Below 5 EMA' : '—'}
             </span>
           </div>
           <div className="swing-bar-row">
             <BarDot value={prevBar} />
             <span className="swing-bar-label">Prev bar</span>
             <span className={`swing-bar-val ${prevBar ?? 'empty'}`}>
-              {prevBar === 'above' ? 'Above 8 EMA' : prevBar === 'below' ? 'Below 8 EMA' : '—'}
+              {prevBar === 'above' ? 'Above 5 EMA' : prevBar === 'below' ? 'Below 5 EMA' : '—'}
             </span>
           </div>
         </div>
@@ -1168,8 +1168,8 @@ export default function SwingResult({
 
       {/* ── Rules ── */}
       <div className="swing-rules-block">
-        <div className="swing-rule bull"><span className="swing-rule-icon">↑</span><span><strong>LONG</strong> — 2 × 4H bars above 8 EMA</span></div>
-        <div className="swing-rule bear"><span className="swing-rule-icon">↓</span><span><strong>EXIT</strong> — 2 × 4H bars below 8 EMA</span></div>
+        <div className="swing-rule bull"><span className="swing-rule-icon">↑</span><span><strong>LONG</strong> — 2 × 4H bars above 5 EMA</span></div>
+        <div className="swing-rule bear"><span className="swing-rule-icon">↓</span><span><strong>EXIT</strong> — 2 × 4H bars below 5 EMA</span></div>
         <div className="swing-rule vwap"><span className="swing-rule-icon">≋</span><span><strong>VWAP</strong> — 2 daily closes above/below 20D VWAP confirms direction</span></div>
       </div>
     </div>

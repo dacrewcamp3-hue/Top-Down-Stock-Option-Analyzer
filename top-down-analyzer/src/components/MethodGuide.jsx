@@ -34,7 +34,7 @@ Data loads in two phases. Phase 1 — price data and all signals — appears wit
     short: 'The weekly chart sets the only direction you\'re allowed to trade',
     body: `The weekly chart is Gate 1. It does one thing: tells you the direction. You don't time entries on the weekly. You don't look for patterns or candle formations. You ask a single binary question — is this stock in a weekly uptrend or a weekly downtrend — and the answer determines everything downstream.
 
-A bullish weekly reads: price above the 15 EMA, the 8 EMA above the 15 EMA (EMA stack in order), RSI holding above 44, and ADX above 21 with +DI above −DI. Every one of those conditions matters. An RSI below 44 on the weekly means the buyers don't have momentum yet. An ADX below 21 means there is no real trend — just drift. Neither of those lets you buy calls.
+A bullish weekly reads: price above the 15 EMA, the 5 EMA above the 15 EMA (EMA stack in order), RSI holding above 44, and ADX above 21 with +DI above −DI. Every one of those conditions matters. An RSI below 44 on the weekly means the buyers don't have momentum yet. An ADX below 21 means there is no real trend — just drift. Neither of those lets you buy calls.
 
 A bearish weekly is the mirror: price below the 15 EMA, EMAs stacked bearishly, RSI below 57, ADX above 21 with −DI leading. This is the only environment where you trade puts.
 
@@ -66,16 +66,16 @@ ADX FILTER: An ADX reading below 21 means there is no real trend — only noise.
     short: '4H two-bar rule and ORB — these are the only entries',
     body: `Gate 3 is the intraday trigger. Even when the weekly is bullish and the daily is lined up perfectly, you do not enter until Gate 3 fires. Entry without a trigger is guessing — and guessing is not part of this system.
 
-THE 4H TWO-BAR RULE: This is your primary swing entry. The rule is simple: you need two consecutive 4-hour bars closing on the correct side of the 8 EMA. For a bull entry (CALL), two consecutive 4H bars closing above the 8 EMA. For a bear entry (PUT), two consecutive bars closing below it. One bar doesn't count — it filters out false breaks and noise. Two bars means the momentum has shifted and held.
+THE 4H TWO-BAR RULE: This is your primary swing entry. The rule is simple: you need two consecutive 4-hour bars closing on the correct side of the 5 EMA. For a bull entry (CALL), two consecutive 4H bars closing above the 5 EMA. For a bear entry (PUT), two consecutive bars closing below it. One bar doesn't count — it filters out false breaks and noise. Two bars means the momentum has shifted and held.
 
-This rule is auto-detected by the app every time you load a ticker. The Swing tab shows the current bar and previous bar status (Above 8 EMA / Below 8 EMA). When both show the same result, Gate 3 is confirmed. The app shows "4H confirmed" in the Brief header. Until both bars confirm, Gate 3 shows "1 BAR" (partial) — which means watch, not enter.
+This rule is auto-detected by the app every time you load a ticker. The Swing tab shows the current bar and previous bar status (Above 5 EMA / Below 5 EMA). When both show the same result, Gate 3 is confirmed. The app shows "4H confirmed" in the Brief header. Until both bars confirm, Gate 3 shows "1 BAR" (partial) — which means watch, not enter.
 
 THE ORB (OPENING RANGE BREAKOUT): During market hours, this is your secondary trigger. The first 15-minute candle of the trading day sets the range: ORH (range high) and ORL (range low). A confirmed close above ORH with a retest and bounce = bull entry. Below ORL with a retest = bear entry. The app tracks both live. The ORB signal fires in the verdict bar at the bottom of the screen the moment a break and retest registers. An ORB break automatically opens Gate 3 on the Brief — even without the 4H two-bar rule being met.
 
 THE ENTRY: When Gate 3 opens, you don't delay. You execute the trade plan the app has already built for you — the recommended option (Brief tab) and the Stock Entry plan below it. Both are live and ready the moment you load the ticker.
 
 SETUP GRADE: Gate 3 is when the Setup Grade becomes meaningful. A+ means 80%+ of all swing checks are passing — 4H confirmed, RSI signal, ADX, MA stack, volume, patterns. This grade directly affects DTE recommendations for options and signals that all the executor conditions are stacked in your favor.`,
-    rule: 'Two 4H bars on the same side of the 8 EMA = Gate 3 open. One bar = watch, not trade. ORB break + retest also unlocks Gate 3. No entry before Gate 3 fires.',
+    rule: 'Two 4H bars on the same side of the 5 EMA = Gate 3 open. One bar = watch, not trade. ORB break + retest also unlocks Gate 3. No entry before Gate 3 fires.',
   },
   {
     num: '05',
@@ -87,7 +87,7 @@ WHY STOCK AND OPTIONS TOGETHER: Options provide leverage. A single option contra
 
 THE STOCK ENTRY CARD: After loading a ticker, the Brief shows a STOCK TRADE card with:
 — Entry at market price
-— Stop loss at the primary EMA (15 EMA by default, 8 EMA for aggressive, 65 EMA for wide) or 1.5× ATR fallback if no EMA is valid
+— Stop loss at the primary EMA (15 EMA by default, 5 EMA for aggressive, 65 EMA for wide) or 1.5× ATR fallback if no EMA is valid
 — Target 1 and Target 2 at Fibonacci extensions
 — Position size in shares (calculated from your account size and risk %)
 — Dollar amount at each target: exactly what you pocket in dollars if the stock hits T1 or T2
@@ -96,7 +96,7 @@ POSITION SIZING: Every calculation uses your account size and risk percentage fr
 
 DOLLAR TARGETS: This is the number that matters. Not a percentage, not an R:R ratio — actual dollars. At Target 1 (first Fibonacci extension), the card shows exactly "+$X" in your direction color. At Target 2, "+$Y". The R:R ratio is shown as X:1 next to each target. You always know what winning looks like before you enter.
 
-STOP LOGIC: The preferred stop is the 15 EMA for longs (below price) and 15 EMA for shorts (above price). If price is too close to the 15 EMA to provide meaningful distance, the app falls back to the 8 EMA (tighter, more aggressive) or the 65 EMA (wider, for high-volatility names). If none are valid, 1.5× ATR is the fallback. The stop is always meaningful — not arbitrary.`,
+STOP LOGIC: The preferred stop is the 15 EMA for longs (below price) and 15 EMA for shorts (above price). If price is too close to the 15 EMA to provide meaningful distance, the app falls back to the 5 EMA (tighter, more aggressive) or the 65 EMA (wider, for high-volatility names). If none are valid, 1.5× ATR is the fallback. The stop is always meaningful — not arbitrary.`,
     rule: 'Know your dollar target before entry. If Target 1 is less than 2:1 R:R from your stop, the setup doesn\'t meet the minimum. Stock and options are both valid — the setup quality determines which you use.',
   },
   {
