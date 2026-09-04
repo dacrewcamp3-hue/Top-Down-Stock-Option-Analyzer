@@ -1178,7 +1178,7 @@ export default function PriceChart({
             </span>
             <span className="pc-legend">
               {/* ── EMA lines (only show active groups) ── */}
-              {showEntryEmas && <><span className="pc-leg-dot" style={{ background: '#f472b6' }} />E8 · {emaNames[8]}</>}
+              {showEntryEmas && <><span className="pc-leg-dot" style={{ background: '#f472b6' }} />E5 · {emaNames[5]}</>}
               {showEntryEmas && <><span className="pc-leg-dot" style={{ background: '#84cc16' }} />E15 · {emaNames[15]}</>}
               {showEntryEmas && <><span className="pc-leg-dot" style={{ background: '#06b6d4' }} />E30 · {emaNames[30]}</>}
               {showTrendEmas && <><span className="pc-leg-dot" style={{ background: '#a855f7' }} />E65 · {emaNames[65]}</>}
@@ -2245,7 +2245,7 @@ export default function PriceChart({
         {crosshair && (() => {
           // Build EMA label list for collision avoidance
           const emaInfo = [
-            { val: hov?.e8,   col: '#f472b6', name: 'E8'   },
+            { val: hov?.e8,   col: '#f472b6', name: 'E5'   },
             { val: hov?.e15,  col: '#84cc16', name: 'E15'  },
             { val: hov?.e30,  col: '#06b6d4', name: 'E30'  },
             { val: hov?.e65,  col: '#a855f7', name: 'E65'  },

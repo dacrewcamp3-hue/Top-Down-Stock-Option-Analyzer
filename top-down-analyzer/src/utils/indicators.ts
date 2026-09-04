@@ -82,9 +82,9 @@ export function calcEMA(closes: number[], period: number): number | null {
   return series[series.length - 1]
 }
 
-// MA Stack: 8, 15, 30, 65, 200 EMAs — 200 = outer ring, 30 = midfield (final decision), 8 = entry/exit
+// MA Stack: 5, 15, 30, 65, 200 EMAs — 200 = outer ring, 30 = midfield (final decision), 5 = entry/exit
 export function calcMAStack(closes) {
-  if (!closes || closes.length < 8) return null
+  if (!closes || closes.length < 5) return null
   const price = closes[closes.length - 1]
 
   // Compute full series for 200 and 65 to enable cross detection
@@ -99,7 +99,7 @@ export function calcMAStack(closes) {
     { period: 65,  val: ema65Series[ema65Series.length - 1],   role: 'strong',   label: '65',  note: 'Trend Strength' },
     { period: 30,  val: calcEMA(closes, 30), role: 'midfield', label: '30',  note: 'Midfield · Final Decision' },
     { period: 15,  val: calcEMA(closes, 15), role: 'minor',    label: '15',  note: 'Momentum' },
-    { period: 8,   val: calcEMA(closes, 8),  role: 'entry',    label: '8',   note: 'Entry / Exit Only' },
+    { period: 5,   val: calcEMA(closes, 5),  role: 'entry',    label: '5',   note: 'Entry / Exit Only' },
   ]
 
   let bullCount = 0, bearCount = 0, validCount = 0
@@ -602,16 +602,16 @@ export function classifyPullback(fibLevels, bars) {
     : ((cur - trough) / range) * 100
   retracePct = Math.max(-5, Math.min(105, retracePct))
 
-  const e8Arr  = calcEMASeries(closes, 8)
+  const e5Arr  = calcEMASeries(closes, 5)
   const e15Arr = calcEMASeries(closes, 15)
   const e65Arr = calcEMASeries(closes, 65)
-  const e8  = e8Arr[n - 1]
+  const e5  = e5Arr[n - 1]
   const e15 = e15Arr[n - 1]
   const e65 = e65Arr[n - 1]
-  const holds8  = isUptrend ? cur >= e8  : cur <= e8
+  const holds5  = isUptrend ? cur >= e5  : cur <= e5
   const holds15 = isUptrend ? cur >= e15 : cur <= e15
   const holds65 = isUptrend ? cur >= e65 : cur <= e65
-  const emaSupport = holds8 ? '8' : holds15 ? '15' : holds65 ? '65' : null
+  const emaSupport = holds5 ? '5' : holds15 ? '15' : holds65 ? '65' : null
 
   // Volume character: recent 5-bar average vs prior 15-bar average
   const recent5 = volumes.slice(-5).filter(v => v > 0)
@@ -630,12 +630,12 @@ export function classifyPullback(fibLevels, bars) {
   } else if (retracePct < 23.6) {
     type = 'MICRO'; label = 'MICRO PULLBACK'; color = '#10b981'
     actionLabel = 'HIGHEST CONVICTION'; actionColor = '#10b981'
-    description = `Only ${retracePct.toFixed(0)}% retraced — a micro pullback inside a powerful trend. ${holds8 ? 'The 8 EMA is still intact, confirming strong momentum.' : 'Testing the 8 EMA area.'} ${volumeSignal === 'DECLINING' ? 'Volume drying up on the dip — no distribution pressure, institutions are holding.' : ''} Aggressive traders may enter here; conservative traders look for a 2-bar close confirmation.`
+    description = `Only ${retracePct.toFixed(0)}% retraced — a micro pullback inside a powerful trend. ${holds5 ? 'The 5 EMA is still intact, confirming strong momentum.' : 'Testing the 5 EMA area.'} ${volumeSignal === 'DECLINING' ? 'Volume drying up on the dip — no distribution pressure, institutions are holding.' : ''} Aggressive traders may enter here; conservative traders look for a 2-bar close confirmation.`
   } else if (retracePct < 38.2) {
     type = 'TIGHT'; label = 'TIGHT PULLBACK'; color = '#34d399'
     actionLabel = holds15 ? 'WATCH FOR ENTRY' : 'WAIT — EMA TEST'
     actionColor = holds15 ? '#34d399' : '#f59e0b'
-    description = `${retracePct.toFixed(0)}% pullback into the 23.6–38.2% Fibonacci zone. ${isUptrend ? 'Bulls' : 'Bears'} remain in clear control. ${holds8 ? 'The 8 EMA is holding as support.' : holds15 ? 'The 15 EMA is providing support — a classic continuation entry zone.' : 'No EMA support yet; wait for a 2-bar reclaim before entering.'} ${volumeSignal === 'DECLINING' ? 'Volume declining on the dip confirms no distribution pressure.' : ''}`
+    description = `${retracePct.toFixed(0)}% pullback into the 23.6–38.2% Fibonacci zone. ${isUptrend ? 'Bulls' : 'Bears'} remain in clear control. ${holds5 ? 'The 5 EMA is holding as support.' : holds15 ? 'The 15 EMA is providing support — a classic continuation entry zone.' : 'No EMA support yet; wait for a 2-bar reclaim before entering.'} ${volumeSignal === 'DECLINING' ? 'Volume declining on the dip confirms no distribution pressure.' : ''}`
   } else if (retracePct < 50) {
     type = 'NORMAL'; label = 'NORMAL PULLBACK'; color = '#a3e635'
     actionLabel = holds15 ? 'PRIME ENTRY ZONE' : 'WAIT FOR CONFIRM'
@@ -663,8 +663,8 @@ export function classifyPullback(fibLevels, bars) {
     type, label, color, actionLabel, actionColor, description,
     retracePct: +retracePct.toFixed(1),
     isUptrend,
-    emaSupport, holds8, holds15, holds65,
-    e8:  e8  != null ? +e8.toFixed(2)  : null,
+    emaSupport, holds5, holds15, holds65,
+    e5:  e5  != null ? +e5.toFixed(2)  : null,
     e15: e15 != null ? +e15.toFixed(2) : null,
     e65: e65 != null ? +e65.toFixed(2) : null,
     volumeSignal, volRatio: +volRatio.toFixed(2),

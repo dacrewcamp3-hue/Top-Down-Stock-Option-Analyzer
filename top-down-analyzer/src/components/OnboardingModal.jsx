@@ -13,7 +13,7 @@ const NAV_ITEMS = [
 ]
 
 const EMA_META = [
-  { ema: 8,   role: 'Momentum — first to feel every move',       col: '#06b6d4' },
+  { ema: 5,   role: 'Momentum — first to feel every move',       col: '#06b6d4' },
   { ema: 15,  role: 'Entries & exits — confirms the signal',     col: '#f97316' },
   { ema: 30,  role: 'Direction — the midfield test',             col: '#84cc16' },
   { ema: 65,  role: 'Support & resistance — the major levels',   col: '#a855f7' },

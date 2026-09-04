@@ -755,7 +755,7 @@ export default function NilGuide({ vixData, breadthData }) {
             {' '}{emaNames[65]} (65) marks the major levels of support and resistance.
             {' '}{emaNames[30]} (30) reveals the directional bias.
             {' '}{emaNames[15]} (15) confirms your entry and exit.
-            {' '}{emaNames[8]} (8) is first to feel every move — your momentum gauge.
+            {' '}{emaNames[5]} (5) is first to feel every move — your momentum gauge.
           </div>
         </div>
       </div>

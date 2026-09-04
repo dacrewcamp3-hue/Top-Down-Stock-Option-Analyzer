@@ -40,7 +40,7 @@ export default function VerdictPanel({
   qty,
 }) {
   const emaNames = useEmaNames()
-  const e8n  = emaNames[8]
+  const e8n  = emaNames[5]
   const e15n = emaNames[15]
 
   const isCall = direction === 'CALL'

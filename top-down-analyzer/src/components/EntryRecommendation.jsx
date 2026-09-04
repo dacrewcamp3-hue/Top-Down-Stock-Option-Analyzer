@@ -62,7 +62,7 @@ function OrbSteps({ signal }) {
 
 function OrbRetestPanel({ data }) {
   const emaNames = useEmaNames()
-  const e8n      = emaNames[8]
+  const e8n      = emaNames[5]
   const rawCfg   = ORB_CFG[data.signal] ?? ORB_CFG.INSIDE
   const cfg      = data.signal === 'INSIDE'
     ? { ...rawCfg, sub: `Price is between ORH and ORL — no break yet. Play moving averages: ${e8n} (EMA 5) 2-bar cross-and-close on the 5M chart for intraday entries.` }
@@ -299,7 +299,7 @@ function GateRow({ weeklyGate, dailyGate, signal, swingResult, orbRetest, vwapSi
   if (!weeklyGate && !dailyGate) return null
 
   const emaNames = useEmaNames()
-  const e8n      = emaNames[8]   // e.g. "Sister"
+  const e8n      = emaNames[5]   // e.g. "Sister"
   const isCall   = signal === 'CALL'
 
   const cfg = {
@@ -405,7 +405,7 @@ function BlockerList({ topBlockers, signal, gateBlocked, targetDir }) {
 
 function SignalExplainer({ signal, gateBlocked, weeklyGate, dailyGate, gate3, confluence, totalSignals, totalBull, totalBear }) {
   const emaNames = useEmaNames()
-  const e8n      = emaNames[8]
+  const e8n      = emaNames[5]
   if (totalSignals === 0) return null
 
   if (gateBlocked) {

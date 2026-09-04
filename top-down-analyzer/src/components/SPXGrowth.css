@@ -434,6 +434,102 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Crash tag */
+.spx-crash-tag {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #ef4444;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+  cursor: help;
+}
+
+/* Table footer notes */
+.spx-table-footer {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 0.7rem;
+  color: var(--muted2, #64748b);
+  padding: 8px 12px;
+  border-top: 1px solid var(--border, #334155);
+}
+.spx-footnote-inline { white-space: nowrap; }
+
+/* Chart legend */
+.spx-chart-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 0 8px 6px;
+  font-size: 0.72rem;
+  color: var(--muted, #94a3b8);
+}
+.spx-chart-legend-item { display: flex; align-items: center; gap: 4px; }
+.spx-chart-legend-crash { cursor: help; }
+
+/* ── Educational tooltip ── */
+.spx-tip {
+  position: relative;
+  display: inline-block;
+}
+.spx-tip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: rgba(148,163,184,0.18);
+  color: #94a3b8;
+  font-size: 0.6rem;
+  font-weight: 700;
+  margin-left: 3px;
+  vertical-align: middle;
+  cursor: help;
+  line-height: 1;
+  font-style: normal;
+}
+.spx-tip-box {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 0.74rem;
+  line-height: 1.55;
+  color: #e2e8f0;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  z-index: 200;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  white-space: normal;
+  text-align: left;
+}
+.spx-tip-wide .spx-tip-box { width: 300px; }
+.spx-tip:hover .spx-tip-box { display: block; }
+
+/* Upward tooltip — flip to below when near top of page */
+.spx-tip-up .spx-tip-box {
+  top: calc(100% + 8px);
+  bottom: auto;
+}
+
 /* Utility */
 .pos { color: #22c55e !important; }
 .neg { color: #ef4444 !important; }

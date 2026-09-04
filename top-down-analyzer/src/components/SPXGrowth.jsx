@@ -1,7 +1,17 @@
 import { useState, useMemo } from 'react'
 import './SPXGrowth.css'
 
-// S&P 500 annual total returns (price + dividends reinvested), 1986–2026
+// ── Educational tooltip wrapper ──────────────────────────────────────────────
+function Tip({ children, text, wide, up }) {
+  return (
+    <span className={`spx-tip${wide ? ' spx-tip-wide' : ''}${up ? ' spx-tip-up' : ''}`}>
+      {children}
+      <span className="spx-tip-box">{text}</span>
+    </span>
+  )
+}
+
+// ── S&P 500 annual total returns (price + dividends reinvested), 1986–2026 ──
 const SP500_ANNUAL = [
   { year: 1986, ret: 18.67 },
   { year: 1987, ret:  5.25 },
@@ -93,6 +103,16 @@ const CPI_ANNUAL = [
 
 const CPI_MAP = Object.fromEntries(CPI_ANNUAL.map(d => [d.year, d.inf]))
 
+const CRASH_NOTES = {
+  1990: 'Gulf War recession — S&P dropped ~20% peak to trough.',
+  2000: 'Dot-com bubble peak — internet stocks had been wildly overvalued.',
+  2001: 'Dot-com crash continued + September 11 market shock.',
+  2002: 'Dot-com crash bottom — 3-year total S&P drop was ~49%.',
+  2008: 'The Great Financial Crisis — housing bubble collapse, banks failed. S&P dropped ~57% peak to trough.',
+  2018: 'Fed rate hike fears — market dropped ~20% in Q4 then fully recovered by April 2019.',
+  2022: 'Post-COVID inflation spike — Fed raised rates aggressively. S&P dropped ~25%.',
+}
+
 const YEAR_MIN = 1986
 const YEAR_MAX = 2026
 const MIN_INVEST = 1000
@@ -101,7 +121,6 @@ function fmtDollar(n) {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
   return `$${Math.round(n).toLocaleString()}`
 }
-
 function fmtMultiple(ratio) {
   if (ratio >= 10) return `${ratio.toFixed(0)}×`
   return `${ratio.toFixed(1)}×`
@@ -109,10 +128,8 @@ function fmtMultiple(ratio) {
 
 const PRESET_YEARS   = [1986, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
 const PRESET_AMOUNTS = [1000, 5000, 10000, 25000, 50000]
-const CRASH_YEARS    = new Set([1990, 2000, 2001, 2002, 2008, 2018, 2022])
-
-// Percentage position of a year along the full 1986–2026 track
-const yearPct = y => ((y - YEAR_MIN) / (YEAR_MAX - YEAR_MIN)) * 100
+const CRASH_YEARS    = new Set(Object.keys(CRASH_NOTES).map(Number))
+const yearPct        = y => ((y - YEAR_MIN) / (YEAR_MAX - YEAR_MIN)) * 100
 
 export default function SPXGrowth() {
   const [startYear,  setStartYear]  = useState(1990)
@@ -122,23 +139,17 @@ export default function SPXGrowth() {
   const [hoveredIdx, setHoveredIdx] = useState(null)
   const [mode,       setMode]       = useState('nominal')
 
-  const changeStart = v => {
-    const n = Math.min(+v, endYear - 1)
-    setStartYear(n)
-  }
-  const changeEnd = v => {
-    const n = Math.max(+v, startYear + 1)
-    setEndYear(n)
-  }
+  const changeStart = v => setStartYear(Math.min(+v, endYear - 1))
+  const changeEnd   = v => setEndYear(Math.max(+v, startYear + 1))
 
   const growthRows = useMemo(() => {
     const rows = []
     let balance = investment
     for (const d of SP500_ANNUAL) {
       if (d.year < startYear || d.year > endYear) continue
-      const prev    = balance
-      const spxRet  = d.ret / 100
-      const cpi     = (CPI_MAP[d.year] ?? 2.5) / 100
+      const prev      = balance
+      const spxRet    = d.ret / 100
+      const cpi       = (CPI_MAP[d.year] ?? 2.5) / 100
       const annualRet = mode === 'real'
         ? ((1 + spxRet) / (1 + cpi)) - 1
         : spxRet
@@ -165,8 +176,7 @@ export default function SPXGrowth() {
     : null
 
   // SVG chart
-  const W = 1000
-  const H = 220
+  const W = 1000, H = 220
   const PAD = { top: 18, bottom: 30, left: 4, right: 4 }
   const innerW = W - PAD.left - PAD.right
   const innerH = H - PAD.top - PAD.bottom
@@ -196,7 +206,6 @@ export default function SPXGrowth() {
     if (!isNaN(n) && n >= MIN_INVEST) setInvestment(n)
   }
 
-  // Track fill percentages for dual range
   const trackLeft  = yearPct(startYear)
   const trackRight = 100 - yearPct(endYear)
 
@@ -214,14 +223,24 @@ export default function SPXGrowth() {
           </p>
         </div>
         <div className="spx-mode-toggle">
-          <button
-            className={`spx-mode-btn${!isReal ? ' active' : ''}`}
-            onClick={() => setMode('nominal')}
-          >Nominal</button>
-          <button
-            className={`spx-mode-btn real${isReal ? ' active' : ''}`}
-            onClick={() => setMode('real')}
-          >Inflation-Adj.</button>
+          <Tip
+            text="Shows raw dollar amounts — what your account statement would literally say. No math adjustments. Just the actual growth."
+            wide up
+          >
+            <button
+              className={`spx-mode-btn${!isReal ? ' active' : ''}`}
+              onClick={() => setMode('nominal')}
+            >Nominal</button>
+          </Tip>
+          <Tip
+            text="Shows real purchasing power. A dollar in 1990 bought way more than a dollar today. This strips inflation out so you can see what your gain actually means in terms of what you can BUY — not just the number on paper."
+            wide up
+          >
+            <button
+              className={`spx-mode-btn real${isReal ? ' active' : ''}`}
+              onClick={() => setMode('real')}
+            >Inflation-Adj.</button>
+          </Tip>
         </div>
       </div>
 
@@ -230,8 +249,8 @@ export default function SPXGrowth() {
           <span className="spx-mode-note-icon">ℹ</span>
           <span>
             <strong>Inflation-adjusted (real) returns</strong> — each year's S&amp;P 500 gain is
-            reduced by that year's CPI rate. Shows your actual purchasing-power gain in{' '}
-            <strong>{startYear} dollars</strong>.
+            reduced by that year's CPI inflation rate. Result is in <strong>{startYear} purchasing-power dollars</strong>.
+            Example: market up 10%, inflation 4% → real gain is only ~5.8%.
           </span>
         </div>
       )}
@@ -239,14 +258,19 @@ export default function SPXGrowth() {
       {/* ── Dual-range year slider ── */}
       <div className="spx-ctrl-block">
         <div className="spx-ctrl-label">
-          Year Range &nbsp;
+          <Tip
+            text="Slide the LEFT dot to pick your start year — when the investment was first made. Slide the RIGHT dot to pick when it ended. Drag them anywhere between 1986 and 2026."
+            wide
+          >
+            Year Range <span className="spx-tip-icon">?</span>
+          </Tip>
+          &nbsp;
           <span className="spx-ctrl-val">{startYear}</span>
           <span className="spx-range-arrow"> → </span>
           <span className="spx-ctrl-val">{endYear}</span>
           <span className="spx-range-span"> ({years} yr{years !== 1 ? 's' : ''})</span>
         </div>
 
-        {/* Quick-start presets */}
         <div className="spx-preset-row">
           <span className="spx-preset-label">Start:</span>
           {PRESET_YEARS.map(y => (
@@ -258,47 +282,36 @@ export default function SPXGrowth() {
           ))}
         </div>
 
-        {/* Dual handle slider */}
         <div
           className="spx-dual-wrap"
           style={{ '--track-left': `${trackLeft}%`, '--track-right': `${trackRight}%` }}
         >
-          {/* filled track segment */}
-          <div className="spx-dual-track">
-            <div className="spx-dual-fill" />
-          </div>
-
-          {/* Start handle */}
-          <input
-            type="range"
-            min={YEAR_MIN} max={YEAR_MAX} step={1}
-            value={startYear}
+          <div className="spx-dual-track"><div className="spx-dual-fill" /></div>
+          <input type="range" min={YEAR_MIN} max={YEAR_MAX} step={1} value={startYear}
             onChange={e => changeStart(e.target.value)}
             className="spx-dual-input spx-dual-start"
+            title={`Start year: ${startYear} — drag right to start later`}
           />
-          {/* End handle */}
-          <input
-            type="range"
-            min={YEAR_MIN} max={YEAR_MAX} step={1}
-            value={endYear}
+          <input type="range" min={YEAR_MIN} max={YEAR_MAX} step={1} value={endYear}
             onChange={e => changeEnd(e.target.value)}
             className="spx-dual-input spx-dual-end"
+            title={`End year: ${endYear} — drag left to see what an early exit looks like`}
           />
         </div>
 
-        <div className="spx-range-labels">
-          <span>{YEAR_MIN}</span>
-          <span>{YEAR_MAX}</span>
-        </div>
+        <div className="spx-range-labels"><span>{YEAR_MIN}</span><span>{YEAR_MAX}</span></div>
       </div>
 
-      {/* ── Investment amount controls ── */}
+      {/* ── Investment amount ── */}
       <div className="spx-ctrl-block">
-        <div className="spx-ctrl-label">Initial Investment</div>
+        <div className="spx-ctrl-label">
+          <Tip text="How much you invested at the start. You put it in once and never added to it — pure compound growth. $1,000 is the minimum to show how even small amounts snowball over time.">
+            Initial Investment <span className="spx-tip-icon">?</span>
+          </Tip>
+        </div>
         <div className="spx-preset-row">
           {PRESET_AMOUNTS.map(a => (
-            <button
-              key={a}
+            <button key={a}
               className={`spx-pill${investment === a ? ' active' : ''}`}
               onClick={() => { setInvestment(a); setCustomAmt(a.toString()) }}
             >${a.toLocaleString()}</button>
@@ -306,11 +319,9 @@ export default function SPXGrowth() {
         </div>
         <div className="spx-custom-row">
           <span className="spx-dollar-sign">$</span>
-          <input
-            type="number" min={MIN_INVEST} value={customAmt}
+          <input type="number" min={MIN_INVEST} value={customAmt}
             onChange={e => handleAmtChange(e.target.value)}
-            className="spx-custom-input"
-            placeholder="Custom amount…"
+            className="spx-custom-input" placeholder="Custom amount…"
           />
         </div>
       </div>
@@ -319,28 +330,57 @@ export default function SPXGrowth() {
       <div className={`spx-banner${isReal ? ' spx-banner-real' : ''}`}>
         <div className="spx-banner-main">
           <div className="spx-banner-label">
-            {fmtDollar(investment)} invested {startYear} → {endYear}
+            <Tip text={`You put in ${fmtDollar(investment)} once and left it alone in an S&P 500 index fund — no adding, no selling, no timing the market. Just patience.`}>
+              {fmtDollar(investment)} invested in {startYear}
+              <span className="spx-tip-icon">?</span>
+            </Tip>
+            {' → '}
             {isReal && <span className="spx-banner-badge">real {startYear} $</span>}
           </div>
+
           <div className="spx-banner-value" style={{ color: accentColor }}>
-            {fmtDollar(finalBalance)}
+            <Tip text={`What that one investment is worth in ${endYear}. The market did the work. You just had to not sell.`} wide>
+              {fmtDollar(finalBalance)}
+              <span className="spx-tip-icon" style={{ fontSize: '0.6em', verticalAlign: 'super' }}>?</span>
+            </Tip>
           </div>
+
           <div className="spx-banner-sub">
-            {totalGain >= 0 ? '+' : ''}{fmtDollar(Math.abs(totalGain))} gain &nbsp;·&nbsp;
-            {fmtMultiple(multiple)} your money &nbsp;·&nbsp;
-            {cagr}% / yr CAGR
+            <Tip text={`Total profit above what you put in. ${fmtMultiple(multiple)} means every dollar you invested turned into ${fmtMultiple(multiple)} dollars. This is the power of compound growth — your gains earn gains.`}>
+              {totalGain >= 0 ? '+' : ''}{fmtDollar(Math.abs(totalGain))} gain &nbsp;·&nbsp; {fmtMultiple(multiple)} your money
+              <span className="spx-tip-icon">?</span>
+            </Tip>
+            &nbsp;·&nbsp;
+            <Tip text={`Compound Annual Growth Rate — the average yearly speed of your investment. A ${cagr}% CAGR means if it grew at exactly this rate every single year, you'd get the same result. It's how you compare investments fairly across time.`}>
+              {cagr}% / yr CAGR <span className="spx-tip-icon">?</span>
+            </Tip>
             {isReal && <span className="spx-banner-real-note"> after inflation</span>}
           </div>
         </div>
         <div className="spx-banner-years">{years} yr{years !== 1 ? 's' : ''} in market</div>
       </div>
 
-      {/* ── SVG Chart ── */}
+      {/* ── Chart ── */}
       <div className="spx-chart-wrap">
+        <div className="spx-chart-legend">
+          <span className="spx-chart-legend-item">
+            <span style={{ color: accentColor }}>▬</span> Portfolio value
+          </span>
+          <Tip text="These dashed red lines mark years when the market had a major crash. The key lesson: every single one of them recovered. Investors who stayed in came out ahead." wide>
+            <span className="spx-chart-legend-item spx-chart-legend-crash">
+              <span style={{ color: '#ef4444' }}>╌</span> Major crash year
+              <span className="spx-tip-icon">?</span>
+            </span>
+          </Tip>
+        </div>
+
         {hRow && (
           <div className="spx-tooltip-box">
             <strong>{hRow.year}{hRow.est ? ' *' : ''}</strong>
             &nbsp;·&nbsp;
+            {CRASH_YEARS.has(hRow.year) && (
+              <span style={{ color: '#f97316', fontSize: '0.75em' }}>⚠ crash year &nbsp;</span>
+            )}
             {isReal && <span style={{ color: '#f59e0b', fontSize: '0.75em' }}>CPI {hRow.inf.toFixed(1)}%&nbsp; </span>}
             <span className={displayRet(hRow) >= 0 ? 'pos' : 'neg'}>
               {isReal ? 'Real' : 'S&P'} {displayRet(hRow) >= 0 ? '+' : ''}{displayRet(hRow).toFixed(2)}%
@@ -350,8 +390,14 @@ export default function SPXGrowth() {
             <span className={hRow.delta >= 0 ? 'pos' : 'neg'}>
               {hRow.delta >= 0 ? '+' : ''}{fmtDollar(Math.abs(hRow.delta))}
             </span>
+            {CRASH_YEARS.has(hRow.year) && (
+              <div style={{ fontSize: '0.72em', color: '#94a3b8', marginTop: 3 }}>
+                {CRASH_NOTES[hRow.year]}
+              </div>
+            )}
           </div>
         )}
+
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none"
           className="spx-svg" onMouseLeave={() => setHoveredIdx(null)}>
           <defs>
@@ -372,7 +418,7 @@ export default function SPXGrowth() {
               <line key={r.year}
                 x1={toX(i + 1)} y1={PAD.top}
                 x2={toX(i + 1)} y2={PAD.top + innerH}
-                stroke="#ef4444" strokeWidth="1" strokeOpacity="0.22"
+                stroke="#ef4444" strokeWidth="1" strokeOpacity="0.28"
                 strokeDasharray="4 3" />
             ) : null
           )}
@@ -389,8 +435,7 @@ export default function SPXGrowth() {
           ))}
 
           {hoveredIdx !== null && allPts[hoveredIdx + 1] && (
-            <circle
-              cx={allPts[hoveredIdx + 1].x} cy={allPts[hoveredIdx + 1].y}
+            <circle cx={allPts[hoveredIdx + 1].x} cy={allPts[hoveredIdx + 1].y}
               r="5" fill={accentColor} stroke="#fff" strokeWidth="2" />
           )}
 
@@ -408,12 +453,40 @@ export default function SPXGrowth() {
         <table className="spx-table">
           <thead>
             <tr>
-              <th>Year</th>
-              <th>S&amp;P Return</th>
-              {isReal && <th>CPI</th>}
-              {isReal && <th>Real Return</th>}
-              <th>Balance</th>
-              <th>Year Gain / Loss</th>
+              <th>
+                <Tip text="Each row is one calendar year. Hover a row to see context about what happened. Red rows = years the market dropped." up>
+                  Year <span className="spx-tip-icon">?</span>
+                </Tip>
+              </th>
+              <th>
+                <Tip text="The S&P 500's total return that year — stock price movement plus dividends reinvested. Positive = market went up. Negative = it dropped. The long-term average is ~10%/year. Single years can swing wildly." up wide>
+                  S&amp;P Return <span className="spx-tip-icon">?</span>
+                </Tip>
+              </th>
+              {isReal && (
+                <th>
+                  <Tip text="Consumer Price Index — how much everyday prices rose that year. Groceries, rent, gas. When CPI is high (like 2022's 8%), inflation is quietly stealing from your returns." up wide>
+                    CPI <span className="spx-tip-icon">?</span>
+                  </Tip>
+                </th>
+              )}
+              {isReal && (
+                <th>
+                  <Tip text="Your real gain after inflation. Formula: (1 + S&P Return) ÷ (1 + CPI) − 1. This is the honest number. If the market returned 10% but prices rose 8%, you only got ~1.85% richer in terms of buying power." up wide>
+                    Real Return <span className="spx-tip-icon">?</span>
+                  </Tip>
+                </th>
+              )}
+              <th>
+                <Tip text="Your total account value at year end. Watch how the jumps get bigger as the balance grows — that's compounding. The same 10% return on $100K earns $10K. On $1M it earns $100K." up wide>
+                  Balance <span className="spx-tip-icon">?</span>
+                </Tip>
+              </th>
+              <th>
+                <Tip text="How many dollars you gained or lost in that single year. Red years feel terrible in the moment. But look at what came after every single crash in this table — the market recovered every time." up wide>
+                  Year Gain / Loss <span className="spx-tip-icon">?</span>
+                </Tip>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -431,8 +504,13 @@ export default function SPXGrowth() {
                   displayRet(r) < 0 ? 'spx-neg-row' : '',
                   CRASH_YEARS.has(r.year) ? 'spx-crash-row' : '',
                 ].join(' ').trim()}
+                title={CRASH_YEARS.has(r.year) ? CRASH_NOTES[r.year] : undefined}
               >
-                <td>{r.year}{r.est ? <span className="spx-est-tag">est.</span> : ''}</td>
+                <td>
+                  {r.year}
+                  {CRASH_YEARS.has(r.year) && <span className="spx-crash-tag" title={CRASH_NOTES[r.year]}>crash</span>}
+                  {r.est && <span className="spx-est-tag">est.</span>}
+                </td>
                 <td className={r.nomRet >= 0 ? 'pos' : 'neg'}>
                   {r.nomRet >= 0 ? '+' : ''}{r.nomRet.toFixed(2)}%
                 </td>
@@ -450,12 +528,17 @@ export default function SPXGrowth() {
             ))}
           </tbody>
         </table>
-        <p className="spx-footnote">
-          {isReal
-            ? `* Real returns = S&P 500 return minus CPI inflation each year. Balances in ${startYear} purchasing-power dollars. 2025–2026 CPI and returns are estimated. Educational use only.`
-            : '* 2025–2026 returns are estimated. Annual figures include dividend reinvestment. Red dashed lines mark notable crash years. Educational use only — past performance does not guarantee future results.'
-          }
-        </p>
+        <div className="spx-table-footer">
+          <Tip text="2025 and 2026 returns are our best estimate based on available data — they will change as the year plays out. Everything from 1986–2024 is actual historical data." wide>
+            <span className="spx-footnote-inline">* estimated years <span className="spx-tip-icon">?</span></span>
+          </Tip>
+          <span className="spx-footnote-inline">·</span>
+          <Tip text="'Crash' years are major market downturns of 20%+ that made headlines. Every one of them recovered within a few years. This is why time in the market beats timing the market." wide>
+            <span className="spx-footnote-inline">crash = major drawdown <span className="spx-tip-icon">?</span></span>
+          </Tip>
+          <span className="spx-footnote-inline">·</span>
+          <span className="spx-footnote-inline">For educational use only.</span>
+        </div>
       </div>
 
     </div>
