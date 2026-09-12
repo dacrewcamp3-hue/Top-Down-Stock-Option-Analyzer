@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { generateRecommendations, bsPrice, calcGreeks } from '../utils/fetchOptions'
 import GEXChart from './GEXChart'
 import OptionsPnlGraph from './OptionsPnlGraph'
@@ -1139,7 +1139,7 @@ function EntryChecklist({ direction, conflict, adxSignal, earningsDate, ivData, 
     },
     {
       label:  'Edge not fading',
-      ok:     !edgeFading && edgeDecayInfo?.freshWR != null ? true : edgeDecayInfo == null,
+      ok:     edgeDecayInfo == null || edgeDecayInfo.freshWR == null || !edgeFading,
       detail: edgeDecayInfo?.freshWR != null
         ? `Last 3m: ${Math.round(edgeDecayInfo.freshWR * 100)}% vs ${Math.round(edgeDecayInfo.allTimeWR * 100)}% all-time`
         : 'No backtest data',
