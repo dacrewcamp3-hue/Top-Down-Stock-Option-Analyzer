@@ -1077,6 +1077,411 @@
   color: #e0a0a0;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════════
+   NEW ANALYTICS COMPONENTS
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Risk Metrics (Sharpe / Sortino / Max Drawdown) ─────────────────────────── */
+.bt-risk-wrap {
+  background: #0a1628;
+  border: 1px solid #1e2d45;
+  border-radius: 10px;
+  padding: 16px;
+}
+.bt-risk-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #60a5fa;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.bt-risk-grid {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+.bt-risk-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+}
+.bt-risk-div {
+  width: 1px;
+  background: #1e2d45;
+  align-self: stretch;
+}
+.bt-risk-lbl {
+  font-size: 10px;
+  color: #4a6380;
+  text-align: center;
+  cursor: help;
+}
+.bt-risk-val {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+.bt-risk-sub {
+  font-size: 9px;
+  color: #4a6380;
+}
+
+/* ── Equity curve enhancements ───────────────────────────────────────────────── */
+.bt-curve-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.bt-curve-badge {
+  background: #1e3a5f;
+  color: #60a5fa;
+  border: 1px solid #2563eb;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 6px;
+  margin-left: 8px;
+}
+.bt-curve-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  color: #4a6380;
+}
+.bt-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
+  margin-right: 3px;
+  vertical-align: middle;
+}
+.bt-curve-empty {
+  font-size: 11px;
+  color: #4a6380;
+  padding: 16px;
+  text-align: center;
+}
+.bt-curve-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.bt-ap-toggle {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: #0f1623;
+  border: 1px solid #1e2d45;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.bt-ap-toggle.active {
+  color: #60a5fa;
+  border-color: #2563eb;
+  background: #1e3a5f;
+}
+.bt-ap-toggle:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.bt-curve-note {
+  font-size: 10px;
+  color: #4a6380;
+}
+
+/* ── Monte Carlo ─────────────────────────────────────────────────────────────── */
+.bt-mc-wrap {
+  background: #0a1628;
+  border: 1px solid #1e2d45;
+  border-radius: 10px;
+  padding: 16px;
+}
+.bt-mc-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #60a5fa;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.bt-mc-subtitle {
+  font-size: 10px;
+  color: #4a6380;
+  margin-bottom: 10px;
+}
+.bt-mc-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 10px;
+  color: #4a6380;
+  margin: 8px 0 10px;
+}
+.bt-mc-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.bt-mc-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: #1e2d45;
+  border: 1px solid #1e2d45;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.bt-mc-stat {
+  background: #0a1628;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+}
+.bt-mc-stat-lbl {
+  font-size: 9px;
+  color: #4a6380;
+  text-align: center;
+}
+.bt-mc-stat-val {
+  font-size: 18px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+.bt-mc-hist-wrap { margin-top: 6px; }
+.bt-mc-hist-title {
+  font-size: 10px;
+  color: #4a6380;
+  margin-bottom: 4px;
+}
+.bt-mc-hist-svg {
+  width: 100%;
+  height: 70px;
+  display: block;
+}
+
+/* ── Monthly Heatmap ─────────────────────────────────────────────────────────── */
+.bt-heatmap-wrap {
+  background: #0a1628;
+  border: 1px solid #1e2d45;
+  border-radius: 10px;
+  padding: 16px;
+  overflow-x: auto;
+}
+.bt-heatmap-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #60a5fa;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.bt-heatmap-grid {
+  display: grid;
+  gap: 2px;
+  min-width: 520px;
+}
+.bt-hm-hdr {
+  font-size: 9px;
+  color: #4a6380;
+  text-align: center;
+  padding: 2px 0;
+}
+.bt-hm-year {
+  font-size: 10px;
+  color: #60a5fa;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+.bt-hm-cell {
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  transition: opacity 0.15s;
+}
+.bt-hm-cell:hover { opacity: 0.8; }
+.bt-heatmap-note {
+  font-size: 9px;
+  color: #4a6380;
+  margin-top: 8px;
+}
+
+/* ── Market Regime Split ─────────────────────────────────────────────────────── */
+.bt-regime-wrap {
+  background: #0a1628;
+  border: 1px solid #1e2d45;
+  border-radius: 10px;
+  padding: 16px;
+}
+.bt-regime-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #60a5fa;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.bt-regime-sub {
+  font-size: 10px;
+  color: #4a6380;
+  margin-bottom: 12px;
+}
+.bt-regime-grid {
+  display: grid;
+  grid-template-columns: 100px 1fr 1fr;
+  gap: 0;
+}
+.bt-rg-hdr {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  padding: 6px 8px;
+  border-bottom: 1px solid #1e2d45;
+  text-align: center;
+}
+.bt-rg-bull { color: #10b981; }
+.bt-rg-bear { color: #ef4444; }
+.bt-rg-label {
+  font-size: 10px;
+  color: #4a6380;
+  padding: 6px 8px;
+  border-bottom: 1px solid #0f1623;
+  display: flex;
+  align-items: center;
+}
+.bt-rg-val {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-bottom: 1px solid #0f1623;
+  text-align: center;
+  color: #94a3b8;
+}
+
+/* ── Window Sensitivity ──────────────────────────────────────────────────────── */
+.bt-wsens-wrap {
+  background: #0a1628;
+  border: 1px solid #1e2d45;
+  border-radius: 10px;
+  padding: 16px;
+}
+.bt-wsens-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #60a5fa;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.bt-wsens-sub {
+  font-size: 10px;
+  color: #4a6380;
+  margin-bottom: 12px;
+}
+.bt-wsens-grid {
+  display: grid;
+  grid-template-columns: 100px repeat(3, 1fr);
+  gap: 0;
+}
+.bt-ws-hdr {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  padding: 6px 8px;
+  border-bottom: 1px solid #1e2d45;
+  text-align: center;
+}
+.bt-ws-label {
+  font-size: 10px;
+  color: #4a6380;
+  padding: 6px 8px;
+  border-bottom: 1px solid #0f1623;
+  display: flex;
+  align-items: center;
+}
+.bt-ws-val {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-bottom: 1px solid #0f1623;
+  text-align: center;
+}
+
+/* ── Drawdown Log ────────────────────────────────────────────────────────────── */
+.bt-dd-wrap {
+  background: #0a1628;
+  border: 1px solid #1e2d45;
+  border-radius: 10px;
+  padding: 16px;
+}
+.bt-dd-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #60a5fa;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.bt-dd-empty {
+  font-size: 11px;
+  color: #10b981;
+  padding: 4px 0;
+}
+.bt-dd-table { width: 100%; }
+.bt-dd-thead {
+  display: grid;
+  grid-template-columns: 1fr 1fr 80px 1fr;
+  gap: 4px;
+  padding: 4px 6px;
+  background: #0f1623;
+  border-radius: 4px 4px 0 0;
+  font-size: 9px;
+  color: #4a6380;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.bt-dd-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 80px 1fr;
+  gap: 4px;
+  padding: 6px 6px;
+  border-bottom: 1px solid #0f1623;
+}
+.bt-dd-row:last-child { border-bottom: none; }
+.bt-dd-cell {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* ── Analytics view tab ──────────────────────────────────────────────────────── */
+.bt-view-toggle {
+  display: flex;
+  gap: 4px;
+  background: #0a1628;
+  border: 1px solid #1e2d45;
+  border-radius: 8px;
+  padding: 4px;
+}
+
 /* ── Mobile responsive ── */
 @media (max-width: 640px) {
   .bt-root { padding: 0 6px 40px; gap: 14px; }

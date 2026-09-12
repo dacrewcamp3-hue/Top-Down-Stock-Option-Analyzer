@@ -1,15 +1,13 @@
 // Replays weekly + daily confluence rules over historical data.
 // Uses the same indicator math as the live app — what fires today also fired historically.
 //
-// Improvements over v1:
-//  1. Earnings skip — options spanning an estimated earnings date are excluded
-//  2. Grade-adaptive exits — scans bar-by-bar for TP/SL instead of fixed lookforward
-//  3. VRP-adjusted entry IV — HV × 1.20 to approximate real option market pricing
-//  4. Completed weekly bars only — prevents incomplete current-week data from biasing signals
-//  5. Compounded equity curve — multiplicative P&L, not additive
-//  6. Low-sample warning when < 20 trades (statistical confidence floor)
-//  7. Scale-out simulation — 50% at +100%, 50% at full grade TP (computed in same pass)
-//  8. Per-grade stats — win rate and EV broken down by A+/A/B
+// Improvements over v2:
+//  9.  Max drawdown + drawdown recovery log (peak-to-trough, >5% threshold)
+//  10. Sharpe / Sortino ratio (trade-level, annualized at backtest frequency)
+//  11. Monthly P&L breakdown (for heatmap display)
+//  12. Window sensitivity — 5/10/20d stock stats computed in single pass
+//  13. SPY benchmark equity curve (normalized to first trade date = 100)
+//  14. Market regime split — win rate above vs below SPY 50-SMA
 
 import { calcEMASeries, calcRSI, calcMACD, calcADX } from './indicators'
 import { bsPrice } from './fetchOptions'
@@ -134,6 +132,22 @@ async function fetchEarningsHistory(ticker) {
   }
 }
 
+// ── SPY data for benchmark + regime detection ─────────────────────────────────
+async function fetchSPYData() {
+  try {
+    const res = await fetch('/yf-api/v8/finance/chart/SPY?interval=1d&range=2y&includePrePost=false')
+    if (!res.ok) return null
+    const json = await res.json()
+    const r    = json.chart?.result?.[0]
+    if (!r)    return null
+    const ts  = r.timestamp ?? []
+    const cl  = r.indicators?.quote?.[0]?.close ?? []
+    return ts
+      .map((t, i) => ({ ts: t, close: cl[i] }))
+      .filter(b => b.close != null)
+  } catch { return null }
+}
+
 // ── Grade from confluence strength ────────────────────────────────────────────
 function gradeFromConf(absConf) {
   if (absConf >= 0.85) return 'A+'
@@ -164,10 +178,6 @@ function spreadInc(price) {
 }
 
 // ── Bar-by-bar debit spread exit scan ────────────────────────────────────────
-// Prices both legs each bar using rolling HV (no VRP), so the VRP paid at entry
-// evaporates naturally — capturing the real IV crush effect on the spread.
-// The short leg partially offsets the long leg's vega loss, which is the core
-// advantage of a spread in high-IV environments.
 function findSpreadExit(closes, entryBar, K, Kshort, isCall, spreadDebit, spreadWidth, grade, DTE, withCommission) {
   const exits   = GRADE_EXITS[grade]
   const maxBars = Math.min(DTE - 1, closes.length - entryBar - 2)
@@ -189,7 +199,6 @@ function findSpreadExit(closes, entryBar, K, Kshort, isCall, spreadDebit, spread
     return spreadDebit > 0.01 ? (p - spreadDebit) / spreadDebit : -1
   }
 
-  // TP fires at grade's target % of debit OR 90% of max spread value, whichever comes first
   const tpValue = Math.min(spreadDebit * (1 + exits.tp), spreadWidth * 0.90)
 
   for (let j = 1; j <= maxBars; j++) {
@@ -205,7 +214,6 @@ function findSpreadExit(closes, entryBar, K, Kshort, isCall, spreadDebit, spread
     }
   }
 
-  // Time exit: same 15% IV crush on underlying HV
   const defaultJ  = Math.min(10, maxBars)
   const barFin    = Math.min(entryBar + defaultJ, closes.length - 1)
   const Sfin      = closes[barFin]
@@ -219,16 +227,10 @@ function findSpreadExit(closes, entryBar, K, Kshort, isCall, spreadDebit, spread
 }
 
 // ── Bar-by-bar options exit scan ──────────────────────────────────────────────
-// Returns { gainFrac, barsHeld, hitTP, hitSL } where gainFrac is the fractional
-// return on optEntry (e.g. 2.0 = +200%, -0.35 = -35%).
-//
-// When scaleOut=true, locks 50% at the +100% level then scans the remaining
-// 50% for the full grade TP or SL. For B grade (TP=100%), scale-out has no
-// effect (TP1 == TP2), so regular and scale-out results are identical for B.
 function findOptionsExit(closes, entryBar, K, isCall, optEntry, grade, DTE, withCommission, scaleOut = false) {
   const exits    = GRADE_EXITS[grade]
   const maxBars  = Math.min(DTE - 1, closes.length - entryBar - 2)
-  const canScale = scaleOut && exits.tp > 1.00   // only meaningful for A+ and A
+  const canScale = scaleOut && exits.tp > 1.00
 
   const rePrice = (barIdx, dteRemaining) => {
     const S  = closes[barIdx]
@@ -239,7 +241,6 @@ function findOptionsExit(closes, entryBar, K, isCall, optEntry, grade, DTE, with
       : Math.max(0, isCall ? S - K : K - S)
   }
 
-  // Convert a raw option price to gain fraction after applying exit commission
   const toGainFrac = price => {
     const p = withCommission
       ? Math.max(0, price * (1 - OPT_SLIP_PCT) - OPT_COMMISSION / 100)
@@ -247,17 +248,16 @@ function findOptionsExit(closes, entryBar, K, isCall, optEntry, grade, DTE, with
     return optEntry > 0.01 ? (p - optEntry) / optEntry : -1
   }
 
-  let scaledFrac = null   // gain fraction locked when first half exited at +100%
+  let scaledFrac = null
 
   for (let j = 1; j <= maxBars; j++) {
     const dte   = (DTE - j) / 365
     const price = rePrice(entryBar + j, dte)
     const ret   = optEntry > 0.01 ? (price - optEntry) / optEntry : -1
 
-    // Scale-out: lock 50% at the +100% trigger point
     if (canScale && scaledFrac === null && ret >= 1.00) {
       scaledFrac = toGainFrac(price)
-      continue  // keep scanning for remaining 50%
+      continue
     }
 
     if (ret <= exits.sl) {
@@ -273,7 +273,6 @@ function findOptionsExit(closes, entryBar, K, isCall, optEntry, grade, DTE, with
     }
   }
 
-  // Time exit: close at 10 days with 15% IV crush applied
   const defaultJ = Math.min(10, maxBars)
   const dteFin   = Math.max(0, (DTE - defaultJ) / 365)
   const Sfin     = closes[Math.min(entryBar + defaultJ, closes.length - 1)]
@@ -287,11 +286,140 @@ function findOptionsExit(closes, entryBar, K, isCall, optEntry, grade, DTE, with
   return { gainFrac: gain, barsHeld: defaultJ, hitTP: false, hitSL: false }
 }
 
+// ── Drawdown analysis ─────────────────────────────────────────────────────────
+function computeDrawdowns(equityCurve) {
+  let peak = 100, maxDD = 0
+  let inDD = false, ddStart = null, ddTroughDate = null, ddTroughEq = 100
+  const ddLog = []
+
+  for (const { date, equity } of equityCurve) {
+    if (equity >= peak) {
+      if (inDD) {
+        const depth = +((ddTroughEq / peak - 1) * 100).toFixed(1)
+        if (depth < -5) ddLog.push({ depth, start: ddStart, trough: ddTroughDate, recovered: date })
+        inDD = false
+      }
+      peak = equity
+    } else {
+      if (!inDD) { inDD = true; ddStart = date; ddTroughEq = equity; ddTroughDate = date }
+      if (equity < ddTroughEq) { ddTroughEq = equity; ddTroughDate = date }
+      const dd = (equity / peak - 1) * 100
+      if (dd < maxDD) maxDD = dd
+    }
+  }
+  if (inDD) {
+    const depth = +((ddTroughEq / peak - 1) * 100).toFixed(1)
+    if (depth < -5) ddLog.push({ depth, start: ddStart, trough: ddTroughDate, recovered: null })
+  }
+  return { maxDD: +maxDD.toFixed(1), ddLog }
+}
+
+// ── Monthly P&L breakdown ─────────────────────────────────────────────────────
+function computeMonthly(trades, timestamps) {
+  const map = {}
+  for (const t of trades) {
+    const d   = new Date(timestamps[t.barIndex] * 1000)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    if (!map[key]) map[key] = { year: d.getFullYear(), month: d.getMonth() + 1, trades: [] }
+    map[key].trades.push(t)
+  }
+  return Object.values(map)
+    .sort((a, b) => `${a.year}-${String(a.month).padStart(2,'0')}` < `${b.year}-${String(b.month).padStart(2,'0')}` ? -1 : 1)
+    .map(m => {
+      const wins = m.trades.filter(t => t.win)
+      const gain = m.trades.reduce((s, t) => s + t.gain, 0)
+      return { year: m.year, month: m.month, count: m.trades.length, wins: wins.length, gain: +gain.toFixed(1) }
+    })
+}
+
+// ── Window sensitivity (5/10/20d stock returns, same trade list) ──────────────
+function computeWindowSensitivity(trades, opens, closes, n) {
+  const result = {}
+  for (const w of [5, 10, 20]) {
+    const gains = trades.map(t => {
+      const i     = t.barIndex
+      const entry = opens[Math.min(i + 1, n - 1)]
+      const exit  = closes[Math.min(i + w, n - 1)]
+      if (!entry || !exit) return 0
+      const pct = (exit - entry) / entry * 100
+      return t.signal === 'CALL' ? pct : -pct
+    })
+    const wins   = gains.filter(g => g > 0)
+    const losses = gains.filter(g => g <= 0)
+    // Compounded return for this window
+    let eq = 100
+    for (const g of gains) eq *= (1 + g / 100)
+    result[w] = {
+      winRate:     Math.round(wins.length / gains.length * 100),
+      avgGain:     +(gains.reduce((s, g) => s + g, 0) / gains.length).toFixed(2),
+      avgWin:      wins.length   ? +(wins.reduce((s, g)   => s + g, 0) / wins.length).toFixed(2)   : 0,
+      avgLoss:     losses.length ? +(losses.reduce((s, g) => s + g, 0) / losses.length).toFixed(2) : 0,
+      totalReturn: +(eq - 100).toFixed(1),
+    }
+  }
+  return result
+}
+
+// ── SPY benchmark equity curve normalized to first trade date = 100 ───────────
+function computeSPYCurve(trades, spyData, timestamps) {
+  if (!spyData?.length || !trades.length) return null
+  const firstTs  = timestamps[trades[0].barIndex]
+  let startIdx   = 0
+  for (let i = 0; i < spyData.length; i++) {
+    if (spyData[i].ts >= firstTs) { startIdx = i; break }
+  }
+  const base = spyData[startIdx]?.close
+  if (!base) return null
+
+  return trades.map(t => {
+    const tradeTs = timestamps[t.barIndex]
+    let idx = startIdx
+    for (let i = startIdx; i < spyData.length; i++) {
+      if (spyData[i].ts <= tradeTs) idx = i
+      else break
+    }
+    return { date: t.date, equity: +(spyData[idx].close / base * 100).toFixed(2) }
+  })
+}
+
+// ── Market regime split (SPY above/below 50-SMA at signal date) ───────────────
+function computeRegimeStats(trades, spyData, timestamps) {
+  if (!spyData?.length) return null
+  const bullTrades = [], bearTrades = []
+
+  for (const t of trades) {
+    const tradeTs = timestamps[t.barIndex]
+    let spyIdx = 0
+    for (let i = 0; i < spyData.length; i++) {
+      if (spyData[i].ts <= tradeTs) spyIdx = i
+      else break
+    }
+    if (spyIdx < 50) { bullTrades.push(t); continue }
+    const sma50 = spyData.slice(spyIdx - 49, spyIdx + 1).reduce((s, b) => s + b.close, 0) / 50
+    ;(spyData[spyIdx].close >= sma50 ? bullTrades : bearTrades).push(t)
+  }
+
+  const stats = arr => {
+    if (!arr.length) return null
+    const wins = arr.filter(t => t.win)
+    const losses = arr.filter(t => !t.win)
+    return {
+      count:   arr.length,
+      winRate: Math.round(wins.length / arr.length * 100),
+      avgGain: +(arr.reduce((s, t) => s + t.gain, 0) / arr.length).toFixed(2),
+      avgWin:  wins.length   ? +(wins.reduce((s, t)   => s + t.gain, 0) / wins.length).toFixed(2)   : 0,
+      avgLoss: losses.length ? +(losses.reduce((s, t) => s + t.gain, 0) / losses.length).toFixed(2) : 0,
+    }
+  }
+  return { bull: stats(bullTrades), bear: stats(bearTrades) }
+}
+
 // ── Main backtest ─────────────────────────────────────────────────────────────
 export async function runBacktest(ticker, lookforward = 10, withCommission = false, { startDate, endDate } = {}) {
-  const [chartRes, earningsDates] = await Promise.all([
+  const [chartRes, earningsDates, spyData] = await Promise.all([
     fetch(`/yf-api/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2y&includePrePost=false`),
     fetchEarningsHistory(ticker),
+    fetchSPYData(),
   ])
 
   if (!chartRes.ok) throw new Error(`Yahoo Finance returned HTTP ${chartRes.status}`)
@@ -302,7 +430,6 @@ export async function runBacktest(ticker, lookforward = 10, withCommission = fal
   const ts   = r.timestamp ?? []
   const q    = r.indicators?.quote?.[0] ?? {}
 
-  // Convert optional date-range strings to Unix seconds for filtering
   const startSec = startDate ? new Date(startDate).getTime() / 1000 : null
   const endSec   = endDate   ? new Date(endDate).getTime()   / 1000 : null
 
@@ -368,7 +495,7 @@ export async function runBacktest(ticker, lookforward = 10, withCommission = fal
     const pctRaw   = (effExit - effEntry) / effEntry * 100
     const gain     = dir === 'CALL' ? pctRaw : -pctRaw
 
-    // ── Options P&L — standard and scale-out computed in the same pass ────────
+    // ── Options P&L ───────────────────────────────────────────────────────────
     const isCall      = dir === 'CALL'
     const K           = Math.round(entry)
     const T0          = OPT_DTE / 365
@@ -401,7 +528,7 @@ export async function runBacktest(ticker, lookforward = 10, withCommission = fal
 
     const spreadGain  = spExit.gainFrac * 100
     const spreadWin   = spExit.gainFrac > 0
-    const ivSaved     = ivCrush && spreadWin   // IV crushed the outright but spread survived
+    const ivSaved     = ivCrush && spreadWin
 
     trades.push({
       barIndex:     i,
@@ -424,7 +551,6 @@ export async function runBacktest(ticker, lookforward = 10, withCommission = fal
       hitTPSO:      soExit.hitTP,
       hitSLSO:      soExit.hitSL,
       barsHeld:     regExit.barsHeld,
-      // spread
       optEntry:     +rawOptEntry.toFixed(2),
       spreadDebit:  +rawSpDebit.toFixed(2),
       spreadWidth,
@@ -463,6 +589,33 @@ export async function runBacktest(ticker, lookforward = 10, withCommission = fal
   })
   const totalReturn = +(eq - 100).toFixed(2)
 
+  // ── NEW: Sharpe / Sortino ─────────────────────────────────────────────────
+  const gainArr          = trades.map(t => t.gain)
+  const meanGain         = gainArr.reduce((s, g) => s + g, 0) / gainArr.length
+  const variance         = gainArr.reduce((s, g) => s + (g - meanGain) ** 2, 0) / gainArr.length
+  const stdDev           = Math.sqrt(variance)
+  const downsideVariance = gainArr.reduce((s, g) => s + (g < 0 ? g * g : 0), 0) / gainArr.length
+  const downsideStd      = Math.sqrt(downsideVariance)
+  const tradesPerYear    = trades.length / 2
+  const annFactor        = Math.sqrt(tradesPerYear)
+  const sharpe           = stdDev > 0     ? +((meanGain / stdDev)     * annFactor).toFixed(2) : null
+  const sortino          = downsideStd > 0 ? +((meanGain / downsideStd) * annFactor).toFixed(2) : null
+
+  // ── NEW: Drawdown analysis ────────────────────────────────────────────────
+  const { maxDD: maxDrawdown, ddLog: drawdownLog } = computeDrawdowns(equityCurve)
+
+  // ── NEW: Monthly breakdown ────────────────────────────────────────────────
+  const monthlyBreakdown = computeMonthly(trades, timestamps)
+
+  // ── NEW: Window sensitivity ───────────────────────────────────────────────
+  const windowSensitivity = computeWindowSensitivity(trades, opens, closes, n)
+
+  // ── NEW: SPY benchmark curve ──────────────────────────────────────────────
+  const spyEquityCurve = computeSPYCurve(trades, spyData, timestamps)
+
+  // ── NEW: Market regime stats ──────────────────────────────────────────────
+  const regimeStats = computeRegimeStats(trades, spyData, timestamps)
+
   // ── Standard options aggregate stats ─────────────────────────────────────
   const optWins    = trades.filter(t => t.optWin)
   const optLosses  = trades.filter(t => !t.optWin)
@@ -494,14 +647,13 @@ export async function runBacktest(ticker, lookforward = 10, withCommission = fal
   const spTpHits    = trades.filter(t => t.spHitTP).length
   const spSlHits    = trades.filter(t => t.spHitSL).length
 
-  // Avg cost reduction: spread debit as % of outright premium
   const costRatios    = trades.filter(t => t.optEntry > 0 && t.spreadDebit > 0)
     .map(t => t.spreadDebit / t.optEntry)
   const avgCostRatio  = costRatios.length
     ? costRatios.reduce((s, r) => s + r, 0) / costRatios.length
     : null
 
-  // Per-grade breakdown (options) ─────────────────────────────────────────
+  // Per-grade breakdown
   const gradeStats = {}
   for (const g of ['A+', 'A', 'B']) {
     const gt = trades.filter(t => t.grade === g)
@@ -521,7 +673,6 @@ export async function runBacktest(ticker, lookforward = 10, withCommission = fal
     }
   }
 
-  // Grade distribution (for existing UI)
   const gradeCount = { 'A+': 0, 'A': 0, 'B': 0 }
   for (const t of trades) gradeCount[t.grade] = (gradeCount[t.grade] ?? 0) + 1
 
@@ -552,6 +703,16 @@ export async function runBacktest(ticker, lookforward = 10, withCommission = fal
     maxConsecLoss,
     equityCurve,
     lookforward,
+    // NEW risk metrics
+    sharpe,
+    sortino,
+    maxDrawdown,
+    drawdownLog,
+    // NEW breakdown
+    monthlyBreakdown,
+    windowSensitivity,
+    spyEquityCurve,
+    regimeStats,
     // Standard options
     optWinRate,
     avgOptGain:    +avgOptGain.toFixed(1),
