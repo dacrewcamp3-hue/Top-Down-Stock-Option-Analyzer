@@ -65,13 +65,19 @@
 
 .sr-row {
   display: grid;
-  grid-template-columns: 130px 1fr 58px 52px 28px;
+  grid-template-columns: 130px 1fr 58px 28px 52px 28px;
   align-items: center;
   gap: 10px;
   padding: 7px 14px;
   background: #060c18;
   border: 1px solid #0e1e30;
   border-radius: 6px;
+}
+
+.sr-momentum {
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
 }
 
 .sr-meta {

@@ -26,6 +26,16 @@
 .ss-title { font-size: 15px; font-weight: 800; color: #a0c0dc; }
 .ss-sub   { font-size: 11px; color: #3a5070; }
 
+.ss-window-pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
 .ss-notif-btn {
   padding: 6px 10px;
   background: #08111e;

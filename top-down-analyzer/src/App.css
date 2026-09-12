@@ -159,8 +159,8 @@ body {
 /* ── Swing tab: side-by-side split with independent scroll ── */
 .swing-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 14px;
   height: calc(100vh - 240px);
   min-height: 480px;
   align-items: start;
@@ -171,24 +171,24 @@ body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-right: 3px;
+  gap: 10px;
+  padding-right: 4px;
   scrollbar-width: thin;
-  scrollbar-color: #1e2d45 transparent;
+  scrollbar-color: #182438 transparent;
 }
 
 .swing-config-col::-webkit-scrollbar       { width: 4px; }
-.swing-config-col::-webkit-scrollbar-thumb { background: #1e2d45; border-radius: 2px; }
+.swing-config-col::-webkit-scrollbar-thumb { background: #182438; border-radius: 2px; }
 
 .swing-result-col {
   height: 100%;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: #1e2d45 transparent;
+  scrollbar-color: #182438 transparent;
 }
 
 .swing-result-col::-webkit-scrollbar       { width: 4px; }
-.swing-result-col::-webkit-scrollbar-thumb { background: #1e2d45; border-radius: 2px; }
+.swing-result-col::-webkit-scrollbar-thumb { background: #182438; border-radius: 2px; }
 
 @media (max-width: 860px) {
   .swing-layout {

@@ -1943,6 +1943,117 @@ function OptionsLevelsCard({ optionsChain, currentPrice, direction }) {
   )
 }
 
+// ── Market Condition + Spread Risk Bar ──────────────────────────────────────
+// Combines SPY trend, VIX, breadth verdict, ADX, and day type into one signal.
+// Displayed prominently before the trade gates so the trader knows the environment
+// before deciding to buy premium — chop and high-VIX both widen bid-ask spreads.
+function computeMarketCondition({ breadthData, vixData, adxSignal, dayType }) {
+  const spy     = breadthData?.spy
+  const vd      = breadthData?.vix ?? vixData
+  const vix     = vd?.current ?? null
+  const verdict = breadthData?.verdict ?? null
+  const bTotal  = breadthData?.total ?? 0
+  const bBull   = breadthData?.bullPts ?? 0
+  const bBear   = breadthData?.bearPts ?? 0
+
+  const vixHigh = vix != null && vix > 25
+  const vixElev = vix != null && vix > 18
+
+  // Mixed breadth = bull and bear pts within 20% of each other
+  const breadthMixed = bTotal > 0 && Math.abs(bBull - bBear) / bTotal < 0.20
+  const stockChop    = adxSignal != null && adxSignal.adx < 20
+  const dayChop      = dayType?.type === 'CHOP'
+
+  if (vixHigh) {
+    const spyDir = spy?.above15 ? '/ BULL' : spy && !spy.above65 ? '/ BEAR' : ''
+    return {
+      state: 'HIGH_VOL',
+      label: `HIGH VOLATILITY ${spyDir}`.trim(),
+      color: '#f97316', bg: '#0e0500', border: '#7c2d12',
+      spreadNote: `VIX ${vix.toFixed(0)} — IV spiked, premium is expensive and bid-ask spreads are wide. Use bull/bear spreads to cut entry cost 40–60% and cap your spread risk.`,
+    }
+  }
+
+  if (breadthMixed || dayChop || stockChop) {
+    const reasons = []
+    if (dayChop)    reasons.push('IB broken both ways')
+    if (stockChop)  reasons.push(`stock ADX ${adxSignal.adx.toFixed(0)} — no trend`)
+    if (breadthMixed && !dayChop && !stockChop) reasons.push('breadth split 50/50')
+    return {
+      state: 'CHOP',
+      label: 'CHOPPY',
+      color: '#f59e0b', bg: '#0e0900', border: '#78350f',
+      spreadNote: `${reasons.join(' · ')} — premium decays without directional follow-through. Wide spreads eat entry/exit. Use defined-risk spreads or wait for a cleaner setup.`,
+    }
+  }
+
+  if (verdict === 'FAVORABLE' || (spy?.above15 && spy?.above65)) {
+    return {
+      state: 'BULL',
+      label: 'TRENDING BULLISH',
+      color: '#10b981', bg: '#010f06', border: '#065f46',
+      spreadNote: vixElev
+        ? `VIX ${vix.toFixed(0)} slightly elevated but market is trending. Use limit orders at mid-price — avoid paying ask on wide strikes.`
+        : 'Clean uptrend — directional premium gains value quickly. Liquid options have tighter spreads. Limit orders at mid.',
+    }
+  }
+
+  if (verdict === 'HOSTILE' || (spy && !spy.above15 && !spy.above65)) {
+    return {
+      state: 'BEAR',
+      label: 'TRENDING BEARISH',
+      color: '#ef4444', bg: '#120000', border: '#7f1d1d',
+      spreadNote: vixElev
+        ? `VIX ${vix.toFixed(0)} rising into the sell-off — put premium expanding. Enter early or use spreads to avoid overpaying.`
+        : 'Downtrend — put premium gains on down moves. Use limit orders at mid. Watch for VIX spikes widening spreads.',
+    }
+  }
+
+  return {
+    state: 'MIXED',
+    label: 'MIXED CONDITIONS',
+    color: '#60a5fa', bg: '#060c18', border: '#1e3a5f',
+    spreadNote: 'No clear market direction — risk of premium bleed if the setup stalls. Consider waiting for alignment or sizing down.',
+  }
+}
+
+function MarketConditionBar({ breadthData, vixData, adxSignal, dayType }) {
+  // Don't render until we have at least SPY data or VIX
+  if (!breadthData?.spy && !(breadthData?.vix ?? vixData)?.current) return null
+  const mc  = computeMarketCondition({ breadthData, vixData, adxSignal, dayType })
+  const vd  = breadthData?.vix ?? vixData
+  const vix = vd?.current ?? null
+  const vixColor = vix == null ? '#475569' : vix > 25 ? '#f97316' : vix > 18 ? '#f59e0b' : '#10b981'
+  const vixLabel = vix == null ? null : vix > 25 ? 'HIGH' : vix > 18 ? 'ELEV' : 'CALM'
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', gap: 12,
+      padding: '8px 14px', background: mc.bg,
+      borderTop: `1px solid ${mc.border}`, borderBottom: '1px solid #0e1a28',
+      fontFamily: "'SF Mono', 'Fira Code', monospace",
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0, paddingTop: 1 }}>
+        <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: 1.4, color: mc.color, whiteSpace: 'nowrap' }}>
+          ● {mc.label}
+        </span>
+        {vix != null && (
+          <span style={{
+            fontSize: 9, fontWeight: 800, color: vixColor, whiteSpace: 'nowrap',
+            background: '#020810', border: `1px solid ${vixColor}40`,
+            borderRadius: 3, padding: '1px 5px',
+          }}>
+            VIX {vix.toFixed(1)} {vixLabel}
+          </span>
+        )}
+      </div>
+      <div style={{ flex: 1, fontSize: 10, fontWeight: 600, color: '#6b8aaa', lineHeight: 1.5 }}>
+        {mc.spreadNote}
+      </div>
+    </div>
+  )
+}
+
 export default function TradeBrief({
   ticker,
   currentPrice,
@@ -1976,6 +2087,8 @@ export default function TradeBrief({
   volumeSpike,
   volumeProfile,
   wyckoff,
+  swingTargets,
+  dayType,
 }) {
   // Compute recommended option + spread suggestion
   const { rec, qty, spreads } = useMemo(() => {
@@ -2176,6 +2289,14 @@ export default function TradeBrief({
         </div>
       </div>
 
+      {/* ── Market Condition + Spread Risk ── */}
+      <MarketConditionBar
+        breadthData={breadthData}
+        vixData={vixData}
+        adxSignal={adxSignal}
+        dayType={dayType}
+      />
+
       {/* ── Trade Gates (critical — right after header, not buried below explanatory text) ── */}
       <GateLock
         direction={direction}
@@ -2187,8 +2308,32 @@ export default function TradeBrief({
         vwapSignal={vwapSignal}
       />
 
-      {/* ── Wyckoff conflict / alignment banner ── */}
-      <WyckoffConflictBanner wyckoff={wyckoff} direction={direction} />
+      {/* ── Day Type Classification (IB-based: TREND / CHOP / COIL) ── */}
+      {dayType?.type != null && (() => {
+        const { type, note, trendDir } = dayType
+        const cfg = {
+          TREND: { bg: '#011a0a', border: '#10b981', label: 'TREND DAY', dot: '#10b981', dotColor: trendDir === 'bull' ? '#10b981' : '#ef4444' },
+          CHOP:  { bg: '#1a0a00', border: '#f59e0b', label: 'CHOP DAY',  dot: '#f59e0b', dotColor: '#f59e0b' },
+          COIL:  { bg: '#0a0a1a', border: '#a855f7', label: 'COIL DAY',  dot: '#a855f7', dotColor: '#a855f7' },
+        }[type]
+        if (!cfg) return null
+        return (
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10,
+            padding: '8px 14px', margin: '0', borderTop: `1px solid ${cfg.border}`,
+            background: cfg.bg, borderBottom: '1px solid #0e1a28',
+            fontFamily: "'SF Mono', 'Fira Code', monospace",
+          }}>
+            <span style={{ fontSize: 10, color: cfg.dotColor, fontWeight: 900, marginTop: 1, letterSpacing: 0.5 }}>●</span>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: 1.5, color: cfg.dotColor, textTransform: 'uppercase', marginRight: 8 }}>
+                {cfg.label}
+              </span>
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#6b8aaa', lineHeight: 1.4 }}>{note}</span>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Economic Calendar — macro event risk before any position decision ── */}
       <EconCalendarPanel />
@@ -2329,6 +2474,7 @@ export default function TradeBrief({
           ivData={ivData}
           historicalVol={historicalVol}
           tradeScore={tradeScore}
+          swingTargets={swingTargets}
         />
       )}
 

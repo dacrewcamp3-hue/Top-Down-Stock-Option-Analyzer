@@ -3,24 +3,50 @@ import { scanUnusualFlow } from '../utils/runFlowScanner'
 import { UNIVERSE } from '../utils/runScanner'
 import './FlowScanner.css'
 
+const FLOW_CACHE_KEY = 'tdsa-flow-results'
 const f2 = v => v != null ? (+v).toFixed(2) : '—'
+
+function fmtPrem(n) {
+  if (!n) return '$0'
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000)     return `$${Math.round(n / 1_000)}K`
+  return `$${Math.round(n)}`
+}
 
 // ── Sentiment strip ───────────────────────────────────────────────────────────
 function SentimentStrip({ sentiment }) {
   const entries = Object.entries(sentiment)
   if (!entries.length) return null
 
+  const totalCallPrem = entries.reduce((s, [, v]) => s + (v.callPrem ?? 0), 0)
+  const totalPutPrem  = entries.reduce((s, [, v]) => s + (v.putPrem  ?? 0), 0)
+  const totalPrem     = totalCallPrem + totalPutPrem
+  const callPremPct   = totalPrem > 0 ? Math.round(totalCallPrem / totalPrem * 100) : 50
+
   return (
     <div className="fl-sentiment">
-      <div className="fl-sent-label">Call / Put Volume Ratio by Ticker</div>
+      <div className="fl-sent-header">
+        <span className="fl-sent-label">Call / Put Flow by Ticker</span>
+        {totalPrem > 0 && (
+          <span className="fl-sent-total">
+            <span style={{ color: '#10b981' }}>{fmtPrem(totalCallPrem)} calls</span>
+            {' vs '}
+            <span style={{ color: '#ef4444' }}>{fmtPrem(totalPutPrem)} puts</span>
+            <span style={{ color: callPremPct >= 60 ? '#10b981' : callPremPct <= 40 ? '#ef4444' : '#6b7280', marginLeft: 6 }}>
+              ({callPremPct}% bullish)
+            </span>
+          </span>
+        )}
+      </div>
       <div className="fl-sent-rows">
         {entries.map(([sym, s]) => {
           const total = s.callVol + s.putVol
           if (!total) return null
-          const callPct = Math.round((s.callVol / total) * 100)
-          const isBull  = callPct >= 60
-          const isBear  = callPct <= 40
-          const barClr  = isBull ? '#10b981' : isBear ? '#ef4444' : '#6b7280'
+          const callPct  = Math.round((s.callVol / total) * 100)
+          const isBull   = callPct >= 60
+          const isBear   = callPct <= 40
+          const barClr   = isBull ? '#10b981' : isBear ? '#ef4444' : '#6b7280'
+          const premTotal = (s.callPrem ?? 0) + (s.putPrem ?? 0)
           return (
             <div key={sym} className="fl-sent-row">
               <span className="fl-sent-sym">{sym}</span>
@@ -28,6 +54,9 @@ function SentimentStrip({ sentiment }) {
                 <div className="fl-sent-bar-fill" style={{ width: `${callPct}%`, background: barClr }} />
               </div>
               <span className="fl-sent-pct" style={{ color: barClr }}>{callPct}% calls</span>
+              {premTotal > 0 && (
+                <span className="fl-sent-prem">{fmtPrem(premTotal)}</span>
+              )}
             </div>
           )
         })}
@@ -56,6 +85,11 @@ function FlowRow({ flow, onLoad }) {
             ? (isCall ? 'Bullish Bet' : 'Bearish Bet')
             : 'Hedge / Cover'}
         </span>
+        {flow.intent && (
+          <span className={`fl-intent-badge fl-intent-${flow.intent.toLowerCase()}`}>
+            {flow.intent === 'OPENING' ? '→ OPEN' : flow.intent === 'CLOSING' ? '← CLOSE' : '≈ MID'}
+          </span>
+        )}
       </div>
 
       <div className="fl-row-right">
@@ -124,6 +158,7 @@ export default function FlowScanner({ onLoadTicker }) {
       setFlows(f)
       setSentiment(s)
       setFetchErrors(e ?? 0)
+      try { localStorage.setItem(FLOW_CACHE_KEY, JSON.stringify({ sentiment: s, at: new Date().toISOString() })) } catch {}
     } catch (_) {}
     setStatus('done')
   }

@@ -2,7 +2,42 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { UNIVERSE, SECTOR_ETFS, SECTOR_STOCKS, runScanner } from '../utils/runScanner'
 import './Scanner.css'
 
-const SCAN_CACHE_KEY = 'tdsa-scanner-results'
+const SCAN_CACHE_KEY   = 'tdsa-scanner-results'
+const SIGNAL_CACHE_KEY = 'tdsa-signal-results'
+const FLOW_CACHE_KEY   = 'tdsa-flow-results'
+
+function getTradeWindow() {
+  const now = new Date()
+  const day = now.getDay()
+  if (day === 0 || day === 6) return null
+  const etStr = now.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false })
+  const [h, m] = etStr.split(':').map(Number)
+  const etMin  = h * 60 + m
+  if (etMin < 570 || etMin >= 960) return null
+  if (etMin < 630) return { label: 'PRIME',    color: '#10b981', bg: '#011209', desc: '9:30–10:30 · Best ORB & momentum entries' }
+  if (etMin < 690) return { label: 'CAUTION',  color: '#f59e0b', bg: '#1a1000', desc: '10:30–11:30 · Reduce size, tighter stops' }
+  if (etMin < 780) return { label: 'AVOID',    color: '#ef4444', bg: '#160202', desc: '11:30–1:00 · Lunch lull, wide spreads' }
+  if (etMin < 870) return { label: 'WATCH',    color: '#60a5fa', bg: '#04101c', desc: '1:00–2:30 · Watch for setups forming' }
+  return                { label: 'MOMENTUM', color: '#a855f7', bg: '#0d0718', desc: '2:30–4:00 · Power hour, EOD positioning' }
+}
+
+function TradeWindowPill() {
+  const [win, setWin] = useState(getTradeWindow)
+  useEffect(() => {
+    const id = setInterval(() => setWin(getTradeWindow()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+  if (!win) return null
+  return (
+    <span
+      className="sc-window-pill"
+      style={{ color: win.color, background: win.bg, border: `1px solid ${win.color}40` }}
+      title={win.desc}
+    >
+      ⏱ {win.label} · {win.desc}
+    </span>
+  )
+}
 
 function loadCache() {
   try {
@@ -306,23 +341,86 @@ function SectorLeaders({ sectorData, results, onLoadTicker }) {
   )
 }
 
-// ── Top Setups ────────────────────────────────────────────────────────────────
+// ── Top Plays ─────────────────────────────────────────────────────────────────
 
 function convictionRank(r) {
   const gradeN = { 'A+': 4, A: 3, B: 2, C: 1 }[r.grade] ?? 0
-  return gradeN * 100 + Math.abs(r.rawConf ?? 0) * 100
+  let score = gradeN * 100 + Math.abs(r.rawConf ?? 0) * 80
+  if (r.rsVsSpy      != null)               score += Math.max(0, Math.min(r.rsVsSpy, 20)) * 2
+  if (r.adx          != null && r.adx > 20) score += (r.adx - 20) * 1.5
+  if (r.tightness    != null && r.tightness <= 0.65) score += 30
+  if (r.volSpike     != null && r.volSpike > 1.5)    score += Math.min((r.volSpike - 1) * 10, 30)
+  if (r.rvolVelocity != null && r.rvolVelocity > 20) score += 15
+  return score
 }
 
-function TopSetups({ results, onLoadAndBrief }) {
+function TopPlays({ results, onLoadAndBrief }) {
+  const [signalCache] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(SIGNAL_CACHE_KEY) ?? 'null') } catch { return null }
+  })
+  const [flowCache] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(FLOW_CACHE_KEY) ?? 'null') } catch { return null }
+  })
+
   if (!onLoadAndBrief || !results?.length) return null
 
   const gradeClr = g => ({ 'A+': '#10b981', A: '#34d399', B: '#f59e0b', C: '#6b7280' }[g] ?? '#6b7280')
 
+  // ── Cross-scanner confluence map ──────────────────────────────────────────
+  const confluenceMap = new Map()
+
+  // 1. Market scanner
+  results.filter(r => r.ok && (r.signal === 'CALL' || r.signal === 'PUT')).forEach(r => {
+    const e = confluenceMap.get(r.ticker) ?? { sources: [], dir: null, data: null }
+    if (!e.sources.includes('MKT')) e.sources.push('MKT')
+    e.dir  = e.dir ?? r.signal
+    e.data = r
+    confluenceMap.set(r.ticker, e)
+  })
+
+  // 2. Signal scanner (ORB or swing signal)
+  if (signalCache?.results) {
+    signalCache.results.forEach(r => {
+      const isCall = r.signal === 'CALL' || r.orb?.signal === 'ENTER' || r.orb?.signal === 'RETEST'
+      const isPut  = r.signal === 'PUT'
+      if (!isCall && !isPut) return
+      const dir = isCall ? 'CALL' : 'PUT'
+      const e   = confluenceMap.get(r.ticker) ?? { sources: [], dir: null, data: null }
+      if (!e.sources.includes('ORB')) e.sources.push('ORB')
+      e.dir = e.dir ?? dir
+      confluenceMap.set(r.ticker, e)
+    })
+  }
+
+  // 3. Flow scanner sentiment (≥65% call or ≤35% call = directional bias)
+  if (flowCache?.sentiment) {
+    Object.entries(flowCache.sentiment).forEach(([ticker, s]) => {
+      const total = (s.callVol ?? 0) + (s.putVol ?? 0)
+      if (!total) return
+      const callPct = s.callVol / total
+      const dir = callPct >= 0.65 ? 'CALL' : callPct <= 0.35 ? 'PUT' : null
+      if (!dir) return
+      const e = confluenceMap.get(ticker) ?? { sources: [], dir: null, data: null }
+      if (!e.sources.includes('FLOW')) e.sources.push('FLOW')
+      e.dir = e.dir ?? dir
+      confluenceMap.set(ticker, e)
+    })
+  }
+
+  // Tickers with 2+ scanner agreement — sorted by source count then conviction
+  const multiHits = Array.from(confluenceMap.entries())
+    .filter(([, e]) => e.sources.length >= 2 && e.data)
+    .sort((a, b) => {
+      if (b[1].sources.length !== a[1].sources.length) return b[1].sources.length - a[1].sources.length
+      return convictionRank(b[1].data) - convictionRank(a[1].data)
+    })
+    .slice(0, 4)
+
+  // Standard top CALL/PUT by conviction rank (no cross-scanner requirement)
   const callSetups = results
     .filter(r => r.ok && r.signal === 'CALL')
     .sort((a, b) => convictionRank(b) - convictionRank(a))
     .slice(0, 3)
-
   const putSetups = results
     .filter(r => r.ok && r.signal === 'PUT')
     .sort((a, b) => convictionRank(b) - convictionRank(a))
@@ -330,7 +428,12 @@ function TopSetups({ results, onLoadAndBrief }) {
 
   if (!callSetups.length && !putSetups.length) return null
 
-  const card = (r, isCall) => (
+  const sourceTag = (label, color) => (
+    <span key={label} className="sc-top-src-tag" style={{ color, borderColor: color + '50' }}>{label}</span>
+  )
+  const sourceColors = { MKT: '#60a5fa', ORB: '#f59e0b', FLOW: '#a855f7' }
+
+  const card = (r, isCall, extra = null) => (
     <button
       key={r.ticker}
       className="sc-top-card"
@@ -347,12 +450,18 @@ function TopSetups({ results, onLoadAndBrief }) {
         <span className="sc-top-signal" style={{ color: isCall ? '#10b981' : '#ef4444' }}>
           {isCall ? '▲ CALL' : '▼ PUT'}
         </span>
+        {extra}
       </div>
       <div className="sc-top-stats">
-        {r.price   != null && <span>${r.price}</span>}
-        {r.rsi     != null && <span>RSI {r.rsi}</span>}
-        {r.adx     != null && <span>ADX {r.adx}</span>}
-        {r.volSpike > 1.4  && <span style={{ color: '#f59e0b' }}>{r.volSpike}× vol</span>}
+        {r.price        != null && <span>${r.price}</span>}
+        {r.rsi          != null && <span>RSI {r.rsi}</span>}
+        {r.adx          != null && <span>ADX {r.adx}</span>}
+        {r.volSpike      > 1.4  && <span style={{ color: '#f59e0b' }}>{r.volSpike}× vol</span>}
+        {r.rvolVelocity != null && Math.abs(r.rvolVelocity) >= 20 && (
+          <span style={{ color: r.rvolVelocity > 0 ? '#10b981' : '#ef4444' }}>
+            vol {r.rvolVelocity > 0 ? '↑' : '↓'}{Math.abs(r.rvolVelocity)}%
+          </span>
+        )}
       </div>
       <div className="sc-top-action">ANALYZE IN BRIEF →</div>
     </button>
@@ -360,7 +469,60 @@ function TopSetups({ results, onLoadAndBrief }) {
 
   return (
     <div className="sc-top-wrap">
-      <div className="sc-top-title">TOP SETUPS — HIGHEST CONVICTION</div>
+      {/* Cross-scanner multi-hit plays */}
+      {multiHits.length > 0 && (
+        <div className="sc-top-confluence">
+          <div className="sc-top-title sc-top-title-conf">
+            ⚡ MULTI-SCANNER CONFLUENCE
+            <span className="sc-top-conf-sub">Tickers appearing in 2+ scanners simultaneously — highest conviction</span>
+          </div>
+          <div className="sc-top-conf-cards">
+            {multiHits.map(([ticker, e]) => {
+              const r = e.data
+              const isCall = e.dir === 'CALL'
+              const tags = e.sources.map(s => sourceTag(s, sourceColors[s] ?? '#6b7280'))
+              return (
+                <button
+                  key={ticker}
+                  className="sc-top-card sc-top-card-conf"
+                  style={{ borderColor: isCall ? '#065f46' : '#7f1d1d', background: isCall ? '#020f07' : '#0d0101' }}
+                  onClick={() => onLoadAndBrief(ticker)}
+                >
+                  <div className="sc-top-card-head">
+                    <span className="sc-top-ticker">{ticker}</span>
+                    {r.grade && (
+                      <span className="sc-top-grade" style={{ color: gradeClr(r.grade), borderColor: gradeClr(r.grade) }}>
+                        {r.grade}
+                      </span>
+                    )}
+                    <span className="sc-top-signal" style={{ color: isCall ? '#10b981' : '#ef4444' }}>
+                      {isCall ? '▲ CALL' : '▼ PUT'}
+                    </span>
+                  </div>
+                  <div className="sc-top-src-tags">{tags}</div>
+                  <div className="sc-top-stats">
+                    {r.price   != null && <span>${r.price}</span>}
+                    {r.rsi     != null && <span>RSI {r.rsi}</span>}
+                    {r.adx     != null && <span>ADX {r.adx}</span>}
+                    {r.volSpike > 1.4  && <span style={{ color: '#f59e0b' }}>{r.volSpike}× vol</span>}
+                    {r.rvolVelocity != null && Math.abs(r.rvolVelocity) >= 20 && (
+                      <span style={{ color: r.rvolVelocity > 0 ? '#10b981' : '#ef4444' }}>
+                        vol {r.rvolVelocity > 0 ? '↑' : '↓'}{Math.abs(r.rvolVelocity)}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="sc-top-action">ANALYZE IN BRIEF →</div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Standard top conviction */}
+      <div className="sc-top-title">
+        {multiHits.length > 0 ? 'TOP SETUPS — MARKET SCANNER' : 'TOP SETUPS — HIGHEST CONVICTION'}
+      </div>
       <div className="sc-top-columns">
         {callSetups.length > 0 && (
           <div className="sc-top-group">
@@ -566,6 +728,7 @@ export default function Scanner({ onLoadTicker, onLoadAndBrief }) {
           <span className="sc-header-sub">
             Screens {UNIVERSE.length} stocks for CALL/PUT signals · only triggered setups appear · sector pulse
           </span>
+          <TradeWindowPill />
         </div>
         <div className="sc-header-right">
           <div className="sc-ar-row">
@@ -672,8 +835,8 @@ export default function Scanner({ onLoadTicker, onLoadAndBrief }) {
             </div>
           )}
 
-          {/* Top Setups */}
-          {status === 'done' && <TopSetups results={results} onLoadAndBrief={onLoadAndBrief} />}
+          {/* Top Plays */}
+          {status === 'done' && <TopPlays results={results} onLoadAndBrief={onLoadAndBrief} />}
 
           {/* ── Filter bar ── */}
           {status === 'done' && (
@@ -764,6 +927,7 @@ export default function Scanner({ onLoadTicker, onLoadAndBrief }) {
               <span className="sc-th-nosort" data-tip="Weinstein Stage: S2 (green ★) = uptrend — ideal for CALL. S4 (red ★) = downtrend — ideal for PUT. S1 = basing. S3 = topping. Only trade Stage 2 CALLs and Stage 4 PUTs.">Stage</span>
               <SortTH label="Score"    col="score"     sortCol={sortCol} sortDir={sortDir} onSort={handleSort} tip="Confluence Score: 0–100 showing how aligned the technical picture is. Above 65 = strong directional bias. Blue dot = setup is coiling tight (5-day range &lt; 65% of normal)." />
               <SortTH label="VolSpike" col="volSpike"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort} tip="Volume Spike: Today's volume vs. 20-day average. 2× = twice normal activity." />
+              <span className="sc-th-nosort" data-tip="Volume Velocity: Is volume accelerating or decelerating? Compares the last 3-day average vs the prior 5-day average. ↑ = buying pressure building. ↓ = activity cooling off.">Vel</span>
               <span className="sc-th-nosort" data-tip="Relative Strength vs SPY: 12-week return minus SPY's 12-week return. Positive = outperforming the market. Stocks with high RS tend to continue outperforming — this is often what breaks out first.">RS</span>
               <SortTH label="RSI"      col="rsi"       sortCol={sortCol} sortDir={sortDir} onSort={handleSort} tip="RSI (Relative Strength Index): Momentum on a 0–100 scale. Above 50 = bullish. Below 50 = bearish." />
               <span />
@@ -820,6 +984,19 @@ export default function Scanner({ onLoadTicker, onLoadAndBrief }) {
                   </span>
                   <span className="sc-td" style={{ color: volClr, fontWeight: r.volSpike >= 1.5 ? 600 : 400 }}>
                     {r.volSpike != null ? `${r.volSpike}×` : '—'}
+                  </span>
+                  <span className="sc-td" style={{
+                    color: r.rvolVelocity == null ? '#2a4060'
+                      : r.rvolVelocity >= 30  ? '#10b981'
+                      : r.rvolVelocity >= 10  ? '#34d399'
+                      : r.rvolVelocity >= -10 ? '#6b7280'
+                      : r.rvolVelocity >= -30 ? '#f87171'
+                      : '#ef4444',
+                    fontSize: '11px',
+                  }}>
+                    {r.rvolVelocity != null
+                      ? `${r.rvolVelocity > 0 ? '↑' : r.rvolVelocity < 0 ? '↓' : '→'}${Math.abs(r.rvolVelocity)}%`
+                      : '—'}
                   </span>
                   <span className="sc-td" style={{
                     color: r.rsVsSpy == null ? '#2a4060'

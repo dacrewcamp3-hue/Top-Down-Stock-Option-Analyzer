@@ -4,6 +4,41 @@ import { UNIVERSE } from '../utils/runScanner'
 import { playTone } from '../utils/audioAlerts'
 import './SignalScanner.css'
 
+const SIGNAL_CACHE_KEY = 'tdsa-signal-results'
+
+function getTradeWindow() {
+  const now = new Date()
+  const day = now.getDay()
+  if (day === 0 || day === 6) return null
+  const etStr = now.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false })
+  const [h, m] = etStr.split(':').map(Number)
+  const etMin  = h * 60 + m
+  if (etMin < 570 || etMin >= 960) return null
+  if (etMin < 630) return { label: 'PRIME',    color: '#10b981', bg: '#011209', desc: '9:30–10:30 · Best ORB & momentum entries' }
+  if (etMin < 690) return { label: 'CAUTION',  color: '#f59e0b', bg: '#1a1000', desc: '10:30–11:30 · Reduce size, tighter stops' }
+  if (etMin < 780) return { label: 'AVOID',    color: '#ef4444', bg: '#160202', desc: '11:30–1:00 · Lunch lull, wide spreads' }
+  if (etMin < 870) return { label: 'WATCH',    color: '#60a5fa', bg: '#04101c', desc: '1:00–2:30 · Watch for setups forming' }
+  return                { label: 'MOMENTUM', color: '#a855f7', bg: '#0d0718', desc: '2:30–4:00 · Power hour, EOD positioning' }
+}
+
+function TradeWindowPill() {
+  const [win, setWin] = useState(getTradeWindow)
+  useEffect(() => {
+    const id = setInterval(() => setWin(getTradeWindow()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+  if (!win) return null
+  return (
+    <span
+      className="ss-window-pill"
+      style={{ color: win.color, background: win.bg, border: `1px solid ${win.color}40` }}
+      title={win.desc}
+    >
+      {win.label} · {win.desc}
+    </span>
+  )
+}
+
 const SIG_COLOR = { CALL: '#10b981', PUT: '#ef4444', 'NO TRADE': '#4a6888', 'NO DATA': '#3a5070', ERROR: '#3a5070' }
 const SIG_BG    = { CALL: '#052010', PUT: '#140508', 'NO TRADE': '#060c18', 'NO DATA': '#060c18', ERROR: '#060c18' }
 
@@ -122,6 +157,7 @@ export default function SignalScanner({ watchlist = [], onLoadTicker }) {
     setResults(res)
     setStatus('done')
     statusRef.current = 'done'
+    try { localStorage.setItem(SIGNAL_CACHE_KEY, JSON.stringify({ results: res, at: new Date().toISOString() })) } catch {}
 
     // Notification for actionable ORB setups or strong swing signals
     const alerts = res.filter(r =>
@@ -203,6 +239,7 @@ export default function SignalScanner({ watchlist = [], onLoadTicker }) {
           <span className="ss-sub">
             {tickers.length} tickers · 15m ORB + weekly/daily trend · click any row to analyze
           </span>
+          <TradeWindowPill />
         </div>
         <div className="ss-header-right">
           {Notification.permission === 'default' && (

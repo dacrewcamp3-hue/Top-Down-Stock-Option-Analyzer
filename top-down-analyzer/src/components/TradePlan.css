@@ -249,6 +249,58 @@
   font-weight: 800;
 }
 
+/* ── Multi-target strip ── */
+.tp-targets-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  align-items: center;
+  padding: 8px 16px;
+  border-top: 1px solid #0e1a28;
+  background: #040b16;
+}
+
+.tp-ts-header {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  color: #3a5070;
+  flex: 0 0 100%;
+  margin-bottom: 2px;
+}
+
+.tp-ts-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+}
+
+.tp-ts-lbl {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+}
+
+.tp-ts-stock {
+  font-weight: 700;
+}
+
+.tp-ts-opt {
+  font-size: 10px;
+  color: #4a6888;
+}
+
+.tp-ts-pct {
+  font-weight: 700;
+}
+
+.tp-ts-rr {
+  font-size: 9px;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
 /* ── Responsive: collapse to 1-column on very small screens ── */
 @media (max-width: 480px) {
   .tp-grid {

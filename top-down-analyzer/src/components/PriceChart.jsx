@@ -61,7 +61,7 @@ function calcHeikinAshi(opens, highs, lows, closes) {
 //                More significant pause. Still within the trend but requires patience.
 //   REVERSAL   — NOT detected here. Would be price breaking EMA 65 and staying there.
 // Requires 2+ consecutive counter-trend bars to filter single-bar noise.
-function detectPullbacksRetracements(c, h, l, e8, e15, e65) {
+function detectPullbacksRetracements(c, h, l, e5, e15, e65) {
   const results = []
   const n = c.length
   let inCounter = false
@@ -71,12 +71,12 @@ function detectPullbacksRetracements(c, h, l, e8, e15, e65) {
   let trendKind = null
 
   for (let i = 1; i < n; i++) {
-    if (e8[i] == null || e15[i] == null || e65[i] == null) { inCounter = false; counterBars = 0; continue }
+    if (e5[i] == null || e15[i] == null || e65[i] == null) { inCounter = false; counterBars = 0; continue }
     const isBull = c[i] > e65[i]
     const isBear = c[i] < e65[i]
 
     if (isBull) {
-      const isCounter = c[i] < e8[i]
+      const isCounter = c[i] < e5[i]
       if (isCounter) {
         if (!inCounter || trendKind !== 'bull') {
           inCounter = true; trendKind = 'bull'; counterBars = 1
@@ -93,7 +93,7 @@ function detectPullbacksRetracements(c, h, l, e8, e15, e65) {
         inCounter = false; counterBars = 0
       } else { inCounter = false; counterBars = 0 }
     } else if (isBear) {
-      const isCounter = c[i] > e8[i]
+      const isCounter = c[i] > e5[i]
       if (isCounter) {
         if (!inCounter || trendKind !== 'bear') {
           inCounter = true; trendKind = 'bear'; counterBars = 1
@@ -181,6 +181,11 @@ export default function PriceChart({
   orbHigh, orbLow, fibLevels, title, timeframe = 'D',
   showPreMarket = false,
   prevDayClose = null,
+  swingTargets = [],
+  gammaFlip = null,
+  callWall = null,
+  putWall = null,
+  maxPain = null,
 }) {
   const emaNames = useEmaNames()
 
@@ -195,7 +200,8 @@ export default function PriceChart({
   const [showEntryEmas, setShowEntryEmas] = useState(true)     // EMA 5, 15, 30
   const [showTrendEmas, setShowTrendEmas] = useState(true)     // EMA 65, 200
   const [showFib,       setShowFib]       = useState(true)     // Fibonacci levels
-  const [showRSI,       setShowRSI]       = useState(false)    // RSI sub-panel
+  const [showRSI,         setShowRSI]         = useState(false)    // RSI sub-panel
+  const [showAllPatterns, setShowAllPatterns] = useState(false)    // all patterns vs. ≥75% win-rate only
 
   const svgRef         = useRef(null)
   const barCountRef    = useRef(TF_DEFAULT_BARS[timeframe] ?? 80)
@@ -277,7 +283,7 @@ export default function PriceChart({
     const ts = (timestamps ?? []).slice(s, endIdx)
 
     // EMAs seeded from full history so values are stable regardless of zoom window
-    const e8   = calcEMA(closes, 5).slice(s, endIdx)
+    const e5   = calcEMA(closes, 5).slice(s, endIdx)
     const e15  = calcEMA(closes, 15).slice(s, endIdx)
     const e30  = calcEMA(closes, 30).slice(s, endIdx)
     const e65  = calcEMA(closes, 65).slice(s, endIdx)
@@ -311,9 +317,11 @@ export default function PriceChart({
     })
 
     // X-axis labels — strategy varies by timeframe
-    const xLabels = []
     const isIntraday = timeframe === '4H' || timeframe === '1H' || timeframe === '15M' || timeframe === '5M'
     const isHighFreq = timeframe === '15M' || timeframe === '5M'
+
+    // Minimum pixel gap between label centers (prevents stacking at any zoom level)
+    const MIN_LABEL_PX = 54
 
     // Pre-market bar detection — used for visual overlays and dimming
     const preMarketSet = new Set()
@@ -342,56 +350,86 @@ export default function PriceChart({
       })
     }
 
+    // Build raw candidate labels, then filter to MIN_LABEL_PX spacing
+    const xLabelCandidates = []
+
     if (!isIntraday) {
-      // Daily / Weekly: label at month boundaries
-      let lastMonth = -1
+      // Daily / Weekly: month boundaries; year boundaries get "Jan '25" style
+      let lastMonth = -1, lastYear = -1
       ts.forEach((t, i) => {
-        if (!t) return
+        if (!t || i === 0 || i >= nb - 1) return
         const dt = new Date(t * 1000)
-        const m  = dt.getMonth()
-        if (m !== lastMonth && i > 0 && i < nb - 1) {
-          const label = nb <= 45
-            ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-            : dt.toLocaleDateString('en-US', { month: 'short' })
-          xLabels.push({ x: xOf(i), label })
-          lastMonth = m
+        const mo = dt.getUTCMonth(), yr = dt.getUTCFullYear()
+        if (mo !== lastMonth) {
+          const isNewYear = yr !== lastYear
+          const label = isNewYear
+            ? dt.toLocaleDateString('en-US', { month: 'short', year: '2-digit', timeZone: 'UTC' })
+            : dt.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })
+          xLabelCandidates.push({ x: xOf(i), label, isPrimary: isNewYear || mo === 0 })
+          lastMonth = mo
+          if (isNewYear) lastYear = yr
         }
       })
     } else if (isHighFreq) {
-      // 15M / 5M: label at hour boundaries using ET time; include pre-market hours when present
+      // 15M / 5M: day boundaries show date ("Mon Dec 5"), hour boundaries show time ("10:00")
       const hasPre = preMarketSet.size > 0
-      const etFmtL = new Intl.DateTimeFormat('en-US', {
+      const etFmtT = new Intl.DateTimeFormat('en-US', {
         hour: '2-digit', minute: '2-digit', hour12: false,
         timeZone: 'America/New_York',
       })
-      let lastHourKey = null
+      const etFmtD = new Intl.DateTimeFormat('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric',
+        timeZone: 'America/New_York',
+      })
+      let lastHourKey = null, lastDayKey = null
       ts.forEach((t, i) => {
         if (!t || i === 0 || i >= nb - 1) return
-        const parts = etFmtL.formatToParts(new Date(t * 1000))
-        const rawH  = parseInt(parts.find(p => p.type === 'hour').value, 10)
-        const m     = parseInt(parts.find(p => p.type === 'minute').value, 10)
-        const etH   = rawH === 24 ? 0 : rawH
-        const etMin = etH * 60 + m
-        const minHr = hasPre ? 240 : 570  // 4 AM if pre-market bars present, else 9:30 AM
-        if (etMin < minHr || etMin >= 960) return
-        const key = `${new Date(t * 1000).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}-${etH}`
-        if (key !== lastHourKey) {
-          xLabels.push({ x: xOf(i), label: `${etH}:${m.toString().padStart(2, '0')}` })
-          lastHourKey = key
+        const d      = new Date(t * 1000)
+        const parts  = etFmtT.formatToParts(d)
+        const rawH   = parseInt(parts.find(p => p.type === 'hour').value, 10)
+        const m      = parseInt(parts.find(p => p.type === 'minute').value, 10)
+        const etH    = rawH === 24 ? 0 : rawH
+        const etMin  = etH * 60 + m
+        const minMn  = hasPre ? 240 : 570
+        if (etMin < minMn || etMin >= 960) return
+        const dk     = d.toLocaleDateString('en-US', { timeZone: 'America/New_York' })
+        const hKey   = `${dk}-${etH}`
+        const newDay = dk !== lastDayKey
+        if (newDay) {
+          xLabelCandidates.push({ x: xOf(i), label: etFmtD.format(d), isPrimary: true })
+          lastDayKey = dk; lastHourKey = hKey
+        } else if (hKey !== lastHourKey) {
+          xLabelCandidates.push({ x: xOf(i), label: `${etH}:${m.toString().padStart(2, '0')}`, isPrimary: false })
+          lastHourKey = hKey
         }
       })
     } else {
-      // 4H / 1H: label at day boundaries
-      let lastDay = -1
+      // 4H / 1H: day boundaries; month transitions show full "Dec 5", others show day number only
+      let lastDay = -1, lastMonth = -1
       ts.forEach((t, i) => {
         if (!t || i === 0 || i >= nb - 1) return
         const dt  = new Date(t * 1000)
-        const day = dt.getDate()
+        const day = dt.getDate(), mo = dt.getMonth()
         if (day !== lastDay) {
-          xLabels.push({ x: xOf(i), label: dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) })
+          const isNewMonth = mo !== lastMonth
+          const label = isNewMonth
+            ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            : String(day)
+          xLabelCandidates.push({ x: xOf(i), label, isPrimary: isNewMonth })
           lastDay = day
+          if (isNewMonth) lastMonth = mo
         }
       })
+    }
+
+    // Filter candidates: enforce minimum pixel gap between accepted labels
+    const xLabels = []
+    let lastAcceptedX = -Infinity
+    for (const c of xLabelCandidates) {
+      if (c.x - lastAcceptedX >= MIN_LABEL_PX) {
+        xLabels.push(c)
+        lastAcceptedX = c.x
+      }
     }
 
     // Separator lines — week boundaries for daily/weekly, day boundaries for intraday
@@ -693,18 +731,18 @@ export default function PriceChart({
     }
 
     // ── EMA 5 two-bar cross signals — entry & exit markers ───────────────────
-    const ema8Crosses = []
+    const ema5Crosses = []
     for (let i = 2; i < nb; i++) {
-      const aboveCurr = c[i]     > e8[i]
-      const abovePrev = c[i - 1] > e8[i - 1]
-      const above2    = c[i - 2] > e8[i - 2]
+      const aboveCurr = c[i]     > e5[i]
+      const abovePrev = c[i - 1] > e5[i - 1]
+      const above2    = c[i - 2] > e5[i - 2]
       // Require confirming bar to have at least average volume
       const crossVolOk = volAvgArr[i] <= 0 || v[i] >= volAvgArr[i]
 
       if (aboveCurr && abovePrev && !above2 && crossVolOk) {
         // 2-bar confirmed bull: both bars above EMA 5, previous was below → ENTRY
         const yBase = yOf(Math.min(l[i - 1], l[i]))
-        ema8Crosses.push({
+        ema5Crosses.push({
           kind: 'bull', i,
           xa: xOf(i - 1), xb: xOf(i),
           ya: yOf(l[i - 1]), yb: yOf(l[i]),
@@ -714,7 +752,7 @@ export default function PriceChart({
       } else if (!aboveCurr && !abovePrev && above2 && crossVolOk) {
         // 2-bar confirmed bear: both bars below EMA 5, previous was above → EXIT
         const yBase = yOf(Math.max(h[i - 1], h[i]))
-        ema8Crosses.push({
+        ema5Crosses.push({
           kind: 'bear', i,
           xa: xOf(i - 1), xb: xOf(i),
           ya: yOf(h[i - 1]), yb: yOf(h[i]),
@@ -725,7 +763,7 @@ export default function PriceChart({
     }
 
     // ── Pullback / Retracement markers ──────────────────────────────────────
-    const pullbackMarkers = detectPullbacksRetracements(c, h, l, e8, e15, e65)
+    const pullbackMarkers = detectPullbacksRetracements(c, h, l, e5, e15, e65)
 
     // ── Golden Cross / Death Cross (EMA 65 × EMA 200) ────────────────────────
     const goldDeathCrosses = []
@@ -743,9 +781,9 @@ export default function PriceChart({
     }
 
     // ── Trend strength from current EMA alignment ────────────────────────────
-    const te8 = e8[nb - 1], te15 = e15[nb - 1], te30 = e30[nb - 1], te65 = e65[nb - 1], te200 = e200[nb - 1]
+    const te5 = e5[nb - 1], te15 = e15[nb - 1], te30 = e30[nb - 1], te65 = e65[nb - 1], te200 = e200[nb - 1]
     let alignScore = 0
-    if (te8  && te15  && te8  > te15)  alignScore++
+    if (te5  && te15  && te5  > te15)  alignScore++
     if (te15 && te30  && te15 > te30)  alignScore++
     if (te30 && te65  && te30 > te65)  alignScore++
     if (te65 && te200 && te65 > te200) alignScore++
@@ -818,6 +856,22 @@ export default function PriceChart({
     const rL = lows.slice(s, endIdx)
     const rC = closes.slice(s, endIdx)
     const smcData = calcSMC(rH, rL, rC, timeframe)
+
+    // ── ATR 14 (Wilder's smoothing) — real OHLCV, not Heikin-Ashi ─────────────
+    const ATR_P = 14
+    let atr14 = null
+    if (nb >= ATR_P + 2) {
+      let atrVal = 0
+      for (let i = 1; i <= ATR_P; i++) {
+        atrVal += Math.max(rH[i] - rL[i], Math.abs(rH[i] - rC[i - 1]), Math.abs(rL[i] - rC[i - 1]))
+      }
+      atrVal /= ATR_P
+      for (let i = ATR_P + 1; i < nb; i++) {
+        const tr = Math.max(rH[i] - rL[i], Math.abs(rH[i] - rC[i - 1]), Math.abs(rL[i] - rC[i - 1]))
+        atrVal = (atrVal * (ATR_P - 1) + tr) / ATR_P
+      }
+      atr14 = atrVal
+    }
 
     // ── Major S/R Zones (4H and 1H only — pivot clusters tested 2+ times) ──────
     const srZones = []
@@ -893,12 +947,12 @@ export default function PriceChart({
     {
       let segFrom = null, segKind = null
       for (let i = 0; i < nb; i++) {
-        if (e8[i] == null || e15[i] == null || e30[i] == null) {
+        if (e5[i] == null || e15[i] == null || e30[i] == null) {
           if (segFrom !== null) { ribbonSegs.push({ from: segFrom, to: i - 1, kind: segKind }); segFrom = null }
           continue
         }
-        const k = (e8[i] > e15[i] && e15[i] > e30[i]) ? 'bull'
-                : (e8[i] < e15[i] && e15[i] < e30[i]) ? 'bear' : 'neutral'
+        const k = (e5[i] > e15[i] && e15[i] > e30[i]) ? 'bull'
+                : (e5[i] < e15[i] && e15[i] < e30[i]) ? 'bear' : 'neutral'
         if (segFrom === null) { segFrom = i; segKind = k }
         else if (k !== segKind) {
           ribbonSegs.push({ from: segFrom, to: i - 1, kind: segKind })
@@ -908,14 +962,25 @@ export default function PriceChart({
       if (segFrom !== null) ribbonSegs.push({ from: segFrom, to: nb - 1, kind: segKind })
     }
 
-    return { c, h, l, o, v, ts, nb, s, e8, e15, e30, e65, e200, vwapArr, vwapSegments,
+    // ── Pre-market High / Low (only when pre-market bars are visible) ─────────
+    let pmHigh = null, pmLow = null
+    if (preMarketSet.size > 0) {
+      for (const i of preMarketSet) {
+        if (i >= 0 && i < nb) {
+          if (pmHigh == null || h[i] > pmHigh) pmHigh = h[i]
+          if (pmLow  == null || l[i] < pmLow)  pmLow  = l[i]
+        }
+      }
+    }
+
+    return { c, h, l, o, v, ts, nb, s, e5, e15, e30, e65, e200, vwapArr, vwapSegments,
       priceMin, priceMax, volMax, pw, ph, xOf, yOf, bw, toPoints,
       yTicks, xLabels, weekSeps, reversals, gapBands, smcData, isToday, totalSlots,
-      profBins, profMax, pocIdx, priceRange, volAvgPoints, ema8Crosses, pullbackMarkers,
-      volSpikes, prevDayH, prevDayL, signalBarSet, vwapCrosses,
+      profBins, profMax, pocIdx, priceRange, volAvgPoints, ema5Crosses,
+      volSpikes, prevDayH, prevDayL, vwapCrosses,
       goldDeathCrosses, trendState,
       vahPrice, valPrice, vaLo, vaHi, lvnThresh, profAvg,
-      preMarketSet, sessionOpens, rsiArr, ribbonSegs, srZones }
+      preMarketSet, sessionOpens, rsiArr, srZones, atr14, pmHigh, pmLow }
   }, [closes, highs, lows, opens, volumes, timestamps, barCount, panOffset, timeframe])
 
   // ── Mouse handlers ────────────────────────────────────────────────────────
@@ -1082,12 +1147,16 @@ export default function PriceChart({
   )
   if (!d) return <div className="pc-wrap pc-empty">Not enough price bars to render chart.</div>
 
-  const { c, h, l, o, v, ts, nb, e8, e15, e30, e65, e200, vwapArr, vwapSegments,
+  const { c, h, l, o, v, ts, nb, e5, e15, e30, e65, e200, vwapArr, vwapSegments,
     xOf, yOf, bw, toPoints, yTicks, xLabels, weekSeps, reversals, gapBands, smcData, isToday,
-    profBins, profMax, pocIdx, priceRange, volAvgPoints, ema8Crosses, pullbackMarkers,
-    volSpikes, prevDayH, prevDayL, signalBarSet, vwapCrosses,
+    profBins, profMax, pocIdx, priceRange, volAvgPoints, ema5Crosses,
+    volSpikes, prevDayH, prevDayL, vwapCrosses,
     goldDeathCrosses, trendState,
-    preMarketSet, sessionOpens, rsiArr, ribbonSegs, srZones } = d
+    preMarketSet, sessionOpens, rsiArr, srZones, atr14, pmHigh, pmLow } = d
+
+  // High-confidence filter: show only patterns with ≥75% win rate by default
+  const displayReversals = showAllPatterns ? reversals : reversals.filter(r => r.rate >= 75)
+  const signalBarSet = new Set(displayReversals.map(r => r.barI))
 
   // Use real closes (not Heikin-Ashi) for the price label and day-change % so the chart
   // topbar matches the app header and trading platforms. HA prices (c[]) are only for drawing.
@@ -1113,7 +1182,7 @@ export default function PriceChart({
     const chg  = ri > 0 ? (rC - closes[ri - 1]) / closes[ri - 1] * 100 : 0
     return {
       i, o: rO, h: rH, l: rL, c: rC, v: v[i], ts: ts[i], bull, chg,
-      e8:   e8[i]      ?? null,
+      e5:   e5[i]      ?? null,
       e15:  e15[i]     ?? null,
       e30:  e30[i]     ?? null,
       e65:  e65[i]     ?? null,
@@ -1186,23 +1255,27 @@ export default function PriceChart({
               <span className="pc-leg-dot" style={{ background: '#ffffff' }} />VWAP
               <span className="pc-leg-dot" style={{ background: '#64748b' }} />Avg Vol
               {/* ── Signals (only when present) ── */}
-              {(vwapCrosses.length > 0 || ema8Crosses.length > 0 || goldDeathCrosses.length > 0 || reversals.length > 0 || volSpikes.length > 0) && (
+              {(vwapCrosses.length > 0 || ema5Crosses.length > 0 || goldDeathCrosses.length > 0 || displayReversals.length > 0 || volSpikes.length > 0) && (
                 <span className="pc-leg-sep" />
               )}
               {vwapCrosses.some(c => c.kind === 'bull') && <span style={{ color: '#10b981' }}>⬆ VWAP</span>}
               {vwapCrosses.some(c => c.kind === 'bear') && <span style={{ color: '#ef4444' }}>⬇ VWAP</span>}
-              {ema8Crosses.some(s => s.kind === 'bull') && <span style={{ color: '#10b981' }}>◎ Entry</span>}
-              {ema8Crosses.some(s => s.kind === 'bear') && <span style={{ color: '#ef4444' }}>◎ Exit</span>}
+              {ema5Crosses.some(s => s.kind === 'bull') && <span style={{ color: '#10b981' }}>◎ Entry</span>}
+              {ema5Crosses.some(s => s.kind === 'bear') && <span style={{ color: '#ef4444' }}>◎ Exit</span>}
               {goldDeathCrosses.some(g => g.kind === 'golden') && <span style={{ color: '#facc15' }}>★ Golden×</span>}
               {goldDeathCrosses.some(g => g.kind === 'death') && <span style={{ color: '#ef4444' }}>✖ Death×</span>}
-              {reversals.some(r => r.kind === 'bull') && <span style={{ color: '#10b981' }}>▲ Rev</span>}
-              {reversals.some(r => r.kind === 'bear') && <span style={{ color: '#ef4444' }}>▼ Rev</span>}
+              {displayReversals.some(r => r.kind === 'bull') && <span style={{ color: '#10b981' }}>▲ Rev</span>}
+              {displayReversals.some(r => r.kind === 'bear') && <span style={{ color: '#ef4444' }}>▼ Rev</span>}
               {volSpikes.length > 0 && <span style={{ color: '#94a3b8' }}>× Spike</span>}
               {/* ── Levels ── */}
               {(orbHigh != null || prevDayH != null || prevDayL != null || gapBands.length > 0 || srZones.length > 0) && (
                 <span className="pc-leg-sep" />
               )}
               {orbHigh != null && <span style={{ color: '#f59e0b' }}>— ORB</span>}
+              {swingTargets?.length > 0 && <span style={{ color: '#10b981' }}>— T1–T5</span>}
+              {showPreMarket && (pmHigh != null || pmLow != null) && <span style={{ color: '#60a5fa' }}>— PM H/L</span>}
+              {timeframe === '5M' && orbHigh != null && <span style={{ color: '#10b981' }}>▲ Snipe</span>}
+              {(gammaFlip != null || callWall != null || putWall != null || maxPain != null) && <span style={{ color: '#f59e0b' }}>— GEX</span>}
               {prevDayH != null && <span style={{ color: '#f97316' }}>— PDH</span>}
               {prevDayL != null && <span style={{ color: '#38bdf8' }}>— PDL</span>}
               {gapBands.length > 0 && <span style={{ color: '#38bdf8' }}>▬ Gap</span>}
@@ -1329,6 +1402,17 @@ export default function PriceChart({
             fontWeight: 800, lineHeight: 1.4, letterSpacing: '0.3px',
           }}
         >RSI</button>
+        <button
+          title={showAllPatterns ? 'Showing all patterns — click for high-confidence only' : 'High-confidence patterns (≥75%) — click to show all'}
+          onClick={() => setShowAllPatterns(v => !v)}
+          style={{
+            background: showAllPatterns ? '#0e0e1a' : 'transparent',
+            border: `1px solid ${showAllPatterns ? '#a78bfa' : '#1e2d45'}`,
+            color: showAllPatterns ? '#a78bfa' : '#3a5a7a',
+            borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer',
+            fontWeight: 800, lineHeight: 1.4, letterSpacing: '0.3px',
+          }}
+        >Pats {showAllPatterns ? 'All' : '★'}</button>
 
         {curLines.length > 0 && (
           <button title="Clear all drawings" onClick={() => setDrawings(prev => ({ ...prev, [curKey]: [] }))}
@@ -1575,6 +1659,129 @@ export default function PriceChart({
           )
         })()}
 
+        {/* ── 15M Swing Targets (T1–T5) — dashed lines above/below OR ── */}
+        {swingTargets?.length > 0 && (() => {
+          const tColors = ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#86efac']
+          const visible = swingTargets.slice(0, 5).filter(px => px > d.priceMin && px < d.priceMax)
+          if (!visible.length) return null
+          return (
+            <g pointerEvents="none">
+              {swingTargets.slice(0, 5).map((tPx, idx) => {
+                if (tPx < d.priceMin || tPx > d.priceMax) return null
+                const y   = yOf(tPx)
+                const col = tColors[idx] || '#10b981'
+                return (
+                  <g key={`st-${idx}`}>
+                    <line x1={PL} y1={y} x2={VW - PR} y2={y}
+                      stroke={col} strokeWidth="1" strokeDasharray="6,4" opacity="0.72" />
+                    <rect x={VW - PR - 70} y={y - 9} width={68} height={12} rx="2" fill="#020d06" opacity="0.90" />
+                    <text x={VW - PR - 5} y={y} textAnchor="end" fontSize="7.5" fill={col} fontWeight="800">
+                      T{idx + 1}  ${fmtPx(tPx)}
+                    </text>
+                  </g>
+                )
+              })}
+            </g>
+          )
+        })()}
+
+        {/* ── Pre-market High / Low ── */}
+        {showPreMarket && (pmHigh != null || pmLow != null) && (
+          <g pointerEvents="none">
+            {pmHigh != null && pmHigh > d.priceMin && pmHigh < d.priceMax && (
+              <g>
+                <line x1={PL} y1={yOf(pmHigh)} x2={VW - PR} y2={yOf(pmHigh)}
+                  stroke="#60a5fa" strokeWidth="1" strokeDasharray="3,4" opacity="0.72" />
+                <rect x={VW - PR - 70} y={yOf(pmHigh) - 10} width={68} height={12} rx="2" fill="#030d1a" opacity="0.88" />
+                <text x={VW - PR - 5} y={yOf(pmHigh) - 1} textAnchor="end" fontSize="7.5" fill="#60a5fa" fontWeight="700">
+                  PMH  ${fmtPx(pmHigh)}
+                </text>
+              </g>
+            )}
+            {pmLow != null && pmLow > d.priceMin && pmLow < d.priceMax && (
+              <g>
+                <line x1={PL} y1={yOf(pmLow)} x2={VW - PR} y2={yOf(pmLow)}
+                  stroke="#93c5fd" strokeWidth="1" strokeDasharray="3,4" opacity="0.72" />
+                <rect x={VW - PR - 70} y={yOf(pmLow)} width={68} height={12} rx="2" fill="#030d1a" opacity="0.88" />
+                <text x={VW - PR - 5} y={yOf(pmLow) + 9} textAnchor="end" fontSize="7.5" fill="#93c5fd" fontWeight="700">
+                  PML  ${fmtPx(pmLow)}
+                </text>
+              </g>
+            )}
+          </g>
+        )}
+
+        {/* ── 5M Sniper Entry Signals — EMA 5 touch after ORB break ── */}
+        {timeframe === '5M' && orbHigh != null && orbLow != null && (() => {
+          const lastClose = d.c[nb - 1]
+          const isBull = lastClose != null && lastClose > orbHigh
+          const signals = []
+          let orbBroken = false
+          for (let i = 1; i < nb; i++) {
+            const e5v = d.e5[i], e5p = d.e5[i - 1]
+            if (e5v == null || e5p == null) continue
+            if (!orbBroken) {
+              if (isBull ? d.c[i] > orbHigh : d.c[i] < orbLow) orbBroken = true
+              continue
+            }
+            if (isBull) {
+              // Wick touched within 0.15% of EMA 5, close still above EMA 5 and above ORH
+              if (d.l[i] <= e5v * 1.0015 && d.c[i] > e5v && d.c[i] > orbHigh) {
+                signals.push({ i, kind: 'bull' })
+              }
+            } else {
+              if (d.h[i] >= e5v * 0.9985 && d.c[i] < e5v && d.c[i] < orbLow) {
+                signals.push({ i, kind: 'bear' })
+              }
+            }
+          }
+          if (!signals.length) return null
+          return (
+            <g pointerEvents="none">
+              {signals.map(({ i, kind }, idx) => {
+                const cx  = xOf(i)
+                const col = kind === 'bull' ? '#10b981' : '#ef4444'
+                const tipY = kind === 'bull' ? yOf(d.l[i]) + 14 : yOf(d.h[i]) - 14
+                const pts = kind === 'bull'
+                  ? `${cx},${tipY - 7} ${cx - 5},${tipY} ${cx + 5},${tipY}`
+                  : `${cx},${tipY + 7} ${cx - 5},${tipY} ${cx + 5},${tipY}`
+                return (
+                  <g key={`snp-${idx}`}>
+                    <polygon points={pts} fill={col} opacity="0.92" />
+                    <text x={cx} y={kind === 'bull' ? tipY + 9 : tipY - 3}
+                      textAnchor="middle" fontSize="6" fill={col} fontWeight="900" letterSpacing="0.2">
+                      SNIPE
+                    </text>
+                  </g>
+                )
+              })}
+            </g>
+          )
+        })()}
+
+        {/* ── GEX levels — gamma flip, call wall, put wall, max pain ── */}
+        {[
+          { price: gammaFlip, label: 'γ FLIP', color: '#f59e0b' },
+          { price: callWall,  label: 'CALL WALL', color: '#ef4444' },
+          { price: putWall,   label: 'PUT WALL',  color: '#10b981' },
+          { price: maxPain,   label: 'MAX PAIN',  color: '#a855f7' },
+        ].map(({ price, label, color }) => {
+          if (price == null) return null
+          const gy = yOf(price)
+          if (gy < PT + 2 || gy > PH - 2) return null
+          return (
+            <g key={label} pointerEvents="none">
+              <line x1={PL} y1={gy} x2={VW - PR} y2={gy}
+                stroke={color} strokeWidth="1.1" strokeDasharray="4,3" opacity="0.75" />
+              <rect x={PL + 2} y={gy - 9} width={label.length * 5.4 + 4} height={10} rx="2"
+                fill="#050d1a" opacity="0.82" />
+              <text x={PL + 4} y={gy - 1} fontSize="7" fill={color} fontWeight="800">
+                {label}  ${fmtPx(price)}
+              </text>
+            </g>
+          )
+        })}
+
         {/* ── Major S/R Zones (4H and 1H only) — drawn below everything ── */}
         {srZones.map((z, i) => {
           const isRes = z.kind === 'resistance'
@@ -1694,24 +1901,6 @@ export default function PriceChart({
           )
         })}
 
-        {/* ── EMA ribbon (shaded fill between E8 and E30 — color tracks stack alignment) ── */}
-        {showEntryEmas && ribbonSegs.map((seg, si) => {
-          const fill = seg.kind === 'bull' ? '#10b981' : seg.kind === 'bear' ? '#ef4444' : '#60a5fa'
-          const op   = seg.kind === 'neutral' ? 0.03 : 0.09
-          const topPts = [], botPts = []
-          for (let i = seg.from; i <= seg.to; i++) {
-            if (e8[i] == null || e30[i] == null) continue
-            const y8 = yOf(e8[i]), y30v = yOf(e30[i])
-            topPts.push(`${xOf(i).toFixed(1)},${Math.min(y8, y30v).toFixed(1)}`)
-            botPts.push(`${xOf(i).toFixed(1)},${Math.max(y8, y30v).toFixed(1)}`)
-          }
-          if (topPts.length < 2) return null
-          return (
-            <polygon key={`ribbon-${si}`}
-              points={[...topPts, ...[...botPts].reverse()].join(' ')}
-              fill={fill} opacity={op} pointerEvents="none" />
-          )
-        })}
 
         {/* EMA 200 — rendered first (bottom layer) so shorter EMAs draw on top */}
         {showTrendEmas && (
@@ -1766,11 +1955,11 @@ export default function PriceChart({
 
         {/* EMA 5 */}
         {showEntryEmas && (
-          <polyline points={toPoints(e8)} fill="none" stroke="#f472b6" strokeWidth="2.2" strokeLinejoin="round" />
+          <polyline points={toPoints(e5)} fill="none" stroke="#f472b6" strokeWidth="2.2" strokeLinejoin="round" />
         )}
 
         {/* ── Signal column glows (volume-confirmed reversal bars) ── */}
-        {reversals.map((r, i) => {
+        {displayReversals.map((r, i) => {
           const col = r.kind === 'bull' ? '#10b981' : '#ef4444'
           const intensity = r.volRatio >= 2.0 ? 0.10 : r.volRatio >= 1.5 ? 0.07 : 0.05
           return (
@@ -1841,6 +2030,36 @@ export default function PriceChart({
           )
         })}
 
+        {/* HVN "NEXT WALL" — nearest high-volume node above current price */}
+        {(() => {
+          if (!profBins?.length || !d.profAvg) return null
+          const hvnThresh = d.profAvg * 1.6
+          const curPx = closes[closes.length - 1] ?? 0
+          const refPx = orbHigh != null ? Math.max(orbHigh, curPx) : curPx
+          if (refPx <= 0) return null
+          // Find lowest HVN bin strictly above our reference price
+          let wallPrice = null
+          for (let i = 0; i < profBins.length; i++) {
+            if (profBins[i] < hvnThresh) continue
+            const binMid = d.priceMin + (i + 0.5) * priceRange / PROFILE_BINS
+            if (binMid > refPx) { wallPrice = binMid; break }
+          }
+          if (wallPrice == null) return null
+          const wallY = yOf(wallPrice)
+          if (wallY < PT + 2 || wallY > PH - 2) return null
+          return (
+            <g pointerEvents="none">
+              <line x1={PL} y1={wallY} x2={PROF_X} y2={wallY}
+                stroke="#0e7490" strokeWidth="1.2" strokeDasharray="2,4" opacity="0.70" />
+              <rect x={VW - PR - 80} y={wallY - 9} width={78} height={11} rx="2"
+                fill="#020c18" opacity="0.85" />
+              <text x={VW - PR - 5} y={wallY} textAnchor="end" fontSize="7" fill="#0e7490" fontWeight="900">
+                NEXT WALL  ${fmtPx(wallPrice)}
+              </text>
+            </g>
+          )
+        })()}
+
         {/* VAH line */}
         {(() => {
           const vahY = yOf(d.vahPrice)
@@ -1892,10 +2111,19 @@ export default function PriceChart({
           </g>
         )}
 
+        {atr14 != null && (
+          <g pointerEvents="none">
+            <text x={VW - PR - 3} y={PH - 4}
+              textAnchor="end" fontSize="7.5" fill="#475569" fontWeight="700">
+              ATR {fmtPx(atr14)}
+            </text>
+          </g>
+        )}
+
         {/* Reversal column glows — subtle background, no text badges */}
 
         {/* ── EMA 5 two-bar cross markers (entry/exit signals) ── */}
-        {ema8Crosses.map((sig, i) => {
+        {ema5Crosses.map((sig, i) => {
           const col    = sig.kind === 'bull' ? '#10b981' : '#ef4444'
           const shadow = sig.kind === 'bull' ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)'
           const barSpan = Math.abs(sig.xb - sig.xa) + bw * 2.2
@@ -1911,7 +2139,7 @@ export default function PriceChart({
           const cyb = sig.kind === 'bull' ? bullYb : bearYb
 
           return (
-            <g key={`ema8x-${i}`} pointerEvents="none">
+            <g key={`ema5x-${i}`} pointerEvents="none">
               {/* Translucent band behind both bars */}
               <rect x={bandX} y={PT} width={barSpan} height={PH - PT}
                 fill={shadow} rx="2" />
@@ -2182,12 +2410,21 @@ export default function PriceChart({
         })()}
 
         {/* X-axis date labels */}
-        {xLabels.map(({ x, label }, i) => (
-          <g key={i}>
+        {xLabels.map(({ x, label, isPrimary }, i) => (
+          <g key={i} pointerEvents="none">
+            {/* Separator line through volume area */}
             <line x1={x} y1={PH + GAP} x2={x} y2={PH + GAP + VH}
-              stroke="#0c1c2e" strokeWidth="0.5" />
-            <text x={x} y={RSI_Y + RSI_H + 15}
-              textAnchor="middle" fontSize="9" fill="#4a6a8a" fontWeight="600">
+              stroke={isPrimary ? '#182e48' : '#0c1c2e'} strokeWidth={isPrimary ? 0.8 : 0.5} />
+            {/* Tick mark below RSI panel */}
+            <line x1={x} y1={RSI_Y + RSI_H + 1} x2={x} y2={RSI_Y + RSI_H + (isPrimary ? 6 : 4)}
+              stroke={isPrimary ? '#2a4a6a' : '#182438'} strokeWidth={isPrimary ? 1.2 : 0.8} />
+            {/* Label text */}
+            <text x={x} y={RSI_Y + RSI_H + (isPrimary ? 15 : 14)}
+              textAnchor="middle"
+              fontSize={isPrimary ? 8.5 : 7.5}
+              fill={isPrimary ? '#6a8aaa' : '#3a5a74'}
+              fontWeight={isPrimary ? 700 : 600}
+              letterSpacing="0.2">
               {label}
             </text>
           </g>
@@ -2245,7 +2482,7 @@ export default function PriceChart({
         {crosshair && (() => {
           // Build EMA label list for collision avoidance
           const emaInfo = [
-            { val: hov?.e8,   col: '#f472b6', name: 'E5'   },
+            { val: hov?.e5,   col: '#f472b6', name: 'E5'   },
             { val: hov?.e15,  col: '#84cc16', name: 'E15'  },
             { val: hov?.e30,  col: '#06b6d4', name: 'E30'  },
             { val: hov?.e65,  col: '#a855f7', name: 'E65'  },

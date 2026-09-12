@@ -55,17 +55,20 @@ export interface ScanResult {
   weekly:    'bull' | 'bear' | 'neutral'
   daily:     'bull' | 'bear' | 'neutral'
   shortTerm: 'bull' | 'bear' | 'neutral'
-  pctChange: number | null
-  volSpike:  number | null
-  rsi:       number | null
-  adx:       number | null
-  price:     number | null
-  bull:      number
-  bear:      number
-  sparkline: number[]
-  stage:     'S1' | 'S2' | 'S3' | 'S4' | null
-  rsVsSpy:   number | null
-  tightness: number | null
+  pctChange:    number | null
+  volSpike:     number | null
+  rvolVelocity: number | null
+  rsi:          number | null
+  adx:          number | null
+  price:        number | null
+  bull:         number
+  bear:         number
+  sparkline:    number[]
+  stage:        'S1' | 'S2' | 'S3' | 'S4' | null
+  rsVsSpy:      number | null
+  tightness:    number | null
+  chg5d:        number | null
+  chg10d:       number | null
 }
 
 export interface ScanError {

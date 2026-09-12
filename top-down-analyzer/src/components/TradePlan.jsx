@@ -10,6 +10,7 @@ export default function TradePlan({
   fibLevels, atr, pullbackData,
   swingResult, orbRetest,
   ivData, historicalVol, tradeScore,
+  swingTargets,
 }) {
   const [logged, setLogged] = useState(false)
 
@@ -48,10 +49,10 @@ export default function TradePlan({
 
   const triggerText =
     tState === 'GO'
-      ? (orbOk ? `ORB ${orbRetest.signal} confirmed — ENTER NOW` : '4H 2-bar rule met — ENTER NOW')
+      ? (orbOk ? `ORB ${orbRetest.signal} confirmed — enter on 5M close through level` : '15M swing confirmed — snipe entry on 5M EMA 5 reclaim')
       : tState === 'WATCH'
-        ? (orbForming ? `ORB ${orbRetest.signal} forming — await ENTER signal` : '4H 1-bar formed — wait for second close')
-        : 'No entry trigger yet — wait for all 3 Gates'
+        ? (orbForming ? `ORB ${orbRetest.signal} in progress — wait for ENTER signal` : 'Pattern forming — wait for 5M close confirmation')
+        : 'Waiting — watch for ORB break then snipe on 5M EMA 5 touch'
   const triggerColor = tState === 'GO' ? dirColor : tState === 'WATCH' ? '#f59e0b' : '#3a5070'
   const triggerDot   = tState === 'GO' ? '●' : tState === 'WATCH' ? '◑' : '○'
 
@@ -70,11 +71,15 @@ export default function TradePlan({
   const stopPx    = stopCands[0]?.price ?? atrStop
   const stopLabel = stopCands[0]?.label ?? (atr != null ? '1.5× ATR' : null)
 
-  // ── Target price (first Fib extension on correct side) ────────────────────
+  // ── Target price: 15M swing target (OR-anchored) → Fib extension fallback ──
+  const swingT1 = swingTargets?.[0] ?? null
   const extCands = (fibLevels?.extensions ?? [])
     .filter(ext => ext.extension && (isCall ? ext.price > currentPrice : ext.price < currentPrice))
-  const targetPx    = extCands[0]?.price != null ? +extCands[0].price.toFixed(2) : null
-  const targetLabel = extCands[0]?.label ?? null
+  const targetPx    = swingT1 != null ? +swingT1.toFixed(2)
+    : extCands[0]?.price != null ? +extCands[0].price.toFixed(2) : null
+  const targetLabel = swingT1 != null
+    ? (isCall ? '15M Swing T1 (above ORH)' : '15M Swing T1 (below ORL)')
+    : (extCands[0]?.label ?? null)
 
   if (!stopPx && !targetPx) return null
 
@@ -243,6 +248,40 @@ export default function TradePlan({
         </div>
 
       </div>{/* /tp-grid */}
+
+      {/* ── Multi-target strip: T1–T5 with option price projections ── */}
+      {swingTargets?.length > 1 && (() => {
+        const tColors = ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#86efac']
+        return (
+          <div className="tp-targets-strip">
+            <span className="tp-ts-header">15M TARGETS</span>
+            {swingTargets.slice(0, 5).map((tPx, idx) => {
+              const col    = tColors[idx] || '#10b981'
+              const optPx  = K > 0 && T > 0 && sigma > 0 ? bsPrice(tPx, K, T, sigma, isCall) : null
+              const pct    = optPx != null ? ((optPx - optEntry) / optEntry * 100).toFixed(0) : null
+              const rrVal  = stopPx != null && Math.abs(currentPrice - stopPx) > 0
+                ? (Math.abs(tPx - currentPrice) / Math.abs(currentPrice - stopPx)).toFixed(1) : null
+              return (
+                <div key={idx} className="tp-ts-item">
+                  <span className="tp-ts-lbl" style={{ color: col }}>T{idx + 1}</span>
+                  <span className="tp-ts-stock" style={{ color: col }}>${f2(tPx)}</span>
+                  {optPx != null && (
+                    <span className="tp-ts-opt" style={{ color: col }}>
+                      opt≈${f2(optPx)}
+                      {pct != null && <span className="tp-ts-pct"> +{pct}%</span>}
+                    </span>
+                  )}
+                  {rrVal && (
+                    <span className="tp-ts-rr" style={{ color: +rrVal >= 2 ? col : '#f59e0b' }}>
+                      {rrVal}:1
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )
+      })()}
 
       {/* ── Full Greeks row ── */}
       {greeks && (

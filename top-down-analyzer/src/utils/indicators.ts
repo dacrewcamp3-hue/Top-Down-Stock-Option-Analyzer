@@ -452,7 +452,7 @@ export function calcORBreakRetest(bars5m, bars15m) {
   const ei15   = Math.min(si15 + 1, ts15.length - 1)
   const orHigh = Math.max(h15[si15], h15[ei15])
   const orLow  = Math.min(l15[si15], l15[ei15])
-  if (!orHigh || !orLow || orHigh <= orLow) return null
+  if (orHigh == null || orLow == null || orHigh <= orLow) return null
 
   // ── Step 2: find first 5m bar of today's session ──
   let si5 = 0
@@ -1533,4 +1533,122 @@ export function calcVolumeSpike(volumes: number[], period = 20): VolumeSpike | n
     strongSpike: ratio >= 2.0,
     lowVolume:   ratio < 0.7,
   }
+}
+
+// ── 15M swing targets from Opening Range ────────────────────────────────────
+// Returns up to 5 target price levels in the direction of trade.
+// Real targets = 15M swing highs above ORH (bull) or swing lows below ORL (bear)
+// after the first two OR bars. Remaining slots filled with ATR-based extensions.
+export function calc15MSwingTargets(
+  bars15m: any,
+  orHigh: number,
+  orLow: number,
+  direction: 'bull' | 'bear',
+  atrFallback = 0
+): number[] {
+  if (!bars15m || orHigh == null || orLow == null || orHigh <= orLow) return []
+  const { highs: h, lows: l, timestamps: ts } = bars15m
+  if (!ts || !h || !l || ts.length < 8) return []
+
+  // Locate today's session start (gap > 4 hours between bars)
+  let si = 0
+  for (let i = ts.length - 1; i > 0; i--) {
+    if (ts[i] - ts[i - 1] > 14400) { si = i; break }
+  }
+  const postOrStart = si + 2   // skip the two 30-min OR bars
+
+  const win = 2  // bars on each side to confirm a pivot
+  const levels: number[] = []
+
+  for (let i = Math.max(postOrStart + win, win); i < h.length - win; i++) {
+    if (direction === 'bull') {
+      const peak = (h as number[])[i]
+      if (peak <= orHigh) continue
+      const leftOk  = (h as number[]).slice(i - win, i).every(v => v < peak)
+      const rightOk = (h as number[]).slice(i + 1, i + win + 1).every(v => v < peak)
+      if (leftOk && rightOk) {
+        const v = +peak.toFixed(2)
+        if (!levels.includes(v)) levels.push(v)
+      }
+    } else {
+      const trough = (l as number[])[i]
+      if (trough >= orLow) continue
+      const leftOk  = (l as number[]).slice(i - win, i).every(v => v > trough)
+      const rightOk = (l as number[]).slice(i + 1, i + win + 1).every(v => v > trough)
+      if (leftOk && rightOk) {
+        const v = +trough.toFixed(2)
+        if (!levels.includes(v)) levels.push(v)
+      }
+    }
+  }
+
+  // Sort nearest to farthest from the OR level
+  if (direction === 'bull') levels.sort((a, b) => a - b)
+  else                      levels.sort((a, b) => b - a)
+
+  // Fill remaining slots with ATR-spaced projections from the last known level
+  const orRange = orHigh - orLow
+  const step    = atrFallback > 0 ? atrFallback : Math.max(orRange, 0.50)
+  while (levels.length < 5) {
+    const last = levels.length > 0 ? levels[levels.length - 1] : (direction === 'bull' ? orHigh : orLow)
+    levels.push(+(direction === 'bull' ? last + step : last - step).toFixed(2))
+  }
+
+  return levels.slice(0, 5)
+}
+
+// ── Day Type Classification ───────────────────────────────────────────────────
+// Uses Initial Balance (first 30 min = 6 bars on 5M) to classify the day's character.
+// TREND: IB extended one direction only — follow momentum, buy pullbacks or sell rallies.
+// CHOP:  IB broken both ways — no directional bias, fade extremes.
+// COIL:  IB still intact — compressed range, explosive move imminent.
+export function calcDayType(bars5m: any): {
+  type: 'TREND' | 'CHOP' | 'COIL' | null
+  note: string
+  ibHigh: number | null
+  ibLow: number | null
+  trendDir: 'bull' | 'bear' | null
+} {
+  const empty = { type: null as null, note: '', ibHigh: null, ibLow: null, trendDir: null as null }
+  if (!bars5m?.highs?.length || bars5m.highs.length < 7) return empty
+
+  const h: number[] = bars5m.highs
+  const l: number[] = bars5m.lows
+  const IB_BARS = 6
+
+  let ibHigh = -Infinity, ibLow = Infinity
+  for (let i = 0; i < Math.min(IB_BARS, h.length); i++) {
+    if (h[i] > ibHigh) ibHigh = h[i]
+    if (l[i] < ibLow)  ibLow  = l[i]
+  }
+
+  const ibRange = ibHigh - ibLow
+  if (ibRange <= 0 || !isFinite(ibHigh) || !isFinite(ibLow)) return empty
+
+  // Require a small buffer beyond the IB edge to filter wick noise
+  let brokeHigh = false, brokeLow = false
+  for (let i = IB_BARS; i < h.length; i++) {
+    if (h[i] > ibHigh * 1.0005) brokeHigh = true
+    if (l[i] < ibLow  * 0.9995) brokeLow  = true
+  }
+
+  let type: 'TREND' | 'CHOP' | 'COIL'
+  let note: string
+  let trendDir: 'bull' | 'bear' | null = null
+
+  if (brokeHigh && brokeLow) {
+    type = 'CHOP'
+    note = 'IB broken both ways — no trend. Fade extremes, avoid breakouts.'
+  } else if (brokeHigh) {
+    type = 'TREND'; trendDir = 'bull'
+    note = 'IB extended UP only — trending day. Buy pullbacks to IB high / VWAP.'
+  } else if (brokeLow) {
+    type = 'TREND'; trendDir = 'bear'
+    note = 'IB extended DOWN only — trending day. Sell rallies to IB low / VWAP.'
+  } else {
+    type = 'COIL'
+    note = 'IB intact — coiling. Large directional move pending. Wait for the break.'
+  }
+
+  return { type, note, ibHigh, ibLow, trendDir }
 }

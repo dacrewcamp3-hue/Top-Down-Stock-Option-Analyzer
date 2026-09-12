@@ -20,7 +20,7 @@ export default function SectorRotation({ sectors, loading }) {
     <div className="sr-root">
       <div className="sr-header">
         <span className="sr-title">SECTOR ROTATION</span>
-        <span className="sr-subtitle">20-day % change · sorted by performance</span>
+        <span className="sr-subtitle">20-day % change · sorted by performance · momentum arrows = 5d vs prior 5d</span>
         <span className="sr-legend">
           <span className="sr-leg-pip sr-leg-bull" />leading
           <span className="sr-leg-pip sr-leg-bear" />lagging
@@ -32,8 +32,20 @@ export default function SectorRotation({ sectors, loading }) {
           const pos     = (s.chg20d ?? 0) >= 0
           const barPct  = Math.abs(s.chg20d ?? 0) / maxAbs * 100
           const clr     = pos ? '#10b981' : '#ef4444'
-          const bgClr   = pos ? '#052010' : '#140508'
           const rank    = pos ? `#${i + 1}` : null
+
+          // Momentum: compare chg5d (recent 5 days) vs prior 5d (chg10d - chg5d ≈ older 5d)
+          let momentumArrow = null
+          if (s.chg5d != null && s.chg10d != null) {
+            const recent5  = s.chg5d
+            const prior5   = s.chg10d - s.chg5d
+            const accel    = recent5 - prior5
+            if      (accel >  1.5) momentumArrow = { sym: '↑↑', color: '#10b981', tip: `Accelerating: recent 5d ${recent5 > 0 ? '+' : ''}${recent5.toFixed(1)}% vs prior 5d ${prior5 > 0 ? '+' : ''}${prior5.toFixed(1)}%` }
+            else if (accel >  0.5) momentumArrow = { sym: '↑',  color: '#34d399', tip: `Improving: recent 5d ${recent5 > 0 ? '+' : ''}${recent5.toFixed(1)}% vs prior 5d ${prior5 > 0 ? '+' : ''}${prior5.toFixed(1)}%` }
+            else if (accel < -1.5) momentumArrow = { sym: '↓↓', color: '#ef4444', tip: `Decelerating: recent 5d ${recent5 > 0 ? '+' : ''}${recent5.toFixed(1)}% vs prior 5d ${prior5 > 0 ? '+' : ''}${prior5.toFixed(1)}%` }
+            else if (accel < -0.5) momentumArrow = { sym: '↓',  color: '#f87171', tip: `Fading: recent 5d ${recent5 > 0 ? '+' : ''}${recent5.toFixed(1)}% vs prior 5d ${prior5 > 0 ? '+' : ''}${prior5.toFixed(1)}%` }
+            else                   momentumArrow = { sym: '→',  color: '#6b7280', tip: `Steady: recent 5d ${recent5 > 0 ? '+' : ''}${recent5.toFixed(1)}% vs prior 5d ${prior5 > 0 ? '+' : ''}${prior5.toFixed(1)}%` }
+          }
 
           return (
             <div key={s.etf} className="sr-row">
@@ -49,6 +61,13 @@ export default function SectorRotation({ sectors, loading }) {
               </div>
               <span className="sr-chg" style={{ color: clr }}>
                 {pos ? '+' : ''}{s.chg20d?.toFixed(1) ?? '—'}%
+              </span>
+              <span
+                className="sr-momentum"
+                style={{ color: momentumArrow?.color ?? 'transparent' }}
+                title={momentumArrow?.tip ?? ''}
+              >
+                {momentumArrow?.sym ?? ''}
               </span>
               <div className="sr-pips">
                 {s.above15ema != null && (
@@ -74,6 +93,7 @@ export default function SectorRotation({ sectors, loading }) {
 
       <div className="sr-footer">
         Leading sectors get institutional money first — look for individual stocks in the top 3 sectors for highest-probability setups.
+        Momentum arrows show whether a sector is accelerating (↑↑) or fading (↓↓) over the last 5 days vs the prior 5 days.
       </div>
     </div>
   )

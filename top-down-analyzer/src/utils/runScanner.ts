@@ -274,30 +274,46 @@ export async function scanTicker(symbol: string, spyReturn: number | null = null
       : 0
     const volSpike = avgVol > 0 ? +(todayVol / avgVol).toFixed(2) : null
 
+    // RVOL velocity: recent 3-day avg vs prior 5-day avg — positive = accelerating
+    const rec3v   = volumes.slice(-4, -1)
+    const pri5v   = volumes.slice(-9, -4)
+    const rec3avg = rec3v.length ? rec3v.reduce((a, b) => a + b, 0) / rec3v.length : 0
+    const pri5avg = pri5v.length ? pri5v.reduce((a, b) => a + b, 0) / pri5v.length : 0
+    const rvolVelocity = (pri5avg > 0 && rec3avg > 0)
+      ? +((rec3avg / pri5avg - 1) * 100).toFixed(0)
+      : null
+
+    // Short-term returns for sector momentum
+    const chg5d  = n >= 6  ? +((closes[n-1] - closes[n-6])  / closes[n-6]  * 100).toFixed(2) : null
+    const chg10d = n >= 11 ? +((closes[n-1] - closes[n-11]) / closes[n-11] * 100).toFixed(2) : null
+
     const rsiVal = calcRSI(closes)
     const adxR   = calcADX(highs, lows, closes)
 
     return {
-      ticker:    symbol,
+      ticker:       symbol,
       signal,
-      score:     Math.round(50 + dyConf * 50),
-      rawConf:   dyConf,
+      score:        Math.round(50 + dyConf * 50),
+      rawConf:      dyConf,
       grade,
-      weekly:    wkSig.dir as ScanResult['weekly'],
-      daily:     dySig.dir as ScanResult['daily'],
-      shortTerm: stDir     as ScanResult['shortTerm'],
+      weekly:       wkSig.dir as ScanResult['weekly'],
+      daily:        dySig.dir as ScanResult['daily'],
+      shortTerm:    stDir     as ScanResult['shortTerm'],
       pctChange,
       volSpike,
-      rsi:       rsiVal != null ? Math.round(rsiVal) : null,
-      adx:       adxR   != null ? Math.round(adxR.adx) : null,
-      price:     closes[n - 1] != null ? +closes[n - 1].toFixed(2) : null,
-      bull:      dySig.bull,
-      bear:      dySig.bear,
-      sparkline: closes.slice(-10),
-      stage:     detectStage(closes, ema30s),
-      rsVsSpy:   calcRS(closes, spyReturn),
-      tightness: calcTightness(highs, lows),
-      ok:        true,
+      rvolVelocity,
+      rsi:          rsiVal != null ? Math.round(rsiVal) : null,
+      adx:          adxR   != null ? Math.round(adxR.adx) : null,
+      price:        closes[n - 1] != null ? +closes[n - 1].toFixed(2) : null,
+      bull:         dySig.bull,
+      bear:         dySig.bear,
+      sparkline:    closes.slice(-10),
+      stage:        detectStage(closes, ema30s),
+      rsVsSpy:      calcRS(closes, spyReturn),
+      tightness:    calcTightness(highs, lows),
+      chg5d,
+      chg10d,
+      ok:           true,
     }
   } catch (e) {
     return { ticker: symbol, ok: false, error: e.message }

@@ -33,7 +33,7 @@ async function fetchChain(ticker) {
 }
 
 function classify(contract, stockPrice, isCall) {
-  const { strike, volume, openInterest, impliedVolatility, lastPrice, expiration, inTheMoney } = contract
+  const { strike, volume, openInterest, impliedVolatility, lastPrice, expiration, inTheMoney, bid, ask } = contract
   if (!volume || volume < 50 || !lastPrice || lastPrice <= 0) return null
 
   const oi       = openInterest || 0
@@ -64,6 +64,14 @@ function classify(contract, stockPrice, isCall) {
   // Bias: OTM + no hedge context = directional speculation
   const bias = inTheMoney ? 'HEDGE' : 'SPEC'
 
+  // Flow intent: paid at ask = opening (initiating buyer); hit the bid = closing/selling
+  let intent = 'OPENING'
+  if (bid > 0 && ask > bid && lastPrice > 0) {
+    if (lastPrice >= ask * 0.97)       intent = 'OPENING'   // hit the ask — new position
+    else if (lastPrice <= bid * 1.03)  intent = 'CLOSING'   // hit the bid — exiting/selling
+    else                               intent = 'NEUTRAL'   // mid-market, ambiguous
+  }
+
   return {
     type:       isCall ? 'CALL' : 'PUT',
     strike,
@@ -81,6 +89,7 @@ function classify(contract, stockPrice, isCall) {
     flowType,
     flowColor,
     bias,
+    intent,
     stockPrice,
     score:      totalPrem * (volOI >= 1 ? 2 : 1),  // sort key
   }

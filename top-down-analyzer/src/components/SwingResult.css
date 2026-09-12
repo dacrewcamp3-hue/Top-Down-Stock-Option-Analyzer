@@ -1,16 +1,18 @@
 ﻿.swing-result {
-  background: #0f1623;
-  border: 1px solid #1e2d45;
-  border-radius: 10px;
+  background: #08101e;
+  border: 1px solid #182438;
+  border-radius: 12px;
   overflow: hidden;
   font-size: 13px;
   color: #e2e8f0;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
 }
 
 /* ── Header ── */
 .swing-result-header {
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid #1e2d45;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid #182438;
+  background: linear-gradient(to bottom, #0d1828, #08101e);
 }
 
 .swing-eyebrow-row {
@@ -21,10 +23,10 @@
 }
 
 .swing-eyebrow {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: #3a4d60;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #2e4a68;
   text-transform: uppercase;
 }
 
@@ -46,48 +48,53 @@
 .swing-confirm-row {
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin-bottom: 8px;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
 .swing-confirm-pip {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
+  transition: box-shadow 0.3s;
 }
 
 .swing-confirm-pip.empty  { background: transparent; border: 2px solid #1e2d45; }
-.swing-confirm-pip.filled { border: none; }
+.swing-confirm-pip.filled { border: none; box-shadow: 0 0 8px currentColor; }
 
 .swing-confirm-text {
-  font-size: 12px;
-  color: #4a6380;
-  margin-left: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #3a5070;
+  margin-left: 3px;
 }
 
 .swing-signal-desc {
   font-size: 12px;
-  font-weight: 600;
-  padding: 6px 10px;
-  border-radius: 5px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 7px;
   border: 1px solid;
   line-height: 1.4;
+  letter-spacing: 0.2px;
 }
 
 .swing-signal-empty {
-  font-size: 11px;
-  color: #2a3d59;
-  padding: 8px 0 2px;
+  font-size: 12px;
+  color: #253650;
+  padding: 12px 0 4px;
+  font-style: italic;
 }
 
 /* ── Shared block helpers ── */
 .swing-block-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: #3a4d60;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: #2e4a68;
   text-transform: uppercase;
-  margin-bottom: 6px;
+  margin-bottom: 7px;
 }
 
 .swing-block-title-row {
@@ -99,17 +106,21 @@
 
 /* ── Bar status ── */
 .swing-bars-block {
-  padding: 10px 16px;
-  border-bottom: 1px solid #1e2d45;
+  padding: 12px 18px;
+  border-bottom: 1px solid #182438;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 7px;
 }
 
 .swing-bar-row {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  background: #06101c;
+  border: 1px solid #182438;
 }
 
 .bar-dot {
@@ -136,7 +147,7 @@
   display: flex;
   gap: 8px;
   padding: 10px 16px;
-  border-bottom: 1px solid #1e2d45;
+  border-bottom: 1px solid #182438;
 }
 .swing-momentum-row .sc-card {
   flex: 1;
@@ -146,7 +157,7 @@
 /* ── ADX full-width panel ── */
 .swing-adx-panel {
   padding: 10px 16px;
-  border-bottom: 1px solid #1e2d45;
+  border-bottom: 1px solid #182438;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -271,12 +282,12 @@
   grid-template-columns: 1fr 1fr;
   gap: 6px;
   padding: 10px 16px;
-  border-bottom: 1px solid #1e2d45;
+  border-bottom: 1px solid #182438;
 }
 
 .sc-card {
   background: #090d18;
-  border: 1px solid #1e2d45;
+  border: 1px solid #182438;
   border-radius: 6px;
   padding: 8px;
   display: flex;
@@ -430,7 +441,7 @@
 /* ── VWAP strip ── */
 .swing-vwap-strip {
   padding: 8px 16px;
-  border-bottom: 1px solid #1e2d45;
+  border-bottom: 1px solid #182438;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -490,7 +501,7 @@
 /* ── MA Stack · S&R Ladder ── */
 .swing-ma-block {
   padding: 10px 16px;
-  border-bottom: 1px solid #1e2d45;
+  border-bottom: 1px solid #182438;
 }
 
 .ma-header-right {
@@ -692,7 +703,7 @@
 /* ── Pattern Detection compact ── */
 .swing-pattern-block {
   padding: 10px 16px;
-  border-bottom: 1px solid #1e2d45;
+  border-bottom: 1px solid #182438;
 }
 
 .pattern-cards {
@@ -1403,7 +1414,7 @@
 /* ── Fibonacci compact ── */
 .swing-fib-block {
   padding: 10px 16px;
-  border-bottom: 1px solid #1e2d45;
+  border-bottom: 1px solid #182438;
 }
 
 .fib-dir-tag {
@@ -1575,106 +1586,133 @@
 
 /* ── Warnings ── */
 .swing-warnings-block {
-  padding: 8px 16px;
-  background: #160808;
-  border-bottom: 1px solid #3a0a0a;
+  padding: 10px 16px;
+  background: linear-gradient(to right, #180808, #120606);
+  border-top: 1px solid #2a0808;
+  border-bottom: 1px solid #2a0808;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .swing-warning-row {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  gap: 8px;
   font-size: 12px;
   font-weight: 600;
   color: #fca5a5;
   line-height: 1.4;
+  padding: 4px 8px;
+  background: rgba(239,68,68,0.06);
+  border-left: 2px solid rgba(239,68,68,0.35);
+  border-radius: 0 5px 5px 0;
 }
 
-.swing-warn-icon { flex-shrink: 0; }
+.swing-warn-icon { flex-shrink: 0; color: #ef4444; font-size: 13px; }
 
 /* ── Rules ── */
 .swing-rules-block {
-  padding: 8px 16px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  background: #060d18;
+  border-top: 1px solid #182438;
 }
 
 .swing-rule {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 11px;
-  color: #6b8099;
+  gap: 9px;
+  font-size: 12px;
+  color: #4a6380;
+  padding: 5px 10px;
+  border-radius: 7px;
+  background: #08101e;
+  border: 1px solid #182438;
 }
 
-.swing-rule-icon { font-size: 12px; font-weight: 800; flex-shrink: 0; }
+.swing-rule:hover { border-color: #253650; }
+
+.swing-rule-icon { font-size: 13px; font-weight: 900; flex-shrink: 0; }
 .swing-rule.bull .swing-rule-icon { color: #10b981; }
 .swing-rule.bear .swing-rule-icon { color: #ef4444; }
 .swing-rule.vwap .swing-rule-icon { color: #4a90c4; }
-.swing-rule strong { color: #e2e8f0; }
+.swing-rule strong { color: #c4d4e4; }
 
 /* ── Header: signal + grade badge row ── */
 .swing-header-signal-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
 .swing-signal {
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -1px;
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: -1.5px;
   line-height: 1;
   margin-bottom: 0;
+  text-shadow: 0 0 40px currentColor;
 }
 
 .swing-grade-badge {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 900;
-  padding: 3px 10px;
-  border-radius: 6px;
+  padding: 4px 12px;
+  border-radius: 8px;
   border: 1px solid;
   letter-spacing: -0.5px;
   line-height: 1;
-  align-self: flex-end;
-  margin-bottom: 2px;
+  align-self: center;
   flex-shrink: 0;
 }
 
 /* ── Action banner ── */
 .swing-action-banner {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border-radius: 7px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 9px;
   border: 1px solid;
+  position: relative;
+  overflow: hidden;
+}
+
+.swing-action-banner::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: currentColor;
+  opacity: 0.5;
 }
 
 .action-banner-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: #3a4d60;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: currentColor;
+  opacity: 0.5;
   text-transform: uppercase;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
 
 .action-banner-text {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 900;
   letter-spacing: -0.3px;
   line-height: 1.2;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 
 .action-banner-sub {
   font-size: 12px;
   color: #6b8099;
-  line-height: 1.3;
+  line-height: 1.4;
 }
 
 /* ── VIX warning banner ── */
@@ -1706,7 +1744,7 @@
 .swing-rs-pair {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  border-bottom: 1px solid #1e2d45;
+  border-bottom: 1px solid #182438;
 }
 
 .swing-rs-pair .swing-rs-strip {
@@ -1731,7 +1769,7 @@
 /* ── Relative Strength strip ── */
 .swing-rs-strip {
   padding: 8px 16px;
-  border-bottom: 1px solid #1e2d45;
+  border-bottom: 1px solid #182438;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1854,7 +1892,7 @@
 /* ── Setup Grade Checklist ── */
 .swing-grade-block {
   padding: 10px 16px;
-  border-bottom: 1px solid #1e2d45;
+  border-bottom: 1px solid #182438;
 }
 
 .grade-summary {
@@ -1980,7 +2018,7 @@
   margin: 0 16px 10px;
   padding: 8px 12px;
   background: #07101c;
-  border: 1px solid #1e2d45;
+  border: 1px solid #182438;
   border-radius: 7px;
 }
 
@@ -2027,7 +2065,7 @@
   margin: 0 16px 10px;
   padding: 8px 12px;
   background: #07101c;
-  border: 1px solid #1e2d45;
+  border: 1px solid #182438;
   border-radius: 7px;
 }
 
@@ -2052,7 +2090,7 @@
   background: #0c1420;
   padding: 2px 6px;
   border-radius: 10px;
-  border: 1px solid #1e2d45;
+  border: 1px solid #182438;
 }
 
 .sector-strip-verdict {

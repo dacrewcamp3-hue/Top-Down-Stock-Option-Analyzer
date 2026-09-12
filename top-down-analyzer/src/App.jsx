@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { TIMEFRAMES } from './data/timeframes'
 import { SWING_CATEGORIES } from './data/swingCategories'
 import { analyzeEntry } from './utils/analyzeEntry'
@@ -10,7 +10,7 @@ import { fetchShortInterest } from './utils/fetchShortInterest'
 import { fetchBreadth } from './utils/fetchBreadth'
 import { calcHistoricalVol, bsPrice } from './utils/fetchOptions'
 import { deriveConfluenceSignals, derive4HSwingSignals, derive4HSwingTrendSignals, deriveMarketAndRisk } from './utils/autoSignals'
-import { calcFibonacci, calcSwingRSI, calcADX, calcMAStack, calcVWAP, detectDoublePatterns, calcRelativeStrength, calcVolumeSpike, calcORBreakRetest, calcWeeklyAlignment, detectHAndS, detectContinuationPatterns, calcVolumeProfile } from './utils/indicators'
+import { calcFibonacci, calcSwingRSI, calcADX, calcMAStack, calcVWAP, detectDoublePatterns, calcRelativeStrength, calcVolumeSpike, calcORBreakRetest, calcWeeklyAlignment, detectHAndS, detectContinuationPatterns, calcVolumeProfile, calc15MSwingTargets, calcDayType } from './utils/indicators'
 import TimeframePanel from './components/TimeframePanel'
 import EntryRecommendation from './components/EntryRecommendation'
 import SwingCategoryPanel from './components/SwingCategoryPanel'
@@ -825,6 +825,28 @@ export default function App() {
     rsiSignal, weeklyAlign, maStack, volumeSpike, shortInterest, wyckoff: wyckoffData,
   })
 
+  // ── 15M swing targets anchored to the 30-min Opening Range ─────────────────
+  const swingTargets = useMemo(() => {
+    if (!orbRetest?.orHigh || !orbRetest?.orLow || !fifteenMBars) return []
+    const dir = tradeScore?.direction === 'CALL' ? 'bull' : 'bear'
+    const { highs: h15, lows: l15, closes: c15 } = fifteenMBars
+    let atr15 = 0
+    if (h15?.length >= 15 && c15?.length >= 15) {
+      for (let i = h15.length - 13; i < h15.length; i++) {
+        atr15 += Math.max(
+          h15[i] - l15[i],
+          Math.abs(h15[i] - c15[i - 1]),
+          Math.abs(l15[i] - c15[i - 1])
+        )
+      }
+      atr15 /= 13
+    }
+    return calc15MSwingTargets(fifteenMBars, orbRetest.orHigh, orbRetest.orLow, dir, atr15)
+  }, [orbRetest, fifteenMBars, tradeScore?.direction])
+
+  // ── Day Type from Initial Balance (5M chart first 30 min) ───────────────────
+  const dayType = useMemo(() => calcDayType(fiveMBars), [fiveMBars])
+
   // Yesterday's close for % calculations.
   // Priority order:
   //   1. Phase 2 live quote: S - regularMarketChange. Split-adjusted, matches all major platforms.
@@ -1234,6 +1256,8 @@ export default function App() {
               volumeSpike={volumeSpike}
               volumeProfile={volumeProfile}
               wyckoff={wyckoffData}
+              swingTargets={swingTargets}
+              dayType={dayType}
             />
           )}
 
@@ -1243,6 +1267,8 @@ export default function App() {
               direction={tradeScore?.direction}
               ticker={ticker}
               rec={primaryRec}
+              orbRetest={orbRetest}
+              swingTargets={swingTargets}
             />
           )}
 
@@ -1408,6 +1434,11 @@ export default function App() {
                   timeframe={chartTf}
                   showPreMarket={showPreMarket && isPmTf}
                   prevDayClose={prevDayCloseValue}
+                  swingTargets={swingTargets}
+                  gammaFlip={optionsChain?.gammaFlip}
+                  callWall={optionsChain?.callWall}
+                  putWall={optionsChain?.putWall}
+                  maxPain={optionsChain?.maxPain}
                 />
                 <PriceVolumePanel
                   closes={chartBars?.closes}

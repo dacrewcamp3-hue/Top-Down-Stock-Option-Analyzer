@@ -1,22 +1,40 @@
-﻿.swing-panel {
-  background: #0f1623;
-  border: 1px solid #1e2d45;
-  border-radius: 10px;
+.swing-panel {
+  background: #08101e;
+  border: 1px solid #182438;
+  border-radius: 12px;
   overflow: hidden;
-  transition: border-color 0.15s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
 }
+
+/* Left accent stripe per category */
+.swing-panel::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--panel-accent, #2a4a80);
+  border-radius: 12px 0 0 12px;
+}
+
+.swing-panel-4h::before      { --panel-accent: #3b82f6; }
+.swing-panel-trend::before   { --panel-accent: #8b5cf6; }
 
 .swing-panel:hover {
-  border-color: #2a3d59;
+  border-color: #253650;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.4);
 }
 
+/* ── Header ── */
 .swing-panel-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 13px 15px 13px 20px;
   width: 100%;
-  background: none;
+  background: linear-gradient(to right, #0c1a2e 0%, #08101e 100%);
   border: none;
   cursor: pointer;
   color: #e2e8f0;
@@ -26,27 +44,40 @@
 }
 
 .swing-panel-header:hover {
-  background: #141d2e;
+  background: linear-gradient(to right, #0f1f34 0%, #0a1422 100%);
 }
 
+/* Category badge */
 .swing-badge {
-  background: #090d18;
-  border: 1px solid #1e2d45;
   border-radius: 5px;
-  color: #6b8099;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  min-width: 36px;
-  padding: 3px 6px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  min-width: 40px;
+  padding: 3px 7px;
   text-align: center;
+  flex-shrink: 0;
+}
+
+.swing-panel-4h .swing-badge {
+  background: rgba(59,130,246,0.2);
+  border: 1px solid rgba(59,130,246,0.5);
+  color: #60a5fa;
+}
+
+.swing-panel-trend .swing-badge {
+  background: rgba(139,92,246,0.2);
+  border: 1px solid rgba(139,92,246,0.5);
+  color: #a78bfa;
 }
 
 .swing-panel-label {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   flex: 1;
-  color: #e2e8f0;
+  color: #c4d4e4;
+  letter-spacing: 0.2px;
 }
 
 .swing-header-right {
@@ -55,89 +86,135 @@
   gap: 8px;
 }
 
-.swing-complete-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+/* Progress counter replaces dot */
+.swing-progress-badge {
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 8px;
+  border-radius: 10px;
+  line-height: 1.5;
 }
 
-.swing-complete-dot.complete { background: #10b981; }
-.swing-complete-dot.partial  { background: #f59e0b; }
+.swing-progress-badge.complete {
+  background: rgba(16,185,129,0.12);
+  border: 1px solid rgba(16,185,129,0.35);
+  color: #10b981;
+}
+
+.swing-progress-badge.partial {
+  background: rgba(245,158,11,0.10);
+  border: 1px solid rgba(245,158,11,0.28);
+  color: #f59e0b;
+}
+
+.swing-progress-badge.empty {
+  background: rgba(30,45,69,0.3);
+  border: 1px solid #182438;
+  color: #2e4560;
+}
 
 .swing-chevron {
-  font-size: 11px;
-  color: #3a4d60;
+  font-size: 9px;
+  color: #253650;
+  transition: transform 0.15s;
+  flex-shrink: 0;
 }
 
+/* ── Body ── */
 .swing-panel-body {
-  border-top: 1px solid #1e2d45;
-  padding: 16px;
+  border-top: 1px solid #182438;
+  padding: 16px 16px 18px 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .swing-field-group {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 
 .swing-field-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  color: #4a6380;
+  color: #2e4a68;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.9px;
 }
 
 .swing-field-options {
   display: flex;
-  flex-wrap: wrap;
   gap: 6px;
 }
 
+/* ── Buttons ── */
 .swing-btn {
-  background: #090d18;
-  border: 1px solid #1e2d45;
-  border-radius: 6px;
-  color: #6b8099;
+  flex: 1;
+  background: #060d1a;
+  border: 1px solid #182438;
+  border-radius: 8px;
+  color: #3a5070;
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
-  font-weight: 500;
-  padding: 7px 14px;
-  transition: all 0.12s;
+  font-weight: 600;
+  padding: 10px 8px;
+  transition: all 0.15s;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  text-align: center;
+  line-height: 1.3;
+  min-height: 52px;
 }
 
-.swing-btn:hover {
-  border-color: #2a3d59;
-  color: #a0b4c8;
+.swing-btn:hover:not(.active-bull):not(.active-bear):not(.active-neutral) {
+  border-color: #253650;
+  color: #7090b0;
+  background: #08111f;
+}
+
+.swing-btn-icon {
+  font-size: 15px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.swing-btn-text {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 .swing-btn-sub {
-  font-size: 12px;
-  opacity: 0.65;
+  font-size: 10px;
+  opacity: 0.6;
 }
 
+/* Active states */
 .swing-btn.active-bull {
-  background: #022c1e;
+  background: linear-gradient(160deg, #021c12 0%, #042e1c 100%);
   border-color: #10b981;
-  color: #10b981;
+  color: #34d399;
+  box-shadow: 0 0 0 1px rgba(16,185,129,0.12), 0 2px 8px rgba(16,185,129,0.08);
 }
+
+.swing-btn.active-bull .swing-btn-icon { opacity: 1; }
 
 .swing-btn.active-bear {
-  background: #2c0202;
+  background: linear-gradient(160deg, #1e0303 0%, #2e0505 100%);
   border-color: #ef4444;
-  color: #ef4444;
+  color: #f87171;
+  box-shadow: 0 0 0 1px rgba(239,68,68,0.12), 0 2px 8px rgba(239,68,68,0.08);
 }
 
 .swing-btn.active-neutral {
-  background: #2c1a02;
+  background: linear-gradient(160deg, #1c1104 0%, #2a1a06 100%);
   border-color: #f59e0b;
-  color: #f59e0b;
+  color: #fbbf24;
+  box-shadow: 0 0 0 1px rgba(245,158,11,0.12), 0 2px 8px rgba(245,158,11,0.08);
 }

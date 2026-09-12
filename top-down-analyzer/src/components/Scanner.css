@@ -327,7 +327,7 @@
 .sc-thead,
 .sc-row {
   display: grid;
-  grid-template-columns: 72px 68px 60px 90px 80px 44px 44px 1fr 60px 60px 46px 54px;
+  grid-template-columns: 72px 68px 60px 90px 80px 44px 44px 1fr 60px 44px 60px 46px 54px;
   padding: 7px 14px;
   align-items: center;
   gap: 0;
@@ -716,6 +716,69 @@
 
 @media (max-width: 600px) {
   .sc-top-columns { flex-direction: column; }
+}
+
+/* ── Trade Window Pill ───────────────────────────────────────────────────── */
+.sc-window-pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  margin-top: 4px;
+}
+
+/* ── Confluence Panel ────────────────────────────────────────────────────── */
+.sc-top-confluence {
+  border-bottom: 1px solid #1a2e48;
+  padding-bottom: 12px;
+}
+
+.sc-top-title-conf {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #070b18 !important;
+  color: #7c5ce8 !important;
+}
+
+.sc-top-conf-sub {
+  font-size: 9px;
+  font-weight: 500;
+  color: #4a4a7a;
+  letter-spacing: 0;
+  text-transform: none;
+  margin-left: auto;
+}
+
+.sc-top-conf-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px 4px;
+}
+
+.sc-top-card-conf {
+  min-width: 160px;
+  flex: 1 1 160px;
+  border-left-width: 3px !important;
+}
+
+.sc-top-src-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.sc-top-src-tag {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 1px 5px;
+  border: 1px solid;
+  border-radius: 3px;
+  text-transform: uppercase;
 }
 
 /* ── Sector Leaders ──────────────────────────────────────────────────────── */

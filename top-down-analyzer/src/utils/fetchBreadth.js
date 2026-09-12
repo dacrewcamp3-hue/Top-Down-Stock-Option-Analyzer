@@ -186,7 +186,11 @@ export async function fetchBreadth() {
     const n      = closes.length
     const price  = closes[n - 1]
     const ref20  = closes[Math.max(0, n - 21)]
+    const ref10  = closes[Math.max(0, n - 11)]
+    const ref5   = closes[Math.max(0, n - 6)]
     const chg20d = ref20 ? +((price - ref20) / ref20 * 100).toFixed(1) : null
+    const chg10d = ref10 && n >= 11 ? +((price - ref10) / ref10 * 100).toFixed(2) : null
+    const chg5d  = ref5  && n >= 6  ? +((price - ref5)  / ref5  * 100).toFixed(2) : null
     const e15arr = calcEMASeries(closes, 15)
     const e65arr = calcEMASeries(closes, 65)
     const e15    = e15arr[n - 1]
@@ -195,6 +199,8 @@ export async function fetchBreadth() {
       etf, name,
       price:      +price.toFixed(2),
       chg20d,
+      chg10d,
+      chg5d,
       above15ema: e15 != null ? price > e15 : null,
       above65ema: e65 != null ? price > e65 : null,
     }

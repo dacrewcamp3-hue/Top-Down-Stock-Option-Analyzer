@@ -1,17 +1,14 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import './StockTradePlan.css'
 
 const f2  = v => v != null ? (+v).toFixed(2) : '—'
 const f0  = v => v != null ? Math.round(+v).toLocaleString() : '—'
-const pct = (v, ref) => ref ? ((v - ref) / ref * 100).toFixed(2) : null
 
 const SHARE_KEY    = 'tdsa_share_size'
 const DAY_PNL_KEY  = 'tdsa_day_pnl'
 const DAY_DATE_KEY = 'tdsa_day_date'
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10)
-}
+function todayStr() { return new Date().toISOString().slice(0, 10) }
 
 function loadDayPnl() {
   try {
@@ -28,7 +25,7 @@ function saveDayPnl(val) {
   } catch {}
 }
 
-// ── Machine status ────────────────────────────────────────────────────────────
+// ── Machine status ─────────────────────────────────────────────────────────────
 function MachineStatus({ dayPnl, dailyGoal, dailyLimit, direction, ticker }) {
   const goalHit  = dailyGoal > 0 && dayPnl >= dailyGoal
   const limitHit = dailyLimit > 0 && dayPnl <= -dailyLimit
@@ -75,36 +72,31 @@ function MachineStatus({ dayPnl, dailyGoal, dailyLimit, direction, ticker }) {
   )
 }
 
-// ── Trade calculator ──────────────────────────────────────────────────────────
-function TradeCalc({ currentPrice, direction, shares }) {
-  if (!currentPrice || !direction || direction === 'NO TRADE' || shares <= 0) return null
-  const isCall = direction === 'CALL'
+// ── Trade calculator ───────────────────────────────────────────────────────────
+function TradeCalc({ entryPx, stopPx, riskPx, targetPrices, stopLabel, entryLabel, hasOR, direction, shares }) {
+  if (!entryPx || !direction || direction === 'NO TRADE' || shares <= 0) return null
+  const isCall   = direction === 'CALL'
+  const dirColor = isCall ? '#10b981' : '#ef4444'
+  const dirBg    = isCall ? '#011208' : '#120202'
+  const dirBord  = isCall ? '#065f46' : '#7f1d1d'
 
-  const s      = +(currentPrice * 0.01).toFixed(2)   // 1R = 1% of stock price
-  const stopPx = +(isCall ? currentPrice - s : currentPrice + s).toFixed(2)
-  const t1Px   = +(isCall ? currentPrice + s     : currentPrice - s).toFixed(2)   // +1%
-  const t2Px   = +(isCall ? currentPrice + s * 2 : currentPrice - s * 2).toFixed(2)  // +2%
-  const t3Px   = +(isCall ? currentPrice + s * 3 : currentPrice - s * 3).toFixed(2)  // +3%
-  const t4Px   = +(isCall ? currentPrice + s * 4 : currentPrice - s * 4).toFixed(2)  // +4%
-  const t5Px   = +(isCall ? currentPrice + s * 6 : currentPrice - s * 6).toFixed(2)  // +6% runner
+  const [t1Px, t2Px, t3Px, t4Px, t5Px] = targetPrices
+  const sh20    = Math.round(shares * 0.20)
+  const maxRisk = +(shares * riskPx).toFixed(0)
 
-  const sh20   = Math.round(shares * 0.20)   // 20% at each target
-  const maxRisk = shares * s
+  const gain  = px => +Math.abs(px - entryPx).toFixed(2)
+  const pctOf = px => ((Math.abs(px - entryPx) / entryPx) * 100).toFixed(1)
 
-  // Cumulative locked profit at each target
-  const t1P = sh20 * s                    // 20% at +1%
-  const t2P = t1P + sh20 * s * 2         // + 20% at +2%
-  const t3P = t2P + sh20 * s * 3         // + 20% at +3%
-  const t4P = t3P + sh20 * s * 4         // + 20% at +4%
-  const t5T = t4P + sh20 * s * 6         // + 20% runner at +6%
+  // Cumulative P&L at each staged exit (20% at each level)
+  const t1P = sh20 * gain(t1Px)
+  const t2P = t1P + sh20 * gain(t2Px)
+  const t3P = t2P + sh20 * gain(t3Px)
+  const t4P = t3P + sh20 * gain(t4Px)
+  const t5T = t4P + sh20 * gain(t5Px)
 
   const rr = n => maxRisk > 0 ? (n / maxRisk).toFixed(1) : null
   const rr1 = rr(t1P); const rr2 = rr(t2P); const rr3 = rr(t3P)
   const rr4 = rr(t4P); const rr5 = rr(t5T)
-
-  const dirColor = isCall ? '#10b981' : '#ef4444'
-  const dirBg    = isCall ? '#011208' : '#120202'
-  const dirBord  = isCall ? '#065f46' : '#7f1d1d'
 
   return (
     <div className="stp-calc" style={{ borderColor: dirBord, background: dirBg }}>
@@ -112,8 +104,8 @@ function TradeCalc({ currentPrice, direction, shares }) {
       {/* ── Header ── */}
       <div className="stp-calc-header">
         <span className="stp-calc-title">TRADE CALCULATOR</span>
-        <span className="stp-calc-entry" style={{ color: '#4a6888' }}>
-          Entry ${f2(currentPrice)} · {shares.toLocaleString()} sh · ${f0(currentPrice * shares)} total
+        <span className="stp-calc-entry" style={{ color: hasOR ? dirColor : '#4a6888' }}>
+          {entryLabel} · {shares.toLocaleString()} sh · ${f0(entryPx * shares)} total
         </span>
         <span className="stp-calc-dir" style={{ color: dirColor }}>
           {isCall ? '▲ LONG' : '▼ SHORT'}
@@ -127,7 +119,8 @@ function TradeCalc({ currentPrice, direction, shares }) {
         <div className="stp-col stp-col-stop">
           <div className="stp-col-hdr">STOP</div>
           <div className="stp-col-price" style={{ color: '#ef4444' }}>${f2(stopPx)}</div>
-          <div className="stp-col-pct" style={{ color: '#ef4444' }}>−1% (−${f2(s)}/sh)</div>
+          <div className="stp-col-pct"   style={{ color: '#ef4444' }}>{stopLabel}</div>
+          <div className="stp-col-pct"   style={{ color: '#ef4444' }}>−${f2(riskPx)}/sh</div>
           <div className="stp-col-sep" />
           <div className="stp-col-action">Exit ALL</div>
           <div className="stp-col-pnl" style={{ color: '#ef4444' }}>−${f0(maxRisk)}</div>
@@ -137,9 +130,9 @@ function TradeCalc({ currentPrice, direction, shares }) {
         <div className="stp-col stp-col-t1" style={{ borderColor: `${dirColor}30` }}>
           <div className="stp-col-hdr" style={{ color: dirColor }}>T1</div>
           <div className="stp-col-price" style={{ color: dirColor }}>${f2(t1Px)}</div>
-          <div className="stp-col-pct" style={{ color: dirColor }}>+1%</div>
+          <div className="stp-col-pct"   style={{ color: dirColor }}>+{pctOf(t1Px)}%</div>
           <div className="stp-col-sep" />
-          <div className="stp-col-action">Sell 20%<br /><span className="stp-col-subnote">→ stop to ${f2(currentPrice)}</span></div>
+          <div className="stp-col-action">Sell 20%<br /><span className="stp-col-subnote">→ stop to ${f2(entryPx)}</span></div>
           <div className="stp-col-pnl" style={{ color: dirColor }}>+${f0(t1P)}</div>
           {rr1 && <div className="stp-col-rr" style={{ color: dirColor }}>{rr1}:1</div>}
         </div>
@@ -148,7 +141,7 @@ function TradeCalc({ currentPrice, direction, shares }) {
         <div className="stp-col stp-col-t2" style={{ borderColor: `${dirColor}28` }}>
           <div className="stp-col-hdr" style={{ color: dirColor }}>T2</div>
           <div className="stp-col-price" style={{ color: dirColor }}>${f2(t2Px)}</div>
-          <div className="stp-col-pct" style={{ color: dirColor }}>+2%</div>
+          <div className="stp-col-pct"   style={{ color: dirColor }}>+{pctOf(t2Px)}%</div>
           <div className="stp-col-sep" />
           <div className="stp-col-action">Sell 20%<br /><span className="stp-col-subnote">→ trail to ${f2(t1Px)}</span></div>
           <div className="stp-col-pnl" style={{ color: dirColor }}>+${f0(t2P)}</div>
@@ -159,7 +152,7 @@ function TradeCalc({ currentPrice, direction, shares }) {
         <div className="stp-col stp-col-t3" style={{ borderColor: `${dirColor}20` }}>
           <div className="stp-col-hdr" style={{ color: dirColor }}>T3</div>
           <div className="stp-col-price" style={{ color: dirColor }}>${f2(t3Px)}</div>
-          <div className="stp-col-pct" style={{ color: dirColor }}>+3%</div>
+          <div className="stp-col-pct"   style={{ color: dirColor }}>+{pctOf(t3Px)}%</div>
           <div className="stp-col-sep" />
           <div className="stp-col-action">Sell 20%<br /><span className="stp-col-subnote">→ trail to ${f2(t2Px)}</span></div>
           <div className="stp-col-pnl" style={{ color: dirColor }}>+${f0(t3P)}</div>
@@ -170,7 +163,7 @@ function TradeCalc({ currentPrice, direction, shares }) {
         <div className="stp-col stp-col-t4" style={{ borderColor: `${dirColor}18` }}>
           <div className="stp-col-hdr" style={{ color: dirColor }}>T4</div>
           <div className="stp-col-price" style={{ color: dirColor }}>${f2(t4Px)}</div>
-          <div className="stp-col-pct" style={{ color: dirColor }}>+4%</div>
+          <div className="stp-col-pct"   style={{ color: dirColor }}>+{pctOf(t4Px)}%</div>
           <div className="stp-col-sep" />
           <div className="stp-col-action">Sell 20%<br /><span className="stp-col-subnote">→ trail to ${f2(t3Px)}</span></div>
           <div className="stp-col-pnl" style={{ color: dirColor }}>+${f0(t4P)}</div>
@@ -179,19 +172,19 @@ function TradeCalc({ currentPrice, direction, shares }) {
 
       </div>
 
-      {/* ── Runner note ── */}
+      {/* ── T5 runner note ── */}
       <div className="stp-trail-row">
-        <span className="stp-trail-label">RUNNER (20%)</span>
+        <span className="stp-trail-label">T5 / RUNNER (20%)</span>
         <span className="stp-trail-body">
           Remaining {sh20} shares trail with a moving stop — raise it as price extends.
-          At {isCall ? '+' : '−'}6% (${f2(t5Px)}) your cumulative gain hits +${f0(t5T)} ({rr5}:1 R:R).
+          At ${f2(t5Px)} (+{pctOf(t5Px)}%) your cumulative gain hits +${f0(t5T)} ({rr5}:1 R:R).
         </span>
       </div>
 
       {/* ── R:R summary bar ── */}
       <div className="stp-rr-row">
         <div className="stp-rr-item">
-          <span className="stp-rr-lbl">MAX RISK</span>
+          <span className="stp-rr-lbl">RISK</span>
           <span className="stp-rr-val" style={{ color: '#ef4444' }}>−${f0(maxRisk)}</span>
         </div>
         <div className="stp-rr-arrow">→</div>
@@ -220,7 +213,7 @@ function TradeCalc({ currentPrice, direction, shares }) {
         </div>
         <div className="stp-rr-arrow">→</div>
         <div className="stp-rr-item">
-          <span className="stp-rr-lbl">RUNNER</span>
+          <span className="stp-rr-lbl">T5</span>
           <span className="stp-rr-val" style={{ color: dirColor }}>+${f0(t5T)}</span>
           {rr5 && <span className="stp-rr-ratio" style={{ color: dirColor }}>{rr5}:1</span>}
         </div>
@@ -229,48 +222,44 @@ function TradeCalc({ currentPrice, direction, shares }) {
   )
 }
 
-// ── Scaling rules ─────────────────────────────────────────────────────────────
-function ScalingRules({ currentPrice, direction, shares }) {
-  if (!currentPrice || !direction || direction === 'NO TRADE' || shares <= 0) return null
+// ── Scaling rules ──────────────────────────────────────────────────────────────
+function ScalingRules({ entryPx, stopPx, riskPx, targetPrices, stopLabel, direction, shares }) {
+  if (!entryPx || !direction || direction === 'NO TRADE' || shares <= 0) return null
   const isCall = direction === 'CALL'
-  const s      = +(currentPrice * 0.01).toFixed(2)
-  const stopPx = +(isCall ? currentPrice - s : currentPrice + s).toFixed(2)
-  const t1Px   = +(isCall ? currentPrice + s     : currentPrice - s).toFixed(2)
-  const t2Px   = +(isCall ? currentPrice + s * 2 : currentPrice - s * 2).toFixed(2)
-  const t3Px   = +(isCall ? currentPrice + s * 3 : currentPrice - s * 3).toFixed(2)
-  const t4Px   = +(isCall ? currentPrice + s * 4 : currentPrice - s * 4).toFixed(2)
+  const [t1Px, t2Px, t3Px, t4Px, t5Px] = targetPrices
   const sh20   = Math.round(shares * 0.20)
+  const pctOf  = px => ((Math.abs(px - entryPx) / entryPx) * 100).toFixed(1)
 
   const rules = [
     {
       num: 1, color: '#3b82f6',
-      action: `Stop set at $${f2(stopPx)} — DO NOT MOVE IT DOWN`,
-      detail: `Place a hard stop order at $${f2(stopPx)} before the trade is live. 1% below entry. If it hits, exit all ${shares.toLocaleString()} shares immediately — no second-guessing.`,
+      action: `Stop set at $${f2(stopPx)} (${stopLabel}) — DO NOT MOVE IT DOWN`,
+      detail: `Place a hard stop order at $${f2(stopPx)} before the trade is live. If price closes below on the 5M chart, exit all ${shares.toLocaleString()} shares immediately — no second-guessing.`,
     },
     {
       num: 2, color: '#f59e0b',
-      action: `T1 — $${f2(t1Px)}: sell ${sh20} shares (20%), move stop to $${f2(currentPrice)}`,
-      detail: `Price reached +1%. Sell 20% and bank $${f0(sh20 * s)}. Move your stop from $${f2(stopPx)} to $${f2(currentPrice)} (breakeven). You can no longer lose on this trade.`,
+      action: `T1 — $${f2(t1Px)} (+${pctOf(t1Px)}%): sell ${sh20} shares (20%), move stop to $${f2(entryPx)}`,
+      detail: `15M swing target hit. Sell 20% and move your stop from $${f2(stopPx)} to $${f2(entryPx)} (your breakout entry). You can no longer lose on this trade.`,
     },
     {
       num: 3, color: '#f59e0b',
-      action: `T2 — $${f2(t2Px)}: sell ${sh20} shares (20%), trail stop to $${f2(t1Px)}`,
-      detail: `Price reached +2%. Sell another 20%. Trail your stop up to $${f2(t1Px)}. You are now risk-free — the worst case is you lock in T1 profit on the remainder.`,
+      action: `T2 — $${f2(t2Px)} (+${pctOf(t2Px)}%): sell ${sh20} shares (20%), trail stop to $${f2(t1Px)}`,
+      detail: `Second 15M swing target hit. Sell another 20%. Trail your stop up to $${f2(t1Px)}. Worst case from here: you lock in T1 profit on the remainder.`,
     },
     {
       num: 4, color: '#10b981',
-      action: `T3 — $${f2(t3Px)}: sell ${sh20} shares (20%), trail stop to $${f2(t2Px)}`,
-      detail: `Price reached +3%. Sell another 20%. Move the trail stop up to $${f2(t2Px)}. You have now sold 60% of your position with compounding locked profits.`,
+      action: `T3 — $${f2(t3Px)} (+${pctOf(t3Px)}%): sell ${sh20} shares (20%), trail stop to $${f2(t2Px)}`,
+      detail: `Third 15M swing target hit. Sell another 20%. Move the trail stop to $${f2(t2Px)}. You have now sold 60% of your position with compounding locked profits.`,
     },
     {
       num: 5, color: '#10b981',
-      action: `T4 — $${f2(t4Px)}: sell ${sh20} shares (20%), trail stop to $${f2(t3Px)}`,
-      detail: `Price reached +4%. Sell another 20%. Trail stop moves to $${f2(t3Px)}. Only the runner (final 20%) remains — it cannot give back more than one stop increment of profit.`,
+      action: `T4 — $${f2(t4Px)} (+${pctOf(t4Px)}%): sell ${sh20} shares (20%), trail stop to $${f2(t3Px)}`,
+      detail: `Fourth 15M swing target hit. Sell another 20%. Trail stop moves to $${f2(t3Px)}. Only the T5 runner remains — it cannot give back more than one stop increment of profit.`,
     },
     {
       num: 6, color: '#10b981',
-      action: `RUNNER — final ${sh20} shares: trail with a moving stop, no fixed target`,
-      detail: `Let the final shares run as far as the move extends. Use a trailing stop that moves up automatically. There is no fixed exit — you ride until the market takes you out. The only rule: never let this runner give back more than T3 profit level.`,
+      action: `T5 / RUNNER — $${f2(t5Px)} (+${pctOf(t5Px)}%): final ${sh20} shares, trail with a moving stop`,
+      detail: `Let the final shares run as far as the 5M structure allows. Use a trailing stop that moves up automatically. At $${f2(t5Px)} your total gain on the position is maximized — close if price shows a 5M lower high.`,
     },
   ]
 
@@ -292,117 +281,87 @@ function ScalingRules({ currentPrice, direction, shares }) {
   )
 }
 
-// ── Stock + Option Coordination ───────────────────────────────────────────────
-// Shows exactly what each stock price level means for the option position.
-// The two exit systems use different percentages — this panel unifies them
-// so one set of stock price levels governs both positions simultaneously.
-function CoordinationPanel({ currentPrice, direction, shares, rec }) {
-  if (!currentPrice || !direction || direction === 'NO TRADE') return null
+// ── Stock + Option Coordination ────────────────────────────────────────────────
+function CoordinationPanel({ entryPx, stopPx, riskPx, targetPrices, direction, shares, rec }) {
+  if (!entryPx || !direction || direction === 'NO TRADE') return null
   const isCall = direction === 'CALL'
 
-  // Use live contract data when available; fall back to 0.45 delta / $2.00 premium
-  const delta    = rec?.delta   != null ? Math.abs(rec.delta)   : 0.45
-  const premium  = rec?.premium != null ? rec.premium           : null
-  const hasLive  = rec != null && rec.premium != null
+  const delta   = rec?.delta   != null ? Math.abs(rec.delta)   : 0.45
+  const premium = rec?.premium != null ? rec.premium           : null
+  const hasLive = rec != null && rec.premium != null
 
-  const stopDist = +(currentPrice * 0.01).toFixed(2)
-  const stopPx   = +(isCall ? currentPrice - stopDist : currentPrice + stopDist).toFixed(2)
-  const t1Px     = +(isCall ? currentPrice + stopDist     : currentPrice - stopDist).toFixed(2)
-  const t2Px     = +(isCall ? currentPrice + stopDist * 2 : currentPrice - stopDist * 2).toFixed(2)
-  const t3Px     = +(isCall ? currentPrice + stopDist * 3 : currentPrice - stopDist * 3).toFixed(2)
-  const t4Px     = +(isCall ? currentPrice + stopDist * 4 : currentPrice - stopDist * 4).toFixed(2)
-  const t5Px     = +(isCall ? currentPrice + stopDist * 6 : currentPrice - stopDist * 6).toFixed(2)
+  const [t1Px, t2Px, t3Px, t4Px, t5Px] = targetPrices
+  const stopDist  = riskPx
 
-  // Option premium change at each stock level using delta approximation
-  const optChangePx = move => +(move * delta).toFixed(2)
-  const optPctStr   = (move, label) => {
-    const dollarChg = optChangePx(move)
-    if (premium) {
-      const pctChg = (dollarChg / premium * 100).toFixed(0)
-      return { dollar: dollarChg, pct: pctChg, label }
-    }
+  const optChg  = move => +(move * delta).toFixed(2)
+  const optPct  = (move, label) => {
+    const dollarChg = optChg(move)
+    if (premium) return { dollar: dollarChg, pct: (dollarChg / premium * 100).toFixed(0), label }
     return { dollar: dollarChg, pct: null, label }
   }
 
-  // Stock price at which option loses 25% of premium
   const optStop25DistApprox = premium ? +(premium * 0.25 / delta).toFixed(2) : null
   const optStop25Px = optStop25DistApprox
-    ? +(isCall ? currentPrice - optStop25DistApprox : currentPrice + optStop25DistApprox).toFixed(2)
+    ? +(isCall ? entryPx - optStop25DistApprox : entryPx + optStop25DistApprox).toFixed(2)
     : null
 
-  const stopChg = optPctStr(-stopDist, 'STOP')
-  const t1Chg   = optPctStr(+stopDist, 'T1')
-  const t2Chg   = optPctStr(+stopDist * 2, 'T2')
-  const t3Chg   = optPctStr(+stopDist * 3, 'T3')
-  const t4Chg   = optPctStr(+stopDist * 4, 'T4')
-  const t5Chg   = optPctStr(+stopDist * 6, 'RUNNER')
+  const pctOf = px => ((Math.abs(px - entryPx) / entryPx) * 100).toFixed(1)
+
+  const stopChg = optPct(-stopDist, 'STOP')
+  const t1Chg   = optPct(Math.abs(t1Px - entryPx), 'T1')
+  const t2Chg   = optPct(Math.abs(t2Px - entryPx), 'T2')
+  const t3Chg   = optPct(Math.abs(t3Px - entryPx), 'T3')
+  const t4Chg   = optPct(Math.abs(t4Px - entryPx), 'T4')
+  const t5Chg   = optPct(Math.abs(t5Px - entryPx), 'T5')
 
   const rows = [
     {
-      label:       'STOP',
-      stockPx:     stopPx,
-      move:        `−1%  (−$${f2(stopDist)})`,
-      moveColor:   '#ef4444',
+      label: 'STOP', stockPx: stopPx,
+      move: `−${pctOf(stopPx)}%  (−$${f2(stopDist)})`, moveColor: '#ef4444',
       stockAction: 'EXIT all shares immediately',
-      optPct:      stopChg.pct ? `≈ −${Math.abs(+stopChg.pct)}%` : `≈ −$${f2(Math.abs(stopChg.dollar))}/sh`,
-      optAction:   'EXIT all contracts — thesis wrong',
-      optColor:    '#ef4444',
-      rule:        'Stock stop and option stop fire TOGETHER. Do not wait for the option to hit −25% separately.',
+      optPct:   stopChg.pct ? `≈ −${Math.abs(+stopChg.pct)}%` : `≈ −$${f2(Math.abs(stopChg.dollar))}/sh`,
+      optAction: 'EXIT all contracts — thesis wrong', optColor: '#ef4444',
+      rule: 'Stock stop and option stop fire TOGETHER. Do not wait for the option to hit −25% separately.',
     },
     {
-      label:       'T1',
-      stockPx:     t1Px,
-      move:        `+1%  (+$${f2(stopDist)})`,
-      moveColor:   '#10b981',
+      label: 'T1', stockPx: t1Px,
+      move: `+${pctOf(t1Px)}%  (+$${f2(Math.abs(t1Px - entryPx))})`, moveColor: '#10b981',
       stockAction: 'Sell 20% of shares — stop → breakeven',
-      optPct:      t1Chg.pct ? `≈ +${t1Chg.pct}%` : `≈ +$${f2(t1Chg.dollar)}/sh`,
-      optAction:   'HOLD all contracts — just warming up',
-      optColor:    '#f59e0b',
-      rule:        `Option has only moved ~${t1Chg.pct ? Math.abs(+t1Chg.pct) + '%' : 'slightly'} at T1. The stock is at breakeven — let the option run. Do not exit early.`,
+      optPct:   t1Chg.pct ? `≈ +${t1Chg.pct}%` : `≈ +$${f2(t1Chg.dollar)}/sh`,
+      optAction: 'HOLD all contracts — just warming up', optColor: '#f59e0b',
+      rule: `Option has only moved ~${t1Chg.pct ? Math.abs(+t1Chg.pct) + '%' : 'slightly'} at T1. The stock is at breakeven — let the option run.`,
     },
     {
-      label:       'T2',
-      stockPx:     t2Px,
-      move:        `+2%  (+$${f2(stopDist * 2)})`,
-      moveColor:   '#10b981',
+      label: 'T2', stockPx: t2Px,
+      move: `+${pctOf(t2Px)}%  (+$${f2(Math.abs(t2Px - entryPx))})`, moveColor: '#10b981',
       stockAction: 'Sell 20% — trail stop to T1',
-      optPct:      t2Chg.pct ? `≈ +${t2Chg.pct}%` : `≈ +$${f2(t2Chg.dollar)}/sh`,
-      optAction:   `Sell 25% of contracts — lock in early partial`,
-      optColor:    '#10b981',
-      rule:        `Option is up ~${t2Chg.pct ? Math.abs(+t2Chg.pct) + '%' : 'meaningfully'}. Take 25% off the option position to lock real dollars. Keep the rest running with the stock.`,
+      optPct:   t2Chg.pct ? `≈ +${t2Chg.pct}%` : `≈ +$${f2(t2Chg.dollar)}/sh`,
+      optAction: 'Sell 25% of contracts — lock in early partial', optColor: '#10b981',
+      rule: `Option is up ~${t2Chg.pct ? Math.abs(+t2Chg.pct) + '%' : 'meaningfully'}. Take 25% off the option position to lock real dollars.`,
     },
     {
-      label:       'T3',
-      stockPx:     t3Px,
-      move:        `+3%  (+$${f2(stopDist * 3)})`,
-      moveColor:   '#10b981',
+      label: 'T3', stockPx: t3Px,
+      move: `+${pctOf(t3Px)}%  (+$${f2(Math.abs(t3Px - entryPx))})`, moveColor: '#10b981',
       stockAction: 'Sell 20% — trail stop to T2',
-      optPct:      t3Chg.pct ? `≈ +${t3Chg.pct}%` : `≈ +$${f2(t3Chg.dollar)}/sh`,
-      optAction:   `Sell 25% more contracts — option near +50% TP zone`,
-      optColor:    '#10b981',
-      rule:        `Option at ~${t3Chg.pct ? Math.abs(+t3Chg.pct) + '%' : 'strong gains'} — nearing the +50% target. Sell another 25%. Half your option position is now booked.`,
+      optPct:   t3Chg.pct ? `≈ +${t3Chg.pct}%` : `≈ +$${f2(t3Chg.dollar)}/sh`,
+      optAction: 'Sell 25% more contracts — option near +50% TP zone', optColor: '#10b981',
+      rule: `Option at ~${t3Chg.pct ? Math.abs(+t3Chg.pct) + '%' : 'strong gains'} — nearing the +50% target. Sell another 25%.`,
     },
     {
-      label:       'T4',
-      stockPx:     t4Px,
-      move:        `+4%  (+$${f2(stopDist * 4)})`,
-      moveColor:   '#10b981',
+      label: 'T4', stockPx: t4Px,
+      move: `+${pctOf(t4Px)}%  (+$${f2(Math.abs(t4Px - entryPx))})`, moveColor: '#10b981',
       stockAction: 'Sell 20% — trail stop to T3',
-      optPct:      t4Chg.pct ? `≈ +${t4Chg.pct}%` : `≈ +$${f2(t4Chg.dollar)}/sh`,
-      optAction:   'Sell 25% more contracts — book the bulk',
-      optColor:    '#10b981',
-      rule:        `Option up ~${t4Chg.pct ? Math.abs(+t4Chg.pct) + '%' : 'significantly'}. Sell another 25%. You now have 75% of option profits locked. One runner contract remains.`,
+      optPct:   t4Chg.pct ? `≈ +${t4Chg.pct}%` : `≈ +$${f2(t4Chg.dollar)}/sh`,
+      optAction: 'Sell 25% more contracts — book the bulk', optColor: '#10b981',
+      rule: `Option up ~${t4Chg.pct ? Math.abs(+t4Chg.pct) + '%' : 'significantly'}. Sell another 25%. You now have 75% of option profits locked.`,
     },
     {
-      label:       'RUNNER',
-      stockPx:     t5Px,
-      move:        `+6%  (+$${f2(stopDist * 6)})`,
-      moveColor:   '#10b981',
+      label: 'T5', stockPx: t5Px,
+      move: `+${pctOf(t5Px)}%  (+$${f2(Math.abs(t5Px - entryPx))})`, moveColor: '#10b981',
       stockAction: 'Trail final 20% with moving stop',
-      optPct:      t5Chg.pct ? `≈ +${t5Chg.pct}%` : `≈ +$${f2(t5Chg.dollar)}/sh`,
-      optAction:   'EXIT all remaining contracts — full option profit taken',
-      optColor:    '#10b981',
-      rule:        `At +6% the option has likely returned ${t5Chg.pct ? Math.abs(+t5Chg.pct) + '%+' : 'maximum gains'}. Close the entire option position. Let the stock runner capture anything beyond with zero option risk.`,
+      optPct:   t5Chg.pct ? `≈ +${t5Chg.pct}%` : `≈ +$${f2(t5Chg.dollar)}/sh`,
+      optAction: 'EXIT all remaining contracts — full option profit taken', optColor: '#10b981',
+      rule: `At T5 the option has returned maximum gains. Close the entire option position. Let the stock runner capture anything beyond with zero option risk.`,
     },
   ]
 
@@ -410,15 +369,19 @@ function CoordinationPanel({ currentPrice, direction, shares, rec }) {
     <div className="stp-coord">
       <div className="stp-coord-header">
         <span className="stp-coord-title">STOCK + OPTION COORDINATION</span>
-        <span className="stp-coord-sub">One set of price levels governs both positions</span>
+        <span className="stp-coord-sub">One set of 15M structural levels governs both positions</span>
       </div>
 
-      {/* Why percentages differ */}
       <div className="stp-coord-explainer">
         <div className="stp-coord-exp-row">
+          <span className="stp-coord-exp-lbl">Entry level</span>
+          <span className="stp-coord-exp-val">${f2(entryPx)} — execute on 5M close through this level</span>
+          <span className="stp-coord-exp-note">5M execution</span>
+        </div>
+        <div className="stp-coord-exp-row">
           <span className="stp-coord-exp-lbl">Stock stop</span>
-          <span className="stp-coord-exp-val">−1% of stock price (${f2(stopDist)} on a ${f2(currentPrice)} stock)</span>
-          <span className="stp-coord-exp-note">structure-based, exact</span>
+          <span className="stp-coord-exp-val">${f2(stopPx)} — ${f2(riskPx)}/sh risk</span>
+          <span className="stp-coord-exp-note">OR structure</span>
         </div>
         <div className="stp-coord-exp-row">
           <span className="stp-coord-exp-lbl">Option stop</span>
@@ -427,7 +390,7 @@ function CoordinationPanel({ currentPrice, direction, shares, rec }) {
             {optStop25Px && ` ≈ stock at $${f2(optStop25Px)} (−${f2(optStop25DistApprox)})`}
             {!hasLive && ' (estimated at 0.45Δ)'}
           </span>
-          <span className="stp-coord-exp-note">premium-based, looser</span>
+          <span className="stp-coord-exp-note">premium-based</span>
         </div>
         <div className="stp-coord-exp-rule">
           The stock stop fires first on most setups. Use it as the trigger for BOTH.
@@ -439,7 +402,6 @@ function CoordinationPanel({ currentPrice, direction, shares, rec }) {
         </div>
       </div>
 
-      {/* Coordination table */}
       <div className="stp-coord-table">
         {rows.map((r, i) => (
           <div key={i} className={`stp-coord-row${i === 0 ? ' stp-coord-stop-row' : ''}`}>
@@ -472,7 +434,7 @@ function CoordinationPanel({ currentPrice, direction, shares, rec }) {
   )
 }
 
-// ── 5 retail mistakes ─────────────────────────────────────────────────────────
+// ── 5 retail mistakes ──────────────────────────────────────────────────────────
 function RetailMistakes() {
   const [open, setOpen] = useState(false)
 
@@ -528,8 +490,8 @@ function RetailMistakes() {
   )
 }
 
-// ── Main export ───────────────────────────────────────────────────────────────
-export default function StockTradePlan({ currentPrice, direction, ticker, rec }) {
+// ── Main export ────────────────────────────────────────────────────────────────
+export default function StockTradePlan({ currentPrice, direction, ticker, rec, orbRetest, swingTargets }) {
   const [shareInput, setShareInput] = useState(() => {
     try { return localStorage.getItem(SHARE_KEY) ?? '100' } catch { return '100' }
   })
@@ -537,8 +499,8 @@ export default function StockTradePlan({ currentPrice, direction, ticker, rec })
   const [quickAmt, setQuickAmt] = useState('')
 
   const shares     = Math.max(0, Math.round(parseFloat(shareInput) || 0))
-  const dailyGoal  = shares * 1    // $1/share per day target
-  const dailyLimit = dailyGoal     // symmetric loss limit
+  const dailyGoal  = shares * 1
+  const dailyLimit = dailyGoal
 
   function handleShareChange(v) {
     setShareInput(v)
@@ -557,14 +519,73 @@ export default function StockTradePlan({ currentPrice, direction, ticker, rec })
     saveDayPnl(0)
   }
 
+  // ── OR-anchored entry, stop, and 5 targets ───────────────────────────────────
+  const isCall    = direction === 'CALL'
+  const orHigh    = orbRetest?.orHigh ?? null
+  const orLow     = orbRetest?.orLow  ?? null
+  const hasOR     = orHigh != null && orLow != null && currentPrice != null
+
+  const fallback1 = currentPrice ? +(currentPrice * 0.01).toFixed(2) : 1
+
+  // Entry: the level traders watch on the 5M chart to snipe the breakout/breakdown
+  const entryPx    = hasOR
+    ? +(isCall ? orHigh : orLow).toFixed(2)
+    : (currentPrice ?? 0)
+  const entryLabel = hasOR
+    ? (isCall ? `5M entry above ORH $${(+orHigh).toFixed(2)}` : `5M entry below ORL $${(+orLow).toFixed(2)}`)
+    : 'Entry (OR not yet set)'
+
+  // Stop: opposite boundary of the 30-min Opening Range
+  const stopPx    = hasOR
+    ? +(isCall ? orLow : orHigh).toFixed(2)
+    : (currentPrice ? +(isCall ? currentPrice - fallback1 : currentPrice + fallback1).toFixed(2) : 0)
+  const stopLabel = hasOR ? (isCall ? '30M ORL' : '30M ORH') : '1% fallback'
+
+  // Risk per share = ORH − ORL (the full opening range)
+  const riskPx = +Math.abs(entryPx - stopPx).toFixed(2)
+
+  // 5 targets: 15M swing peaks/troughs above/below the OR (pre-computed in App.jsx)
+  const step = riskPx > 0 ? riskPx : fallback1
+  const buildTargets = (raw) => {
+    const result = [...(raw ?? [])]
+    while (result.length < 5) {
+      const last = result.length > 0 ? result[result.length - 1] : entryPx
+      result.push(+(isCall ? last + step : last - step).toFixed(2))
+    }
+    return result.slice(0, 5)
+  }
+  const targetPrices = buildTargets(swingTargets?.length ? swingTargets : [])
+
   return (
     <div className="stp-root">
 
       {/* ── Header ── */}
       <div className="stp-header">
         <span className="stp-header-title">STOCK TRADE PLAN</span>
-        <span className="stp-header-sub">Stocks and options move together — trade both sides of every setup</span>
+        <span className="stp-header-sub">
+          {hasOR
+            ? `30M OR: $${(+orLow).toFixed(2)} — $${(+orHigh).toFixed(2)} · 15M structure · 5M execution`
+            : 'Stocks and options move together — trade both sides of every setup'}
+        </span>
       </div>
+
+      {/* ── OR status banner ── */}
+      {hasOR && (
+        <div className="stp-or-banner" style={{
+          background: isCall ? '#021208' : '#120202',
+          border: `1px solid ${isCall ? '#065f46' : '#7f1d1d'}`,
+          borderRadius: 8, padding: '8px 14px', marginBottom: 10,
+          display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap',
+        }}>
+          <span style={{ color: '#4a6888', fontSize: 11, fontWeight: 700, letterSpacing: '0.8px' }}>30M OPENING RANGE</span>
+          <span style={{ color: '#10b981', fontWeight: 700 }}>ORH ${(+orHigh).toFixed(2)}</span>
+          <span style={{ color: '#ef4444', fontWeight: 700 }}>ORL ${(+orLow).toFixed(2)}</span>
+          <span style={{ color: '#f59e0b', fontWeight: 700 }}>Range ${(+(orHigh - orLow)).toFixed(2)}</span>
+          <span style={{ color: isCall ? '#10b981' : '#ef4444', fontWeight: 800, marginLeft: 'auto' }}>
+            {isCall ? '▲ BREAK ABOVE ORH — TARGET RESISTANCES' : '▼ BREAK BELOW ORL — TARGET SUPPORTS'}
+          </span>
+        </div>
+      )}
 
       {/* ── Share size + daily plan setup ── */}
       <div className="stp-setup-row">
@@ -616,13 +637,26 @@ export default function StockTradePlan({ currentPrice, direction, ticker, rec })
       </div>
 
       {/* ── Trade calculator ── */}
-      <TradeCalc currentPrice={currentPrice} direction={direction} shares={shares} />
+      <TradeCalc
+        entryPx={entryPx} stopPx={stopPx} riskPx={riskPx}
+        targetPrices={targetPrices} stopLabel={stopLabel} entryLabel={entryLabel}
+        hasOR={hasOR} direction={direction} shares={shares}
+        currentPrice={currentPrice}
+      />
 
       {/* ── Scaling rules ── */}
-      <ScalingRules currentPrice={currentPrice} direction={direction} shares={shares} />
+      <ScalingRules
+        entryPx={entryPx} stopPx={stopPx} riskPx={riskPx}
+        targetPrices={targetPrices} stopLabel={stopLabel}
+        direction={direction} shares={shares}
+      />
 
       {/* ── Stock + Option coordination ── */}
-      <CoordinationPanel currentPrice={currentPrice} direction={direction} shares={shares} rec={rec} />
+      <CoordinationPanel
+        entryPx={entryPx} stopPx={stopPx} riskPx={riskPx}
+        targetPrices={targetPrices}
+        direction={direction} shares={shares} rec={rec}
+      />
 
       {/* ── 5 retail mistakes ── */}
       <RetailMistakes />
