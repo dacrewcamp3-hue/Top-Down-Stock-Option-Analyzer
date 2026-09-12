@@ -2054,6 +2054,163 @@ function MarketConditionBar({ breadthData, vixData, adxSignal, dayType }) {
   )
 }
 
+// ── The Play Hero Card ─────────────────────────────────────────────────────
+function ThePlayHeroCard({ direction, currentPrice, fibLevels, swingTargets, atr, qty }) {
+  if (!direction || direction === 'NO TRADE' || !currentPrice) return null
+  const isCall = direction === 'CALL'
+  const entry = currentPrice
+  const stop = atr
+    ? parseFloat((isCall ? currentPrice - atr * 1.5 : currentPrice + atr * 1.5).toFixed(2))
+    : (isCall ? (fibLevels?.support ?? fibLevels?.fib61) : (fibLevels?.resistance ?? fibLevels?.fib38)) ?? null
+  const t1 = swingTargets?.t1 ?? fibLevels?.r1 ?? null
+  const t2 = swingTargets?.t2 ?? fibLevels?.r2 ?? null
+  const risk = stop ? Math.abs(entry - stop) : null
+  const reward = t1 ? Math.abs(t1 - entry) : null
+  const rr = reward && risk && risk > 0 ? (reward / risk).toFixed(1) : null
+  const rrNum = rr ? parseFloat(rr) : null
+  const rrColor = rrNum >= 2 ? '#10b981' : rrNum >= 1.5 ? '#f59e0b' : rrNum ? '#ef4444' : '#475569'
+  const cells = [
+    { lbl: 'ENTRY', val: `$${f2(entry)}`, sub: 'near market', cls: '' },
+    { lbl: 'STOP',  val: stop ? `$${f2(stop)}` : '—', sub: atr ? '1.5×ATR' : 'fib level', cls: 'tb-play-stop' },
+    { lbl: 'T1',    val: t1 ? `$${f2(t1)}` : '—', sub: swingTargets?.t1 ? 'swing' : 'fib R1', cls: 'tb-play-t1' },
+    { lbl: 'T2',    val: t2 ? `$${f2(t2)}` : '—', sub: swingTargets?.t2 ? 'swing' : 'fib R2', cls: 'tb-play-t2' },
+  ]
+  return (
+    <div className="tb-play-hero">
+      <div className="tb-play-hero-title">
+        <span style={{ color: isCall ? '#10b981' : '#ef4444' }}>{isCall ? '▲' : '▼'}</span>
+        {' THE PLAY · '}{direction}
+      </div>
+      <div className="tb-play-hero-grid">
+        {cells.map(({ lbl, val, sub, cls }) => (
+          <div key={lbl} className={`tb-play-hero-cell${cls ? ' ' + cls : ''}`}>
+            <div className="tb-play-hero-lbl">{lbl}</div>
+            <div className="tb-play-hero-val">{val}</div>
+            <div className="tb-play-hero-sub">{sub}</div>
+          </div>
+        ))}
+        <div className="tb-play-hero-cell tb-play-rr">
+          <div className="tb-play-hero-lbl">R:R</div>
+          <div className="tb-play-hero-val" style={{ color: rrColor }}>{rr ? `${rr}:1` : '—'}</div>
+          <div className="tb-play-hero-sub">{rrNum >= 2 ? 'favorable' : rrNum >= 1.5 ? 'acceptable' : rrNum ? 'tight' : ''}</div>
+        </div>
+        {qty > 0 && (
+          <div className="tb-play-hero-cell tb-play-qty">
+            <div className="tb-play-hero-lbl">SIZE</div>
+            <div className="tb-play-hero-val">{qty} ct{qty > 1 ? 's' : ''}</div>
+            <div className="tb-play-hero-sub">auto-sized</div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Trade Invalidation Conditions Card ────────────────────────────────────
+function TradeInvalidationCard({ direction, adxSignal, fibLevels, currentPrice }) {
+  if (!direction || direction === 'NO TRADE') return null
+  const isCall = direction === 'CALL'
+  const items = [
+    `4H bar closes ${isCall ? 'below' : 'above'} EMA5`,
+    adxSignal?.adx != null
+      ? `ADX drops below 21 (currently ${adxSignal.adx.toFixed(0)})`
+      : 'ADX drops below 21',
+    `weekly trend flips ${isCall ? 'bearish' : 'bullish'}`,
+  ]
+  if (fibLevels && currentPrice) {
+    const lvl = isCall ? (fibLevels.support ?? fibLevels.fib61) : (fibLevels.resistance ?? fibLevels.fib38)
+    if (lvl) items.push(`key ${isCall ? 'support' : 'resistance'} at $${f2(lvl)} breaks on daily close`)
+  }
+  return (
+    <div className="tb-invalid-card">
+      <div className="tb-invalid-head">
+        <span className="tb-invalid-icon">⛔</span>
+        <span className="tb-invalid-title">THIS {direction} IS INVALIDATED IF:</span>
+      </div>
+      <div className="tb-invalid-list">
+        {items.map((c, i) => (
+          <div key={i} className="tb-invalid-item">
+            <span className="tb-invalid-dot">✗</span>
+            <span className="tb-invalid-text">{c}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Signal Conflict Resolver ───────────────────────────────────────────────
+function SignalConflictResolver({ direction, confluenceResult, adxSignal, vwapSignal }) {
+  if (!direction || direction === 'NO TRADE') return null
+  const isCall = direction === 'CALL'
+  const pairs = []
+  if (isCall && vwapSignal?.signal === 'below') {
+    pairs.push({ flag: 'Price below VWAP — short-term selling pressure', res: 'Weekly + daily alignment outweigh intraday VWAP on swing trades' })
+  } else if (!isCall && vwapSignal?.signal === 'above') {
+    pairs.push({ flag: 'Price above VWAP — intraday bid still present', res: 'Weekly + daily bearish trend takes precedence for multi-day holds' })
+  }
+  if (adxSignal?.adx != null && adxSignal.adx < 21) {
+    pairs.push({ flag: `ADX ${adxSignal.adx.toFixed(0)} — below 21 trend threshold`, res: 'Score penalizes weak ADX — consider reducing size or waiting for ≥ 21' })
+  } else if (adxSignal?.adx != null && adxSignal.adx >= 21 && !adxSignal.adxRising) {
+    pairs.push({ flag: 'ADX not rising — trend not accelerating', res: 'Trend intact; watch for ADX upturn before adding size' })
+  }
+  const bears = confluenceResult?.totalBear ?? 0
+  const bulls = confluenceResult?.totalBull ?? 0
+  if (isCall && bears >= 3) {
+    pairs.push({ flag: `${bears} bearish sub-signals vs ${bulls} bullish`, res: 'Bull signals dominate; minority bear signals are scored in — size conservatively' })
+  } else if (!isCall && bulls >= 3) {
+    pairs.push({ flag: `${bulls} bullish sub-signals vs ${bears} bearish`, res: 'Bear signals dominate; minority bull signals are scored in — size conservatively' })
+  }
+  if (pairs.length === 0) return null
+  return (
+    <div className="tb-conflict-wrap">
+      <div className="tb-conflict-title">SIGNAL CONFLICTS · WHY THE DIRECTION STILL HOLDS</div>
+      {pairs.map((p, i) => (
+        <div key={i} className="tb-conflict-row">
+          <div className="tb-conflict-flag">⚠ {p.flag}</div>
+          <div className="tb-conflict-res">→ {p.res}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Next 4H Trigger Countdown ──────────────────────────────────────────────
+function NextTriggerCountdown({ swingResult, orbRetest, direction }) {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30000)
+    return () => clearInterval(t)
+  }, [])
+  if (!direction || direction === 'NO TRADE') return null
+  const isCall = direction === 'CALL'
+  const g3Full = (isCall ? swingResult?.signal === 'LONG' : swingResult?.signal === 'EXIT') && swingResult?.confirmed
+  const orbPass = ['ENTER', 'RECAPTURED'].includes(orbRetest?.signal)
+  if (g3Full || orbPass) return null
+  // Next 4H bar close (EDT = UTC−4)
+  const etNow = new Date(now.getTime() - 4 * 3600 * 1000)
+  const hET = etNow.getUTCHours(), mET = etNow.getUTCMinutes()
+  const nextClose = Math.ceil((hET + 0.0001) / 4) * 4
+  let minutesLeft = (nextClose - hET) * 60 - mET
+  if (minutesLeft <= 0) minutesLeft += 240
+  const hrs = Math.floor(minutesLeft / 60), mins = minutesLeft % 60
+  const hasSig = swingResult?.signal === (isCall ? 'LONG' : 'EXIT')
+  const barsNeeded = hasSig && !swingResult?.confirmed ? 1 : 2
+  return (
+    <div className="tb-countdown-wrap">
+      <span className="tb-countdown-icon">⏳</span>
+      <div className="tb-countdown-body">
+        <div className="tb-countdown-main">
+          Gate 3 needs {barsNeeded} more 4H bar{barsNeeded > 1 ? 's' : ''} {isCall ? 'above' : 'below'} EMA5
+        </div>
+        <div className="tb-countdown-time">
+          Next 4H close in ~{hrs > 0 ? `${hrs}h ` : ''}{mins}m (ET)
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function TradeBrief({
   ticker,
   currentPrice,
@@ -2308,6 +2465,20 @@ export default function TradeBrief({
         vwapSignal={vwapSignal}
       />
 
+      {/* ── Wyckoff structural alignment or conflict ── */}
+      <WyckoffConflictBanner wyckoff={wyckoff} direction={direction} />
+
+      {/* ── Gate 3 countdown: when partial, show time to next 4H bar close ── */}
+      <NextTriggerCountdown swingResult={swingResult} orbRetest={orbRetest} direction={direction} />
+
+      {/* ── Signal conflict resolver: explains why direction holds despite sub-signal divergence ── */}
+      <SignalConflictResolver
+        direction={direction}
+        confluenceResult={confluenceResult}
+        adxSignal={adxSignal}
+        vwapSignal={vwapSignal}
+      />
+
       {/* ── Day Type Classification (IB-based: TREND / CHOP / COIL) ── */}
       {dayType?.type != null && (() => {
         const { type, note, trendDir } = dayType
@@ -2349,6 +2520,18 @@ export default function TradeBrief({
           optionsChain={optionsChain}
           currentPrice={currentPrice}
           atr={atr}
+        />
+      )}
+
+      {/* ── The Play: entry · stop · T1 · T2 · R:R hero card (auto position size included) ── */}
+      {!signalGated && direction && direction !== 'NO TRADE' && (
+        <ThePlayHeroCard
+          direction={direction}
+          currentPrice={currentPrice}
+          fibLevels={fibLevels}
+          swingTargets={swingTargets}
+          atr={atr}
+          qty={qty}
         />
       )}
 
@@ -2490,6 +2673,16 @@ export default function TradeBrief({
         />
       )}
 
+      {/* ── Trade Invalidation: what kills this trade before it starts ── */}
+      {!signalGated && direction && direction !== 'NO TRADE' && (
+        <TradeInvalidationCard
+          direction={direction}
+          adxSignal={adxSignal}
+          fibLevels={fibLevels}
+          currentPrice={currentPrice}
+        />
+      )}
+
       {!signalGated && !rec && direction && direction !== 'NO TRADE' && (
         <div className="tb-option-placeholder">
           {isEnriching
@@ -2556,6 +2749,15 @@ export default function TradeBrief({
         </div>
       )}
 
+      {/* ── Conditional Win Rate (always visible — key decision input, computed from 2yr backtest) ── */}
+      <ConditionalWinRate
+        condWinRate={condWinRate}
+        condWinLoading={condWinLoading}
+        direction={direction}
+        setupGrade={setupGrade}
+        adxSignal={adxSignal}
+      />
+
       {/* ── Deep Analysis toggle — everything below is supplementary ── */}
       <button
         className={`tb-deep-toggle${showDeep ? ' tb-deep-open' : ''}`}
@@ -2579,15 +2781,6 @@ export default function TradeBrief({
               {showBreakdown && <ScoreBreakdown breakdown={tradeScore.breakdown} />}
             </>
           )}
-
-          {/* ── Conditional Win Rate ── */}
-          <ConditionalWinRate
-            condWinRate={condWinRate}
-            condWinLoading={condWinLoading}
-            direction={direction}
-            setupGrade={setupGrade}
-            adxSignal={adxSignal}
-          />
 
           {/* ── Key levels ── */}
           <KeyLevels
