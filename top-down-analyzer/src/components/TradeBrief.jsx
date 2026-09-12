@@ -700,10 +700,19 @@ function GateLock({ direction, confluenceResult, weeklyAlign, swingResult, orbRe
 }
 
 // ── Signal Intelligence panel ────────────────────────────────────────────────
+const SIG_GROUPS = {
+  momentum: ['confluence', 'cycle'],
+  trend:    ['weekly', 'swing'],
+  volume:   ['pv'],
+  external: ['insider', 'sector'],
+  risk:     ['earnings'],
+}
+
 function SignalIntel({
   confluenceResult, swingResult, cycleData, dailyBars,
   insiderData, earningsDate, sectorRS, weeklyAlign,
   tradeScore, shortInterest, onNavigate,
+  adxSignal, ivData, orbRetest, rec,
 }) {
   const pvq = useMemo(() => {
     const c = dailyBars?.closes, v = dailyBars?.volumes
@@ -717,6 +726,7 @@ function SignalIntel({
   }, [dailyBars])
 
   const direction      = tradeScore?.direction
+  const isCall         = direction === 'CALL'
   const confSignal     = confluenceResult?.signal
   const confBull       = confluenceResult?.totalBull ?? 0
   const confBear       = confluenceResult?.totalBear ?? 0
@@ -729,13 +739,80 @@ function SignalIntel({
   const earningsDays   = earningsDate ? Math.round((earningsDate.getTime() - Date.now()) / 86400000) : null
   const stockVsSector  = sectorRS?.stockVsSector?.signal
   const weeklySignal   = weeklyAlign?.signal
+  const adxValue       = adxSignal?.adx ?? null
 
   const G = '#10b981', A = '#f59e0b', R = '#ef4444', D = '#4a6888'
   const GB = '#01120a', AB = '#0f0900', RB = '#130305', DB = '#070d18'
 
+  // ── Conviction scores 0–100 (how strongly each signal fires) ─────────────
+  const confTotal      = confBull + confBear
+  const confConviction = confTotal > 0 ? Math.round((isCall ? confBull : confBear) / confTotal * 100) : 50
+  const swingConviction = swingConf ? 95 : swingSignal === (isCall ? 'LONG' : 'EXIT') ? 48 : 8
+  const cycleConviction = cyclePhase === 'MARKUP' ? 88 : cyclePhase === 'MARKDOWN' ? 12
+    : cyclePhase === 'SPRING' ? 72 : cyclePhase === 'UTAD' ? 28
+    : cyclePhase === 'ACCUMULATION' ? 62 : cyclePhase === 'DISTRIBUTION' ? 38 : 50
+  const pvConviction  = !pvq ? 50 : pvq.priceUp && pvq.volUp ? 90
+    : !pvq.priceUp && !pvq.volUp ? 20 : pvq.priceUp ? 48 : 25
+  const insiderConviction = insiderVerdict === 'BULLISH' ? 90 : insiderVerdict === 'LEAN BULLISH' ? 72
+    : insiderVerdict === 'BEARISH' ? 10 : insiderVerdict === 'CAUTIOUS' ? 28
+    : insiderVerdict === 'MIXED' ? 50 : 50
+  const earningsConviction = earningsDays == null ? 50
+    : earningsDays <= 0 ? 0 : earningsDays <= 7 ? 12 : earningsDays <= 14 ? 32
+    : earningsDays <= 30 ? 65 : 92
+  const sectorConviction = ['BULL','STRONG BULL'].includes(stockVsSector) ? 85
+    : ['BEAR','STRONG BEAR'].includes(stockVsSector) ? 15 : stockVsSector === 'NEUTRAL' ? 50 : 50
+  const weeklyConviction = weeklySignal === 'BULLISH' ? 85 : weeklySignal === 'BEARISH' ? 15 : 50
+
+  // ── Gate / sequence state ─────────────────────────────────────────────────
+  const g1Pass    = weeklySignal === (isCall ? 'BULLISH' : 'BEARISH')
+  const g2Pass    = confluenceResult?.dailyGate === 'pass'
+  const g3Pass    = swingConf || ['ENTER','RECAPTURED'].includes(orbRetest?.signal)
+  const g3Partial = !g3Pass && swingSignal === (isCall ? 'LONG' : 'EXIT')
+  const seqScore  = [g1Pass, g2Pass, g3Pass].filter(Boolean).length
+  const seqItems  = [
+    { label: 'WEEKLY',   pass: g1Pass,  partial: false,     detail: weeklySignal ?? 'pending' },
+    { label: 'DAILY',    pass: g2Pass,  partial: false,     detail: g2Pass ? 'gate open' : 'pending' },
+    { label: '4H SWING', pass: g3Pass,  partial: g3Partial, detail: g3Pass ? 'confirmed' : g3Partial ? '1 bar — need 2nd' : 'watching' },
+  ]
+  const seqQuality = seqScore === 3 ? 'FULL ALIGNMENT'
+    : seqScore === 2 && g1Pass && g2Pass ? 'WAITING FOR TRIGGER'
+    : seqScore === 2 ? 'PARTIAL — out of sequence'
+    : seqScore === 1 ? 'WEAK — 1/3 gates'
+    : direction && direction !== 'NO TRADE' ? 'NO ALIGNMENT' : ''
+
+  // ── One signal away ───────────────────────────────────────────────────────
+  const missingGates = []
+  if (direction && direction !== 'NO TRADE') {
+    if (!g1Pass) missingGates.push({ label: 'Weekly trend', need: `flip to ${isCall ? 'BULLISH' : 'BEARISH'}` })
+    if (!g2Pass) missingGates.push({ label: 'Daily gate',   need: 'daily EMA alignment' })
+    if (!g3Pass) missingGates.push({ label: '4H trigger',   need: g3Partial ? '1 more 4H bar above EMA5' : '2 consecutive 4H bars above EMA5' })
+  }
+  const isOneAway = missingGates.length === 1
+
+  // ── About to flip signals ─────────────────────────────────────────────────
+  const nearFlip = []
+  if (adxValue != null && adxValue >= 17 && adxValue < 21) nearFlip.push(`ADX ${adxValue.toFixed(1)} — approaching 21 trend threshold`)
+  if (weeklySignal === 'NEUTRAL') nearFlip.push('Weekly trend NEUTRAL — near EMA crossover, one close from a flip')
+  if (pvq && pvq.priceUp && !pvq.volUp) nearFlip.push('P+V diverging — price up but volume contracting (confirm on next bar)')
+  if (confTotal > 0 && Math.abs(confBull - confBear) <= 1) nearFlip.push(`Confluence balanced ${confBull}B/${confBear}Be — one sub-signal flip changes the direction call`)
+
+  // ── Theta wait cost ───────────────────────────────────────────────────────
+  let thetaWaitCost = null
+  if (direction && direction !== 'NO TRADE' && !g3Pass && rec?.theta != null) {
+    const barsNeeded  = g3Partial ? 1 : 2
+    thetaWaitCost = Math.abs(barsNeeded * 0.5 * rec.theta * 100)
+  }
+
+  // ── IV environment note ───────────────────────────────────────────────────
+  const ivRank = ivData?.ivRank ?? null
+  const ivNote = ivRank == null ? null
+    : ivRank > 70 ? `IV rank ${ivRank.toFixed(0)} — premium expensive. Signals are valid but directional buys are penalized. Consider spreads.`
+    : ivRank < 20 ? `IV rank ${ivRank.toFixed(0)} — premium cheap. Both signal and options pricing are favorable. Best entry environment.`
+    : null
+
   const signals = [
     {
-      key: 'confluence', label: 'CONFLUENCE', view: 'confluence',
+      key: 'confluence', label: 'CONFLUENCE', view: 'confluence', conviction: confConviction,
       value:  confSignal === 'CALL' ? 'BUY CALLS' : confSignal === 'PUT' ? 'BUY PUTS' : confSignal === 'NO TRADE' ? 'NO TRADE' : '—',
       detail: confSignal ? `${confBull}B / ${confBear}Be` : 'Load ticker',
       color:  confSignal === 'CALL' ? G : confSignal === 'PUT' ? R : D,
@@ -743,7 +820,7 @@ function SignalIntel({
       dot:    confSignal === 'CALL' ? '▲' : confSignal === 'PUT' ? '▼' : '●',
     },
     {
-      key: 'swing', label: 'TIMING', view: 'swing',
+      key: 'swing', label: 'TIMING', view: 'swing', conviction: swingConviction,
       value:  swingSignal ?? 'WAITING',
       detail: swingSignal ? (swingConf ? '4H fully confirmed' : '1-bar — wait for 2nd close') : 'No entry trigger yet',
       color:  swingSignal === 'LONG' ? G : swingSignal === 'EXIT' ? A : D,
@@ -751,7 +828,7 @@ function SignalIntel({
       dot:    swingSignal === 'LONG' ? '▲' : swingSignal === 'EXIT' ? '▼' : '●',
     },
     {
-      key: 'cycle', label: 'CYCLE PHASE', view: 'chart',
+      key: 'cycle', label: 'CYCLE PHASE', view: 'chart', conviction: cycleConviction,
       value:  cyclePhase ?? '—',
       detail: cycleData?.phaseAction ?? (cycleData ? '' : 'Load chart'),
       color:  cyclePhase === 'MARKUP' ? G : cyclePhase === 'MARKDOWN' ? R : cyclePhase ? A : D,
@@ -759,7 +836,7 @@ function SignalIntel({
       dot:    cyclePhase === 'MARKUP' ? '▲' : cyclePhase === 'MARKDOWN' ? '▼' : '●',
     },
     {
-      key: 'pv', label: 'PRICE + VOLUME', view: 'chart',
+      key: 'pv', label: 'PRICE + VOLUME', view: 'chart', conviction: pvConviction,
       value:  pvq ? (pvq.priceUp && pvq.volUp ? '↑ P + ↑ V' : !pvq.priceUp && !pvq.volUp ? '↓ P + ↓ V' : pvq.priceUp ? '↑ P + ↓ V' : '↓ P + ↑ V') : '—',
       detail: pvq ? (pvq.priceUp && pvq.volUp ? 'Expansion — buyers in control' : !pvq.priceUp && !pvq.volUp ? 'Contraction — selling exhausting' : pvq.priceUp ? 'Weak up move — low conviction' : 'Distribution — selling into strength') : 'Load chart',
       color:  pvq ? (pvq.priceUp && pvq.volUp ? G : !pvq.priceUp && !pvq.volUp ? A : pvq.priceUp ? A : R) : D,
@@ -767,7 +844,7 @@ function SignalIntel({
       dot:    pvq ? (pvq.priceUp ? '▲' : '▼') : '●',
     },
     {
-      key: 'insider', label: 'INSIDER ACTIVITY', view: 'insider',
+      key: 'insider', label: 'INSIDER ACTIVITY', view: 'insider', conviction: insiderConviction,
       value:  insiderVerdict ?? (insiderData ? 'UNKNOWN' : '—'),
       detail: !insiderVerdict ? 'Load insider tab'
             : ['BULLISH','LEAN BULLISH'].includes(insiderVerdict) ? `${buyCount} open-market buy${buyCount !== 1 ? 's' : ''}`
@@ -777,10 +854,10 @@ function SignalIntel({
             : insiderVerdict === 'BEARISH' ? R : insiderVerdict === 'CAUTIOUS' ? A
             : insiderVerdict === 'MIXED'   ? A : D,
       bg:     ['BULLISH','LEAN BULLISH'].includes(insiderVerdict) ? GB : ['BEARISH','CAUTIOUS'].includes(insiderVerdict) ? RB : insiderVerdict === 'MIXED' ? AB : DB,
-      dot:    ['BULLISH','LEAN BULLISH'].includes(insiderVerdict) ? '●' : ['BEARISH','CAUTIOUS'].includes(insiderVerdict) ? '●' : '●',
+      dot:    '●',
     },
     {
-      key: 'earnings', label: 'EARNINGS RISK', view: 'earnings',
+      key: 'earnings', label: 'EARNINGS RISK', view: 'earnings', conviction: earningsConviction,
       value:  earningsDays != null ? (earningsDays > 0 ? `${earningsDays}d AWAY` : earningsDays === 0 ? 'TODAY' : `${Math.abs(earningsDays)}d AGO`) : '—',
       detail: earningsDays == null ? 'No date loaded'
             : earningsDays > 0 && earningsDays <= 7   ? 'Critical — close or use spread'
@@ -793,7 +870,7 @@ function SignalIntel({
       dot:    earningsDays != null && earningsDays > 0 && earningsDays <= 14 ? '⚠' : '●',
     },
     {
-      key: 'sector', label: 'SECTOR RS', view: 'confluence',
+      key: 'sector', label: 'SECTOR RS', view: 'confluence', conviction: sectorConviction,
       value:  stockVsSector ?? '—',
       detail: sectorRS ? `vs ${sectorRS.etf ?? 'sector ETF'}` : 'Load confluence',
       color:  ['BULL','STRONG BULL'].includes(stockVsSector) ? G : ['BEAR','STRONG BEAR'].includes(stockVsSector) ? R : stockVsSector ? A : D,
@@ -801,7 +878,7 @@ function SignalIntel({
       dot:    ['BULL','STRONG BULL'].includes(stockVsSector) ? '▲' : ['BEAR','STRONG BEAR'].includes(stockVsSector) ? '▼' : '●',
     },
     {
-      key: 'weekly', label: 'WEEKLY TREND', view: 'confluence',
+      key: 'weekly', label: 'WEEKLY TREND', view: 'confluence', conviction: weeklyConviction,
       value:  weeklySignal ?? '—',
       detail: weeklySignal === 'BULLISH' ? 'Above weekly EMA — uptrend' : weeklySignal === 'BEARISH' ? 'Below weekly EMA — downtrend' : weeklySignal === 'NEUTRAL' ? 'No clear weekly bias' : 'Load confluence',
       color:  weeklySignal === 'BULLISH' ? G : weeklySignal === 'BEARISH' ? R : weeklySignal === 'NEUTRAL' ? A : D,
@@ -809,6 +886,24 @@ function SignalIntel({
       dot:    weeklySignal === 'BULLISH' ? '▲' : weeklySignal === 'BEARISH' ? '▼' : '●',
     },
   ]
+
+  // ── Signal independence ───────────────────────────────────────────────────
+  const confirmedKeys = signals.filter(s => s.color === G || s.color === '#34d399').map(s => s.key)
+  const confGroupsSet = new Set(
+    Object.entries(SIG_GROUPS)
+      .filter(([, keys]) => keys.some(k => confirmedKeys.includes(k)))
+      .map(([group]) => group)
+  )
+  const indScore = confGroupsSet.size
+  const indColor = indScore >= 4 ? G : indScore >= 3 ? A : R
+  const indLabel = indScore >= 4 ? 'HIGH DIVERSITY' : indScore >= 3 ? 'MODERATE' : indScore >= 2 ? 'SOME CORRELATION' : 'CORRELATED'
+  const indNote  = indScore >= 4
+    ? `${indScore}/5 independent groups confirm — momentum, trend, volume, and external sources all aligned.`
+    : indScore >= 3
+    ? `${indScore}/5 groups — good multi-source backing, but some signals share underlying data.`
+    : indScore >= 2
+    ? `${indScore}/5 groups — signals may be correlated. Look for volume or external confirmation.`
+    : `${indScore}/5 groups — most confirming signals measure the same thing. Don't count them as independent confirmations.`
 
   // ── Short interest card (full-width, 9th) ───────────────────────────────────
   const si       = shortInterest
@@ -882,25 +977,105 @@ function SignalIntel({
         <span className="tb-sigintel-title">Signal Intelligence</span>
         <span className="tb-sigintel-sub">All sources — click any card to drill in</span>
       </div>
+
+      {/* Signal Sequence Timeline */}
+      {direction && direction !== 'NO TRADE' && (
+        <div className="tb-seq-timeline">
+          {seqItems.flatMap((s, i) => {
+            const step = (
+              <div key={s.label} className={`tb-seq-step${s.pass ? ' tb-seq-pass' : s.partial ? ' tb-seq-partial' : ''}`}>
+                <div className="tb-seq-circle">{s.pass ? '✓' : s.partial ? '…' : (i + 1)}</div>
+                <div className="tb-seq-info">
+                  <div className="tb-seq-label">{s.label}</div>
+                  <div className="tb-seq-detail">{s.detail}</div>
+                </div>
+              </div>
+            )
+            return i < seqItems.length - 1
+              ? [step, <div key={`arr-${i}`} className={`tb-seq-connector${s.pass ? ' tb-seq-conn-pass' : ''}`}>→</div>]
+              : [step]
+          })}
+          {seqQuality && (
+            <div className="tb-seq-quality" style={{ color: seqScore === 3 ? G : seqScore >= 2 ? A : R }}>
+              {seqQuality}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* One Signal Away Banner */}
+      {isOneAway && (
+        <div className="tb-one-away">
+          <span className="tb-one-away-icon">◎</span>
+          <div className="tb-one-away-body">
+            <div className="tb-one-away-title">ONE SIGNAL AWAY FROM FULL ALIGNMENT</div>
+            <div className="tb-one-away-need">
+              {missingGates[0].label}: <strong>{missingGates[0].need}</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pre-Trigger Alerts */}
+      {nearFlip.length > 0 && (
+        <div className="tb-nearflip-wrap">
+          <div className="tb-nearflip-title">PRE-TRIGGER ALERTS</div>
+          {nearFlip.map((f, i) => (
+            <div key={i} className="tb-nearflip-item">
+              <span className="tb-nearflip-dot">◐</span>
+              {f}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Theta Wait Cost */}
+      {thetaWaitCost != null && (
+        <div className="tb-theta-wait">
+          <span className="tb-theta-wait-icon">Θ</span>
+          <div className="tb-theta-wait-body">
+            <div className="tb-theta-wait-main">
+              Waiting for Gate 3 costs ~<strong>${thetaWaitCost.toFixed(0)}/contract</strong> in theta decay
+            </div>
+            <div className="tb-theta-wait-note">
+              {thetaWaitCost < 15
+                ? 'Minimal burn — waiting for 2nd bar confirmation is the right call'
+                : thetaWaitCost < 40
+                ? 'Moderate burn — weigh theta cost vs. reduced gate-miss risk'
+                : 'High burn — consider entering at reduced size now or skipping if score is borderline'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Signal cards grid with conviction bars */}
       <div className="tb-sigintel-grid">
-        {signals.map(sig => (
-          <button
-            key={sig.key}
-            className="tb-sig-card"
-            style={{ background: sig.bg, borderColor: sig.color + '30' }}
-            onClick={() => onNavigate?.(sig.view)}
-          >
-            <div className="tb-sig-top">
-              <span className="tb-sig-label">{sig.label}</span>
-              <span className="tb-sig-arrow" style={{ color: sig.color }}>→</span>
-            </div>
-            <div className="tb-sig-value" style={{ color: sig.color }}>
-              <span className="tb-sig-dot">{sig.dot}</span>
-              {sig.value}
-            </div>
-            <div className="tb-sig-detail">{sig.detail}</div>
-          </button>
-        ))}
+        {signals.map(sig => {
+          const convPct   = sig.conviction ?? 50
+          const convColor = convPct >= 65 ? G : convPct >= 45 ? A : R
+          return (
+            <button
+              key={sig.key}
+              className="tb-sig-card"
+              style={{ background: sig.bg, borderColor: sig.color + '30' }}
+              onClick={() => onNavigate?.(sig.view)}
+            >
+              <div className="tb-sig-top">
+                <span className="tb-sig-label">{sig.label}</span>
+                <span className="tb-sig-arrow" style={{ color: sig.color }}>→</span>
+              </div>
+              <div className="tb-sig-value" style={{ color: sig.color }}>
+                <span className="tb-sig-dot">{sig.dot}</span>
+                {sig.value}
+              </div>
+              <div className="tb-sig-detail">{sig.detail}</div>
+              <div className="tb-sig-conv-track">
+                <div className="tb-sig-conv-fill" style={{ width: `${convPct}%`, background: convColor + '90' }} />
+                <span className="tb-sig-conv-num">{convPct}%</span>
+              </div>
+            </button>
+          )
+        })}
 
         {/* Short Interest — full-width 9th card */}
         <button
@@ -921,6 +1096,31 @@ function SignalIntel({
           {siSubtag && <div className="tb-sig-subtag" style={{ color: siColor }}>{siSubtag}</div>}
         </button>
       </div>
+
+      {/* Signal Independence Score */}
+      {direction && direction !== 'NO TRADE' && confirmedKeys.length > 0 && (
+        <div className="tb-independence">
+          <div className="tb-independence-head">
+            <span className="tb-independence-label">SIGNAL INDEPENDENCE</span>
+            <span className="tb-independence-score" style={{ color: indColor }}>{indScore}/5 — {indLabel}</span>
+          </div>
+          <div className="tb-independence-pips">
+            {[0,1,2,3,4].map(i => (
+              <div key={i} className="tb-ind-pip" style={{ background: i < indScore ? indColor : '#1a2e40' }} />
+            ))}
+          </div>
+          <div className="tb-independence-note">{indNote}</div>
+        </div>
+      )}
+
+      {/* IV environment note */}
+      {ivNote && (
+        <div className="tb-iv-adjust">
+          <span className="tb-iv-adjust-icon">IV</span>
+          <span className="tb-iv-adjust-text">{ivNote}</span>
+        </div>
+      )}
+
       <div className="tb-sigintel-narrative">{narrative}</div>
     </div>
   )
@@ -2827,6 +3027,10 @@ export default function TradeBrief({
             tradeScore={tradeScore}
             shortInterest={shortInterest}
             onNavigate={onNavigate}
+            adxSignal={adxSignal}
+            ivData={ivData}
+            orbRetest={orbRetest}
+            rec={rec}
           />
 
           {/* ── Smart Money Analysis ── */}
