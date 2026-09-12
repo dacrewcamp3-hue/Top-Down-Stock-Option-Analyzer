@@ -453,6 +453,19 @@ export async function runBacktest(ticker, lookforward = 10, withCommission = fal
   const weekly = resampleWeekly(timestamps, opens, highs, lows, closes)
   const OPT_DTE = 21
 
+  // Tag each trade with SPY regime at signal date
+  const getRegimeAt = ts => {
+    if (!spyData?.length) return 'unknown'
+    let si = 0
+    for (let j = 0; j < spyData.length; j++) {
+      if (spyData[j].ts <= ts) si = j
+      else break
+    }
+    if (si < 50) return 'unknown'
+    const sma50 = spyData.slice(si - 49, si + 1).reduce((s, b) => s + b.close, 0) / 50
+    return spyData[si].close >= sma50 ? 'bull' : 'bear'
+  }
+
   const trades        = []
   let lastSignalBar   = -10
   let earningsSkipped = 0
@@ -536,6 +549,7 @@ export async function runBacktest(ticker, lookforward = 10, withCommission = fal
       signal:       dir,
       grade,
       adxLevel,
+      regime:       getRegimeAt(timestamps[i]),
       entryPrice:   +entry.toFixed(2),
       exitPrice:    +exit.toFixed(2),
       gain:         +gain.toFixed(2),

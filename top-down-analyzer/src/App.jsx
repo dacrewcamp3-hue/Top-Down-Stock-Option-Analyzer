@@ -1499,6 +1499,8 @@ export default function App() {
           optionsChain={optionsChain}
           chainFetchDone={chainFetchDone}
           onRetryChain={handleRetryOptionsChain}
+          backtestResult={backtestResult}
+          wyckoffData={wyckoffData}
         />
       )}
 

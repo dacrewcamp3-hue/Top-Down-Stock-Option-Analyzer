@@ -1927,3 +1927,271 @@
   border-radius: 10px;
   line-height: 1.8;
 }
+
+/* ── Fill% column ──────────────────────────────────────────────────────────── */
+.opt-exp-fill { font-size: 11px; font-weight: 600; }
+
+/* ── Edge Decay Banner ─────────────────────────────────────────────────────── */
+.opt-edge-decay {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: #1a0e00;
+  border: 1px solid #92400e;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+.opt-edge-decay-severe {
+  background: #1a0000;
+  border-color: #7f1d1d;
+}
+.opt-edge-icon {
+  font-size: 16px;
+  line-height: 1;
+  padding-top: 1px;
+  flex-shrink: 0;
+}
+.opt-edge-body  { display: flex; flex-direction: column; gap: 3px; }
+.opt-edge-title { font-size: 11px; font-weight: 700; color: #f59e0b; letter-spacing: 0.04em; }
+.opt-edge-decay-severe .opt-edge-title { color: #ef4444; }
+.opt-edge-sub   { font-size: 11px; color: #b08040; line-height: 1.5; }
+.opt-edge-decay-severe .opt-edge-sub { color: #a85050; }
+
+/* ── GEX Structure Rec ─────────────────────────────────────────────────────── */
+.opt-gex-rec {
+  border: 1px solid;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+.opt-gex-rec-header {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.opt-gex-rec-label   { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; }
+.opt-gex-rec-suggest { font-size: 11px; font-weight: 700; }
+.opt-gex-rec-why     { font-size: 11px; color: #7090a0; line-height: 1.5; margin: 0; }
+
+/* ── Theta Decay Calendar ─────────────────────────────────────────────────── */
+.opt-theta-cal {
+  background: #060e1a;
+  border: 1px solid #1a3050;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.opt-theta-cal-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6a90b0;
+  margin-bottom: 8px;
+}
+.opt-theta-cal-hold {
+  color: #f59e0b;
+  font-weight: 600;
+}
+.opt-theta-cal-grid {
+  display: grid;
+  grid-template-columns: 60px repeat(3, 1fr);
+  gap: 0;
+  font-size: 11px;
+}
+.opt-theta-hdr {
+  font-size: 10px;
+  color: #3a5878;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 0;
+  border-bottom: 1px solid #0e1e30;
+}
+.opt-theta-cell {
+  padding: 4px 0;
+  border-bottom: 1px solid #0a1828;
+  color: #7090a8;
+}
+.opt-theta-day { color: #a0c0dc; font-weight: 600; }
+.opt-theta-pin { color: #f59e0b !important; font-weight: 700; }
+.opt-theta-cal-note {
+  font-size: 10px;
+  color: #2a4060;
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+/* ── Historical Strike Hint ───────────────────────────────────────────────── */
+.opt-hist-strike {
+  background: #06100a;
+  border: 1px solid #064e2e;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.opt-hs-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4a7060;
+  margin-bottom: 10px;
+}
+.opt-hs-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.opt-hs-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  text-align: center;
+  background: #0a1a10;
+  border-radius: 6px;
+  padding: 8px 6px;
+}
+.opt-hs-lbl { font-size: 9px; color: #3a6050; text-transform: uppercase; letter-spacing: 0.04em; }
+.opt-hs-val { font-size: 15px; font-weight: 700; }
+.opt-hs-sub { font-size: 9px; color: #2a4838; }
+.opt-hs-verdict {
+  font-size: 11px;
+  padding: 7px 10px;
+  border-radius: 5px;
+  line-height: 1.5;
+}
+.opt-hs-aligned { background: #082010; color: #4caf70; border: 1px solid #0d4020; }
+.opt-hs-delta   { background: #100e00; color: #b0a030; border: 1px solid #302800; }
+
+/* ── Grade × Regime Matrix ───────────────────────────────────────────────── */
+.opt-grm-wrap {
+  background: #060c18;
+  border: 1px solid #1a2e48;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.opt-grm-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #5a80a0;
+  margin-bottom: 4px;
+  letter-spacing: 0.03em;
+}
+.opt-grm-sub {
+  font-size: 10px;
+  color: #2a4060;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.opt-grm-grid {
+  display: grid;
+  gap: 0;
+  font-size: 11px;
+  border: 1px solid #0e1e30;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.opt-grm-hdr {
+  padding: 5px 8px;
+  background: #0a1828;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #3a5878;
+  text-align: center;
+  border-bottom: 1px solid #0e1e30;
+}
+.opt-grm-regime {
+  padding: 8px 8px;
+  background: #080e1a;
+  font-size: 11px;
+  color: #5a80a0;
+  border-right: 1px solid #0e1e30;
+  border-bottom: 1px solid #0e1e30;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.opt-grm-cell {
+  padding: 6px 4px;
+  text-align: center;
+  border-right: 1px solid #0e1e30;
+  border-bottom: 1px solid #0e1e30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: default;
+}
+.opt-grm-empty { color: #1a3050; }
+.opt-grm-wr    { font-size: 13px; font-weight: 700; }
+.opt-grm-count { font-size: 9px; color: #3a5878; }
+.opt-grm-note  { font-size: 9px; color: #2a4060; margin-top: 6px; }
+
+/* ── Multi-Factor Position Sizing breakdown ──────────────────────────────── */
+.opt-mf-size-wrap {
+  background: #08101e;
+  border: 1px solid #1a3050;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 10px;
+}
+.opt-mf-size-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #3a5878;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.opt-mf-size-rows { display: flex; flex-direction: column; gap: 3px; }
+.opt-mf-size-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr 60px;
+  gap: 6px;
+  align-items: center;
+  font-size: 10px;
+  padding: 3px 0;
+  border-bottom: 1px solid #0e1e30;
+}
+.opt-mf-warn { background: #10080000; }
+.opt-mf-name   { color: #5a80a0; font-weight: 600; }
+.opt-mf-detail { color: #3a5878; }
+.opt-mf-adj    { font-weight: 700; text-align: right; font-size: 11px; }
+.opt-mf-size-result {
+  font-size: 11px;
+  color: #4a6888;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* ── P&L Scenarios frequency column ─────────────────────────────────────── */
+.opt-pnl-table-freq .opt-pnl-row { grid-template-columns: 80px 90px 90px 90px 90px 110px 110px; }
+.opt-pnl-table-freq .opt-pnl-hdr { grid-template-columns: 80px 90px 90px 90px 90px 110px 110px; }
+.opt-pnl-freq {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: #4a6888;
+  font-weight: 600;
+}
+.opt-pnl-freq-bar {
+  display: inline-block;
+  height: 6px;
+  min-width: 2px;
+  background: #3a6aac;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.opt-pnl-freq-note {
+  font-size: 9px;
+  color: #2a4060;
+  margin-left: 6px;
+}
+
+/* ── Checklist 7-item score ──────────────────────────────────────────────── */
+/* No new selectors needed — the score color is inline */

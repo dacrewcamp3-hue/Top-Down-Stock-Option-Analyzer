@@ -35,6 +35,144 @@ function ivBudget(maxRisk, ivRank) {
   return { budget: maxRisk, note: null, warn: false }
 }
 
+// ── Edge decay helper ─────────────────────────────────────────────────────────
+function computeEdgeDecay(monthlyBreakdown, allTimeWinRate) {
+  if (!monthlyBreakdown?.length) return { freshWR: null, allTimeWR: (allTimeWinRate ?? 50) / 100 }
+  const sorted = [...monthlyBreakdown].sort((a, b) => {
+    const ka = `${a.year}-${String(a.month).padStart(2,'0')}`
+    const kb = `${b.year}-${String(b.month).padStart(2,'0')}`
+    return ka < kb ? -1 : 1
+  })
+  const last3       = sorted.slice(-3)
+  const totalTrades = last3.reduce((s, m) => s + m.count, 0)
+  const totalWins   = last3.reduce((s, m) => s + m.wins,  0)
+  if (totalTrades < 3) return { freshWR: null, allTimeWR: (allTimeWinRate ?? 50) / 100 }
+  return { freshWR: totalWins / totalTrades, allTimeWR: (allTimeWinRate ?? 50) / 100 }
+}
+
+// ── Move distribution from backtest trades ────────────────────────────────────
+function computeMoveDistribution(trades) {
+  if (!trades?.length) return null
+  const buckets = [
+    { lo: -Infinity, hi: -10, label: '< −10%' },
+    { lo: -10,       hi: -5,  label: '−10→−5%' },
+    { lo: -5,        hi: 0,   label: '−5→0%' },
+    { lo: 0,         hi: 5,   label: '0→+5%' },
+    { lo: 5,         hi: 10,  label: '+5→+10%' },
+    { lo: 10,        hi: Infinity, label: '> +10%' },
+  ]
+  const counts = buckets.map(() => 0)
+  for (const t of trades) {
+    for (let i = 0; i < buckets.length; i++) {
+      if (t.gain >= buckets[i].lo && t.gain < buckets[i].hi) { counts[i]++; break }
+    }
+  }
+  return buckets.map((b, i) => ({
+    ...b,
+    count: counts[i],
+    pct:   Math.round(counts[i] / trades.length * 100),
+  }))
+}
+
+// ── Median bars held (winning trades) ────────────────────────────────────────
+function computeMedianBarsHeld(trades) {
+  if (!trades?.length) return null
+  const held = trades.filter(t => t.barsHeld != null).map(t => t.barsHeld).sort((a, b) => a - b)
+  if (!held.length) return null
+  return held[Math.floor(held.length / 2)]
+}
+
+// ── Multi-factor position sizing ──────────────────────────────────────────────
+function computeMultiFactorBudget(maxRisk, ivRank, wyckoffData, backtestResult) {
+  let mult = 1.0
+  const factors = []
+
+  // 1 — IV rank
+  if (ivRank != null) {
+    if (ivRank > 60) {
+      mult *= 0.60
+      factors.push({ name: 'High IV', detail: `rank ${Math.round(ivRank)}`, adj: '−40%', warn: true })
+    } else if (ivRank < 30) {
+      mult *= 1.20
+      factors.push({ name: 'Low IV',  detail: `rank ${Math.round(ivRank)}`, adj: '+20%', warn: false })
+    }
+  }
+
+  // 2 — Wyckoff range quality (0–1)
+  const rq = wyckoffData?.rangeQuality
+  if (rq != null) {
+    const qMult = +(0.60 + rq * 0.60).toFixed(2)   // 0.60 @ rq=0 … 1.20 @ rq=1
+    mult *= qMult
+    const adjStr = qMult >= 1.05 ? `+${Math.round((qMult - 1) * 100)}%`
+                 : qMult <= 0.95 ? `−${Math.round((1 - qMult) * 100)}%` : '±0%'
+    factors.push({ name: 'Range quality', detail: `${Math.round(rq * 100)}%`, adj: adjStr, warn: qMult < 0.75 })
+  }
+
+  // 3 — Edge freshness (last-3-month win rate vs all-time)
+  if (backtestResult?.monthlyBreakdown?.length >= 3) {
+    const { freshWR, allTimeWR } = computeEdgeDecay(backtestResult.monthlyBreakdown, backtestResult.winRate)
+    if (freshWR != null && allTimeWR > 0) {
+      const ratio = freshWR / allTimeWR
+      if (ratio < 0.65) {
+        mult *= 0.55
+        factors.push({ name: 'Edge fading', detail: `${Math.round(freshWR * 100)}% recent vs ${Math.round(allTimeWR * 100)}% all-time`, adj: '−45%', warn: true })
+      } else if (ratio > 1.25) {
+        mult *= 1.10
+        factors.push({ name: 'Hot streak', detail: `${Math.round(freshWR * 100)}% recent`, adj: '+10%', warn: false })
+      }
+    }
+  }
+
+  // 4 — Wyckoff spring/trend confirmation bonus
+  if (wyckoffData?.spring?.confirmed && wyckoffData?.trendContext === 'UPTREND') {
+    mult *= 1.10
+    factors.push({ name: 'Spring + uptrend', detail: 'Wyckoff confirmed', adj: '+10%', warn: false })
+  } else if (wyckoffData?.utad?.confirmed && wyckoffData?.trendContext === 'DOWNTREND') {
+    mult *= 1.10
+    factors.push({ name: 'UTAD + downtrend', detail: 'Wyckoff confirmed', adj: '+10%', warn: false })
+  }
+
+  const budget = maxRisk * Math.min(1.50, Math.max(0.20, mult))
+  return { budget, mult: +mult.toFixed(2), factors, warn: factors.some(f => f.warn) }
+}
+
+// ── Grade × Regime conditional probability matrix ─────────────────────────────
+function computeGradeRegime(trades) {
+  if (!trades?.length) return null
+  const grades  = ['A+', 'A', 'B']
+  const regimes = ['bull', 'bear']
+  const matrix  = {}
+  for (const g of grades) {
+    matrix[g] = {}
+    for (const r of regimes) {
+      const sub = trades.filter(t => t.grade === g && t.regime === r)
+      if (!sub.length) { matrix[g][r] = null; continue }
+      const wins = sub.filter(t => t.optWin)
+      matrix[g][r] = {
+        count:   sub.length,
+        winRate: Math.round(wins.length / sub.length * 100),
+        avgGain: +(sub.reduce((s, t) => s + t.optGainPct, 0) / sub.length).toFixed(1),
+      }
+    }
+  }
+  return matrix
+}
+
+// ── Historical optimal strike ─────────────────────────────────────────────────
+function computeHistoricalStrike(trades, direction, currentPrice) {
+  if (!trades?.length || !currentPrice) return null
+  const wins      = trades.filter(t => t.win && t.signal === direction)
+  if (!wins.length) return null
+  const sorted    = wins.map(t => t.gain).sort((a, b) => a - b)
+  const p25       = sorted[Math.floor(sorted.length * 0.25)]
+  const p50       = sorted[Math.floor(sorted.length * 0.50)]
+  const p75       = sorted[Math.floor(sorted.length * 0.75)]
+  const optStrike = direction === 'CALL'
+    ? Math.round(currentPrice * (1 + p50 / 100))
+    : Math.round(currentPrice * (1 - p50 / 100))
+  return { p25: +p25.toFixed(1), p50: +p50.toFixed(1), p75: +p75.toFixed(1), optStrike, wins: wins.length }
+}
+
 // ── Max Pain — strike where total option holder loss is maximized ─────────────
 function calcMaxPain(contracts) {
   if (!contracts) return null
@@ -412,7 +550,7 @@ function SpreadAlert({ ivRank, direction, currentPrice, sigma, recs }) {
 }
 
 // ── P&L Scenario Table ────────────────────────────────────────────────────────
-function PnLScenarios({ rec, currentPrice, qty }) {
+function PnLScenarios({ rec, currentPrice, qty, backtestResult }) {
   const { strike, dte, premium, isCall, sigma: sig } = rec
   const T    = dte / 365
   const qtyN = Math.max(1, qty)
@@ -421,15 +559,35 @@ function PnLScenarios({ rec, currentPrice, qty }) {
     ? [-0.10, -0.05, 0, +0.05, +0.10, +0.15]
     : [+0.10, +0.05, 0, -0.05, -0.10, -0.15]
 
+  // Build move distribution from backtest trades for frequency column
+  const moveDist = backtestResult?.trades?.length
+    ? computeMoveDistribution(backtestResult.trades)
+    : null
+
+  // Map each scenario pct to the closest distribution bucket
+  const getFreq = pct => {
+    if (!moveDist) return null
+    const pctVal = pct * 100
+    // Each scenario pct maps to the bucket that contains it
+    for (const b of moveDist) {
+      if (pctVal >= b.lo && pctVal < b.hi) return b
+    }
+    // Edge: exactly at the last hi
+    if (pctVal >= moveDist[moveDist.length - 1].hi) return moveDist[moveDist.length - 1]
+    return null
+  }
+
   return (
     <div className="opt-pnl-wrap">
       <div className="opt-pnl-header">
         <span className="opt-pnl-title">P&amp;L Scenarios — Primary Pick</span>
         <span className="opt-pnl-sub">{qtyN} contract{qtyN > 1 ? 's' : ''} · {dte} days to expiry</span>
+        {moveDist && <span className="opt-pnl-freq-note">· Historical freq. column from {backtestResult.trades.length} backtest trades</span>}
       </div>
-      <div className="opt-pnl-table">
+      <div className={`opt-pnl-table${moveDist ? ' opt-pnl-table-freq' : ''}`}>
         <div className="opt-pnl-row opt-pnl-hdr">
           <span>Stock Move</span>
+          {moveDist && <span>Hist. Freq.</span>}
           <span>Stock Price</span>
           <span>Value Now (est.)</span>
           <span>At Expiry</span>
@@ -446,6 +604,7 @@ function PnLScenarios({ rec, currentPrice, qty }) {
           const plTotal   = plPer * qtyN
           const isWin     = plPer > 0
           const isCurrent = pct === 0
+          const freq      = getFreq(pct)
 
           return (
             <div key={pct} className={`opt-pnl-row${isCurrent ? ' opt-pnl-current' : ''}${isWin ? ' opt-pnl-win' : ' opt-pnl-loss'}`}>
@@ -453,6 +612,14 @@ function PnLScenarios({ rec, currentPrice, qty }) {
                 {pct >= 0 ? '+' : ''}{(pct * 100).toFixed(0)}%
                 {isCurrent && <span className="opt-pnl-now"> TODAY</span>}
               </span>
+              {moveDist && (
+                <span className="opt-pnl-freq" title={`${freq?.count ?? 0} of ${backtestResult.trades.length} trades landed in this range`}>
+                  {freq
+                    ? <><span className="opt-pnl-freq-bar" style={{ width: `${Math.min(100, freq.pct * 2)}px`, opacity: 0.6 + freq.pct / 100 * 0.4 }} />{freq.pct}%</>
+                    : '—'
+                  }
+                </span>
+              )}
               <span>${sNew.toFixed(2)}</span>
               <span>${nowVal.toFixed(2)}</span>
               <span style={{ color: intrinsic > 0 ? '#a0c0dc' : '#4a6380' }}>
@@ -471,6 +638,7 @@ function PnLScenarios({ rec, currentPrice, qty }) {
       <div className="opt-pnl-footnote">
         "Value Now" uses Black-Scholes with full time remaining — useful if you plan to exit before expiry.
         "At Expiry" is the intrinsic value on expiration day.
+        {moveDist && ' "Hist. Freq." shows how often past trades landed in each move bucket.'}
       </div>
     </div>
   )
@@ -699,12 +867,238 @@ function TermStructureChart({ termStructure }) {
   )
 }
 
+// ── Edge Decay Banner ─────────────────────────────────────────────────────────
+function EdgeDecayBanner({ monthlyBreakdown, allTimeWinRate }) {
+  if (!monthlyBreakdown?.length) return null
+  const { freshWR, allTimeWR } = computeEdgeDecay(monthlyBreakdown, allTimeWinRate)
+  if (freshWR == null) return null
+  const ratio = freshWR / Math.max(0.01, allTimeWR)
+  if (ratio >= 0.80) return null   // edge is healthy — no banner needed
+
+  const pctFresh = Math.round(freshWR * 100)
+  const pctAll   = Math.round(allTimeWR * 100)
+  const severe   = ratio < 0.50
+
+  return (
+    <div className={`opt-edge-decay ${severe ? 'opt-edge-decay-severe' : ''}`}>
+      <span className="opt-edge-icon">⚠</span>
+      <div className="opt-edge-body">
+        <span className="opt-edge-title">
+          {severe ? 'EDGE SIGNIFICANTLY DEGRADED' : 'EDGE WEAKENING — REDUCE SIZE'}
+        </span>
+        <span className="opt-edge-sub">
+          Last 3 months: <strong>{pctFresh}%</strong> win rate vs{' '}
+          <strong>{pctAll}%</strong> all-time — signal quality has dropped{' '}
+          <strong>{Math.round((1 - ratio) * 100)}%</strong>.
+          {severe
+            ? ' Consider pausing new entries until the edge recovers above historical baseline.'
+            : ' Size down to 50–60% of normal until win rate recovers.'}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// ── GEX-based structure recommendation ────────────────────────────────────────
+function GEXStructureRec({ totalNetGEX, direction }) {
+  if (totalNetGEX == null || !direction) return null
+  const isBull  = direction === 'CALL'
+  const isPos   = totalNetGEX > 0
+  const absGEX  = Math.abs(totalNetGEX)
+  // Positive GEX = dealers long gamma = they pin price = range-bound
+  // Negative GEX = dealers short gamma = they amplify moves = explosive
+  const regime  = isPos ? 'pinning' : 'explosive'
+  const suggest = isPos ? 'DEBIT SPREAD' : 'NAKED LONG OPTION'
+  const why     = isPos
+    ? 'Positive GEX: market makers are long gamma — they sell into rallies and buy dips, keeping price in a range. Naked options will bleed theta in choppy conditions. A spread caps your theta exposure.'
+    : 'Negative GEX: market makers are short gamma — they must buy when price rises (or sell when it falls), amplifying moves. A naked option gives you full convexity to ride the acceleration.'
+
+  const clr  = isPos ? '#f59e0b' : '#10b981'
+  const bg   = isPos ? '#1a1000' : '#001a0d'
+  const bord = isPos ? '#b45309' : '#065f46'
+
+  return (
+    <div className="opt-gex-rec" style={{ background: bg, borderColor: bord }}>
+      <div className="opt-gex-rec-header">
+        <span className="opt-gex-rec-label" style={{ color: clr }}>GEX REGIME: {regime.toUpperCase()}</span>
+        <span className="opt-gex-rec-suggest" style={{ color: clr }}>→ PREFER {suggest}</span>
+      </div>
+      <p className="opt-gex-rec-why">{why}</p>
+    </div>
+  )
+}
+
+// ── Theta decay calendar vs median backtest hold ───────────────────────────────
+function ThetaCalendar({ rec, sigma, currentPrice, medianHold }) {
+  if (!rec || !currentPrice || !sigma) return null
+  const { strike, dte, isCall } = rec
+  if (!strike || !dte) return null
+
+  const days  = [1, 3, 5, 7, 10, 14, 21].filter(d => d < dte)
+  const entry = rec.premium
+
+  return (
+    <div className="opt-theta-cal">
+      <div className="opt-theta-cal-title">
+        Theta Decay Calendar — option value at <em>current</em> stock price as time passes
+        {medianHold != null && (
+          <span className="opt-theta-cal-hold"> · Median backtest exit: {medianHold}d</span>
+        )}
+      </div>
+      <div className="opt-theta-cal-grid">
+        <span className="opt-theta-hdr">Day</span>
+        <span className="opt-theta-hdr">Option value</span>
+        <span className="opt-theta-hdr">P&amp;L / share</span>
+        <span className="opt-theta-hdr">% of premium</span>
+        {days.map(d => {
+          const T     = Math.max(0, (dte - d) / 365)
+          const val   = T > 0.004
+            ? bsPrice(currentPrice, strike, T, sigma, isCall)
+            : Math.max(0, isCall ? currentPrice - strike : strike - currentPrice)
+          const pl    = (val - entry) * 100
+          const pct   = entry > 0 ? Math.round((val / entry - 1) * 100) : 0
+          const isPin = medianHold != null && d === days.find(x => x >= medianHold)
+          const clr   = pl >= 0 ? '#10b981' : '#ef4444'
+          return (
+            <React.Fragment key={d}>
+              <span className={`opt-theta-cell opt-theta-day${isPin ? ' opt-theta-pin' : ''}`}>
+                {d}d{isPin ? ' ◀' : ''}
+              </span>
+              <span className="opt-theta-cell">${val.toFixed(2)}</span>
+              <span className="opt-theta-cell" style={{ color: clr }}>{pl >= 0 ? '+' : ''}${pl.toFixed(0)}</span>
+              <span className="opt-theta-cell" style={{ color: clr }}>{pct >= 0 ? '+' : ''}{pct}%</span>
+            </React.Fragment>
+          )
+        })}
+      </div>
+      <div className="opt-theta-cal-note">
+        At current stock price ${f2(currentPrice)} — assumes no stock movement, isolating pure time decay.
+        {medianHold != null && ` ◀ marks your historical median exit day (${medianHold}d).`}
+      </div>
+    </div>
+  )
+}
+
+// ── Historical strike hint ─────────────────────────────────────────────────────
+function HistoricalStrikeHint({ trades, currentPrice, direction, recStrike }) {
+  if (!trades?.length || !currentPrice || !direction) return null
+  const hs = computeHistoricalStrike(trades, direction, currentPrice)
+  if (!hs) return null
+
+  const isBull    = direction === 'CALL'
+  const diffPct   = recStrike ? +((hs.optStrike - recStrike) / recStrike * 100).toFixed(1) : null
+  const aligned   = diffPct != null && Math.abs(diffPct) <= 3
+
+  return (
+    <div className="opt-hist-strike">
+      <div className="opt-hs-title">Historical Strike Calibration — based on {hs.wins} winning {direction}s</div>
+      <div className="opt-hs-grid">
+        <div className="opt-hs-cell">
+          <span className="opt-hs-lbl">p25 win move</span>
+          <span className="opt-hs-val" style={{ color: '#10b981' }}>{isBull ? '+' : '−'}{hs.p25}%</span>
+          <span className="opt-hs-sub">conservative exit</span>
+        </div>
+        <div className="opt-hs-cell">
+          <span className="opt-hs-lbl">Median win move</span>
+          <span className="opt-hs-val" style={{ color: '#10b981' }}>{isBull ? '+' : '−'}{hs.p50}%</span>
+          <span className="opt-hs-sub">typical winner</span>
+        </div>
+        <div className="opt-hs-cell">
+          <span className="opt-hs-lbl">p75 win move</span>
+          <span className="opt-hs-val" style={{ color: '#10b981' }}>{isBull ? '+' : '−'}{hs.p75}%</span>
+          <span className="opt-hs-sub">extended run</span>
+        </div>
+        <div className="opt-hs-cell">
+          <span className="opt-hs-lbl">Optimal strike</span>
+          <span className="opt-hs-val" style={{ color: '#f59e0b' }}>${hs.optStrike}</span>
+          <span className="opt-hs-sub">at median move</span>
+        </div>
+      </div>
+      {recStrike && (
+        <div className={`opt-hs-verdict ${aligned ? 'opt-hs-aligned' : 'opt-hs-delta'}`}>
+          {aligned
+            ? `✓ Current rec ($${recStrike}) is within 3% of the historically optimal strike — well placed.`
+            : `Current rec $${recStrike} vs historical optimal $${hs.optStrike} (${diffPct > 0 ? '+' : ''}${diffPct}%). ${
+                Math.abs(diffPct) > 8
+                  ? 'Consider a strike closer to $' + hs.optStrike + ' — it sits at the median winning move target.'
+                  : 'Small divergence — either strike is reasonable.'
+              }`
+          }
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Grade × Regime conditional probability matrix ─────────────────────────────
+function GradeRegimeMatrix({ trades }) {
+  const matrix = computeGradeRegime(trades)
+  if (!matrix) return null
+
+  const grades  = ['A+', 'A', 'B'].filter(g => Object.values(matrix[g] ?? {}).some(Boolean))
+  if (!grades.length) return null
+
+  const gradeColors = { 'A+': '#10b981', 'A': '#f59e0b', 'B': '#6b7280' }
+
+  return (
+    <div className="opt-grm-wrap">
+      <div className="opt-grm-title">Conditional Win Rate — Options · Grade × Market Regime</div>
+      <div className="opt-grm-sub">
+        Shows historical options win rate broken down by setup quality AND whether SPY was in a bull or bear regime at signal time.
+        The regime where your edge is strongest tells you WHEN to size up.
+      </div>
+      <div className="opt-grm-grid" style={{ gridTemplateColumns: `72px repeat(${grades.length}, 1fr)` }}>
+        <span className="opt-grm-hdr" />
+        {grades.map(g => (
+          <span key={g} className="opt-grm-hdr" style={{ color: gradeColors[g] }}>{g}</span>
+        ))}
+        {['bull', 'bear'].map(regime => (
+          <React.Fragment key={regime}>
+            <span className="opt-grm-regime">
+              {regime === 'bull' ? '📈 Bull' : '📉 Bear'}
+            </span>
+            {grades.map(g => {
+              const cell = matrix[g]?.[regime]
+              if (!cell) return <span key={g} className="opt-grm-cell opt-grm-empty">—</span>
+              const clr = cell.winRate >= 60 ? '#10b981' : cell.winRate >= 45 ? '#f59e0b' : '#ef4444'
+              return (
+                <span key={g} className="opt-grm-cell" title={`${cell.count} trades · avg ${cell.avgGain >= 0 ? '+' : ''}${cell.avgGain}%`}>
+                  <span className="opt-grm-wr" style={{ color: clr }}>{cell.winRate}%</span>
+                  <span className="opt-grm-count">{cell.count}t</span>
+                </span>
+              )
+            })}
+          </React.Fragment>
+        ))}
+      </div>
+      <div className="opt-grm-note">
+        Hover cells for trade count and avg gain · size up when both grade AND regime align with history
+      </div>
+    </div>
+  )
+}
+
 // ── Pre-entry Checklist ───────────────────────────────────────────────────────
-function EntryChecklist({ direction, conflict, adxSignal, earningsDate, ivData, setupGrade }) {
+function EntryChecklist({ direction, conflict, adxSignal, earningsDate, ivData, setupGrade, wyckoffData, backtestResult }) {
   if (!direction) return null
   const daysToEarnings = earningsDate
     ? Math.round((earningsDate.getTime() - Date.now()) / 86400000)
     : null
+
+  // Edge decay check
+  const edgeDecayInfo = backtestResult?.monthlyBreakdown?.length
+    ? computeEdgeDecay(backtestResult.monthlyBreakdown, backtestResult.winRate ?? 0)
+    : null
+  const edgeFading = edgeDecayInfo?.freshWR != null
+    && (edgeDecayInfo.freshWR / Math.max(0.01, edgeDecayInfo.allTimeWR)) < 0.80
+
+  // Wyckoff trend alignment
+  const wyTrend      = wyckoffData?.trendContext   // 'UPTREND'|'DOWNTREND'|'NEUTRAL'
+  const wyAligned    = direction === 'CALL'
+    ? wyTrend === 'UPTREND'
+    : direction === 'PUT'
+      ? wyTrend === 'DOWNTREND'
+      : wyTrend == null  // no data = neutral pass
 
   const items = [
     {
@@ -737,15 +1131,32 @@ function EntryChecklist({ direction, conflict, adxSignal, earningsDate, ivData, 
       detail: ivData?.ivRank != null ? `Rank ${Math.round(ivData.ivRank)}` : 'Unavailable',
       tip:    'IV Rank: Where current Implied Volatility sits in its 52-week range. Above 60 means options are historically expensive — you\'re paying inflated premium. At IV Rank 60+, the risk/reward of buying options is skewed against you. Wait for IV to compress, or reduce your size significantly.',
     },
+    {
+      label:  'Wyckoff trend aligned',
+      ok:     wyTrend == null || wyAligned,
+      detail: wyTrend
+        ? `${wyTrend}${wyAligned ? ' ✓' : ' — misaligned'}`
+        : 'No Wyckoff data',
+      tip:    'Wyckoff Trend Context: The market structure detected by Wyckoff analysis. If you\'re buying CALLs but the Wyckoff structure shows DOWNTREND (distribution/markdown), the supply/demand context is against you. Align your option direction with the Wyckoff trend for higher-probability trades.',
+    },
+    {
+      label:  'Edge not fading',
+      ok:     !edgeFading && edgeDecayInfo?.freshWR != null ? true : edgeDecayInfo == null,
+      detail: edgeDecayInfo?.freshWR != null
+        ? `Last 3m: ${Math.round(edgeDecayInfo.freshWR * 100)}% vs ${Math.round(edgeDecayInfo.allTimeWR * 100)}% all-time`
+        : 'No backtest data',
+      tip:    'Edge Freshness: Compares the win rate of this signal over the last 3 months vs all-time. If recent win rate has dropped significantly, the edge may be degrading due to changed market conditions. A fading edge means normal sizing is risky — reduce position size until the signal proves itself again.',
+    },
   ]
-  const pass = items.filter(i => i.ok).length
+  const total = items.length
+  const pass  = items.filter(i => i.ok).length
 
   return (
     <div className="opt-checklist">
       <div className="opt-checklist-header">
         <span className="opt-checklist-title">PRE-ENTRY CHECKLIST</span>
-        <span className="opt-checklist-score" style={{ color: pass === 5 ? '#10b981' : pass >= 3 ? '#f59e0b' : '#ef4444' }}>
-          {pass}/5
+        <span className="opt-checklist-score" style={{ color: pass === total ? '#10b981' : pass >= Math.ceil(total * 0.6) ? '#f59e0b' : '#ef4444' }}>
+          {pass}/{total}
         </span>
       </div>
       <div className="opt-checklist-items">
@@ -762,7 +1173,7 @@ function EntryChecklist({ direction, conflict, adxSignal, earningsDate, ivData, 
 }
 
 // ── Recommendation card ───────────────────────────────────────────────────────
-function RecCard({ rec, ticker, maxRisk, currentPrice, ivRank, isQuickPlay, sigma, grade, adxSignal }) {
+function RecCard({ rec, ticker, maxRisk, currentPrice, ivRank, isQuickPlay, sigma, grade, adxSignal, wyckoffData, backtestResult }) {
   if (!rec) return null
   const { label, dte, expDate, strike, premium, contractCost, isCall } = rec
 
@@ -770,9 +1181,12 @@ function RecCard({ rec, ticker, maxRisk, currentPrice, ivRank, isQuickPlay, sigm
   const bg      = isCall ? '#001a0d' : '#1a0000'
   const bord    = isCall ? '#064e2e' : '#6b0000'
 
-  // IV-adaptive sizing
-  const { budget, note: ivNote, warn: ivWarn } = ivBudget(maxRisk, ivRank)
-  const qty      = contractCost > 0 ? Math.floor(budget / contractCost) : 0
+  // Multi-factor adaptive sizing (replaces simple ivBudget)
+  const mfBudget  = computeMultiFactorBudget(maxRisk, ivRank, wyckoffData, backtestResult)
+  const budget    = mfBudget.budget
+  const ivNote    = mfBudget.mult < 1.0
+  const ivWarn    = mfBudget.warn
+  const qty       = contractCost > 0 ? Math.floor(budget / contractCost) : 0
   const totalCost = qty > 0 ? qty * contractCost : null
 
   // Pattern target clearance
@@ -947,15 +1361,38 @@ function RecCard({ rec, ticker, maxRisk, currentPrice, ivRank, isQuickPlay, sigm
 
       <GreeksBar rec={rec} highlightGamma={isQuickPlay} />
 
+      {/* Multi-factor sizing breakdown */}
+      {mfBudget.factors.length > 0 && (
+        <div className="opt-mf-size-wrap">
+          <div className="opt-mf-size-title">Position Sizing Factors</div>
+          <div className="opt-mf-size-rows">
+            {mfBudget.factors.map((f, i) => (
+              <div key={i} className={`opt-mf-size-row${f.warn ? ' opt-mf-warn' : ''}`}>
+                <span className="opt-mf-name">{f.name}</span>
+                <span className="opt-mf-detail">{f.detail}</span>
+                <span className="opt-mf-adj" style={{ color: f.adj < 1 ? '#ef4444' : f.adj > 1 ? '#10b981' : '#6a90b0' }}>
+                  {f.adj < 1 ? '↓' : f.adj > 1 ? '↑' : '='} ×{f.adj.toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="opt-mf-size-result">
+            Net multiplier <strong style={{ color: mfBudget.mult < 0.8 ? '#ef4444' : mfBudget.mult > 1.05 ? '#10b981' : '#a0c0dc' }}>×{mfBudget.mult.toFixed(2)}</strong>
+            {' '}→ effective budget <strong>${f0(budget)}</strong>
+            {' of '}${f0(maxRisk)} base
+          </div>
+        </div>
+      )}
+
       {ivWarn && (
         <div className="opt-iv-size-warn">
-          ⚠ IV expensive (rank {Math.round(ivRank)}) — position sized down to 60% of budget · ${f0(budget)} effective budget
+          ⚠ Position scaled down to {Math.round(mfBudget.mult * 100)}% of budget — see sizing factors above
         </div>
       )}
 
       {qty < 1 && (
         <div className="opt-over-budget">
-          ⚠ 1 contract ≈ ${f0(contractCost)} · exceeds ${f0(budget)} budget · increase risk % in Analyze → Timing → Risk Panel
+          ⚠ 1 contract ≈ ${f0(contractCost)} · exceeds ${f0(budget)} effective budget · increase risk % in Analyze → Timing → Risk Panel
         </div>
       )}
 
@@ -1040,6 +1477,13 @@ function ExpiryCompare({ optionsChain, currentPrice, sigma }) {
     const callG = atmCall ? calcGreeks(S, atmCall.strike, T, iv, true)  : null
     const putG  = atmPut  ? calcGreeks(S, atmPut.strike,  T, iv, false) : null
 
+    const callFillPct = (atmCall && callMid && callMid > 0)
+      ? +((atmCall.ask - atmCall.bid) / callMid * 100).toFixed(1)
+      : null
+    const putFillPct  = (atmPut && putMid && putMid > 0)
+      ? +((atmPut.ask  - atmPut.bid)  / putMid  * 100).toFixed(1)
+      : null
+
     return {
       expDate:       tsItem.expDate,
       dte,
@@ -1054,6 +1498,8 @@ function ExpiryCompare({ optionsChain, currentPrice, sigma }) {
       callBreakeven: (atmCall && callMid) ? atmCall.strike + callMid : null,
       putBreakeven:  (atmPut  && putMid)  ? atmPut.strike  - putMid  : null,
       iv:            tsItem.iv,
+      callFillPct,
+      putFillPct,
     }
   }).filter(Boolean)
 
@@ -1078,6 +1524,7 @@ function ExpiryCompare({ optionsChain, currentPrice, sigma }) {
               <th data-tip="Theta (Θ/day) — dollars of premium lost per calendar day from time decay. Accelerates dramatically inside 14 DTE. This is what you fight as a buyer.">Θ/day</th>
               <th data-tip="ATM Implied Volatility — the market's expected annualized move embedded in this expiry's prices. Compare across expirations to spot term structure anomalies.">IV</th>
               <th data-tip="Call Breakeven — stock price at expiration where the call trade breaks even (strike + premium paid). The stock must exceed this level by expiry.">B/E</th>
+              <th data-tip="Fill Cost % — bid/ask spread as a percentage of the mid-price: (ask−bid)/mid×100. This is the edge you give up on entry. Below 5% = tight, liquid market. 10–20% = expect slippage. Above 20% = illiquid; use limit orders at mid and be prepared to not get filled. This silent cost destroys edge on options with wide spreads.">Fill%</th>
             </tr>
           </thead>
           <tbody>
@@ -1123,13 +1570,22 @@ function ExpiryCompare({ optionsChain, currentPrice, sigma }) {
                     ? `Call breakeven: ${f2(row.callBreakeven)} — the stock must close ABOVE this price at expiration for the trade to profit. It equals strike (${row.callStrike != null ? f2(row.callStrike) : '?'}) + premium paid (${row.callMid != null ? f2(row.callMid) : '?'}). Any profit before expiry is pure momentum — you don't have to hold to expiry.`
                     : 'Breakeven unavailable.'}
                 >{row.callBreakeven != null ? f2(row.callBreakeven) : '—'}</td>
+                <td
+                  className="opt-exp-fill"
+                  data-tip={row.callFillPct != null
+                    ? `Call fill cost: ${row.callFillPct}% — you give up ${row.callFillPct}% of premium just by crossing the spread. ${row.callFillPct > 20 ? 'DANGEROUS: Use a strict limit at mid-price.' : row.callFillPct > 10 ? 'Elevated: prefer limit orders.' : 'Acceptable.'}`
+                    : 'Fill cost unavailable — no live bid/ask for this expiry.'}
+                  style={{ color: row.callFillPct == null ? '#4a6380' : row.callFillPct > 20 ? '#ef4444' : row.callFillPct > 10 ? '#f59e0b' : '#10b981' }}
+                >
+                  {row.callFillPct != null ? `${row.callFillPct}%` : '—'}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
       <div className="opt-exp-note">
-        Hover column headers for definitions · Call side shown · longer DTE = more time premium but also more time decay risk
+        Hover column headers for definitions · Call side shown · Fill% = (ask−bid)/mid — the edge you surrender on entry
       </div>
     </div>
   )
@@ -1140,6 +1596,7 @@ export default function OptionsChain({
   ticker, currentPrice, historicalVol, swingResult, confluenceResult,
   setupGrade, patterns, hsPatterns, ivData, lastUpdated,
   earningsDate, adxSignal, optionsChain, chainFetchDone, onRetryChain,
+  backtestResult, wyckoffData,
 }) {
   const [conviction,    setConviction]    = useState('standard')
   const [optionsView,   setOptionsView]   = useState('recommendations')  // 'recommendations' | 'structure'
@@ -1325,6 +1782,11 @@ export default function OptionsChain({
 
       <SpreadAlert ivRank={ivRank} direction={direction} currentPrice={currentPrice} sigma={sigma} recs={recs} />
 
+      <EdgeDecayBanner
+        monthlyBreakdown={backtestResult?.monthlyBreakdown}
+        allTimeWinRate={backtestResult?.winRate ?? 0}
+      />
+
       <EntryChecklist
         direction={conflict ? null : direction}
         conflict={conflict}
@@ -1332,6 +1794,8 @@ export default function OptionsChain({
         earningsDate={earningsDate}
         ivData={ivData}
         setupGrade={setupGrade}
+        wyckoffData={wyckoffData}
+        backtestResult={backtestResult}
       />
 
       {direction && !conflict && (
@@ -1348,6 +1812,12 @@ export default function OptionsChain({
       {recs && (
         <>
           {/* Quick play — appears only on A / A+ setups */}
+          {/* GEX structure recommendation */}
+          <GEXStructureRec
+            totalNetGEX={optionsChain?.totalNetGEX}
+            direction={conflict ? null : direction}
+          />
+
           {recs.quickPlay && (
             <div className="opt-quickplay-section">
               <div className="opt-quickplay-header">
@@ -1362,6 +1832,8 @@ export default function OptionsChain({
                 sigma={sigma}
                 grade={setupGrade}
                 adxSignal={adxSignal}
+                wyckoffData={wyckoffData}
+                backtestResult={backtestResult}
                 isQuickPlay
               />
             </div>
@@ -1378,6 +1850,8 @@ export default function OptionsChain({
               sigma={sigma}
               grade={setupGrade}
               adxSignal={adxSignal}
+              wyckoffData={wyckoffData}
+              backtestResult={backtestResult}
             />
             <RecCard
               rec={recs.extended}
@@ -1388,20 +1862,46 @@ export default function OptionsChain({
               sigma={sigma}
               grade={setupGrade}
               adxSignal={adxSignal}
+              wyckoffData={wyckoffData}
+              backtestResult={backtestResult}
             />
           </div>
 
+          {/* Theta decay calendar — primary pick */}
+          {recs.primary && (
+            <ThetaCalendar
+              rec={recs.primary}
+              sigma={sigma}
+              currentPrice={currentPrice}
+              medianHold={computeMedianBarsHeld(backtestResult?.trades ?? [])}
+            />
+          )}
+
+          {/* Historical strike calibration */}
+          {recs.primary && (
+            <HistoricalStrikeHint
+              trades={backtestResult?.trades}
+              currentPrice={currentPrice}
+              direction={conflict ? null : direction}
+              recStrike={recs.primary?.strike}
+            />
+          )}
+
+          {/* Grade × Regime matrix */}
+          <GradeRegimeMatrix trades={backtestResult?.trades} />
+
           {/* P&L scenario table — primary pick */}
           {recs.primary && (() => {
-            const { budget } = ivBudget(maxRisk, ivRank)
+            const mfb = computeMultiFactorBudget(maxRisk, ivRank, wyckoffData, backtestResult)
             const qty = recs.primary.contractCost > 0
-              ? Math.floor(budget / recs.primary.contractCost)
+              ? Math.floor(mfb.budget / recs.primary.contractCost)
               : 0
             return (
               <PnLScenarios
                 rec={recs.primary}
                 currentPrice={currentPrice}
                 qty={qty}
+                backtestResult={backtestResult}
               />
             )
           })()}
