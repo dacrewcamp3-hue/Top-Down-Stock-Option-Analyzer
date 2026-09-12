@@ -2212,3 +2212,347 @@
   border-color: #1e3d5c;
 }
 
+/* ════════════════════════════════════════════════════════════
+   TIMING INTELLIGENCE — 8 NEW COMPONENTS
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Timing Intelligence block wrapper ── */
+.timing-intel-block {
+  padding: 10px 14px;
+  border-top: 1px solid #182438;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.timing-intel-title {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #2e4a68;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+/* ── 1. Bar Quality Badge ── */
+.bq-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  background: #0c1624;
+  border-radius: 6px;
+  flex-wrap: wrap;
+  border: 1px solid #182438;
+}
+.bq-title {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #2e4a68;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.bq-item {
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.bq-detail {
+  font-size: 9px;
+  color: #4a6380;
+  font-weight: 500;
+}
+
+/* ── 2. EMA5 Slope Gauge ── */
+.ema5-slope-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #0c1624;
+  border-radius: 6px;
+  border: 1px solid #182438;
+}
+.ema5-slope-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #2e4a68;
+  flex-shrink: 0;
+}
+.ema5-slope-val {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+.ema5-slope-detail {
+  font-size: 10px;
+  color: #4a6380;
+}
+.ema5-slope-warn {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+/* ── 3. Trend Age Bar ── */
+.trend-age-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #0c1624;
+  border-radius: 6px;
+  border: 1px solid #182438;
+  flex-wrap: wrap;
+}
+.trend-age-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #2e4a68;
+  flex-shrink: 0;
+}
+.trend-age-val {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+}
+.trend-age-phase {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.trend-age-warn {
+  font-size: 10px;
+  color: #f59e0b;
+  font-weight: 600;
+  width: 100%;
+  margin-top: 2px;
+}
+
+/* ── 4. Missed Entry Alert ── */
+.missed-entry-wrap {
+  margin: 0 0 2px 0;
+  padding: 10px 14px;
+  background: #1a0a00;
+  border: 1px solid #7c2d12;
+  border-radius: 8px;
+}
+.missed-entry-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: #f97316;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+}
+.missed-entry-desc {
+  font-size: 11px;
+  color: #a16207;
+  margin-bottom: 5px;
+  line-height: 1.4;
+}
+.missed-entry-zone {
+  font-size: 12px;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+.missed-entry-note {
+  font-size: 10px;
+  color: #4a6380;
+  margin-left: 6px;
+  font-weight: 400;
+}
+
+/* ── 5. Flip Recency Strip ── */
+.flip-recency-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: #0c1624;
+  border-top: 1px solid #182438;
+  flex-wrap: wrap;
+}
+.flip-recency-title {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #2e4a68;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.flip-recency-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.flip-recency-name {
+  font-size: 10px;
+  color: #4a6380;
+  font-weight: 600;
+}
+.flip-recency-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid;
+  letter-spacing: 0.3px;
+}
+.flip-recency-badge.fresh    { color: #10b981; background: #011c10; border-color: #065f46; }
+.flip-recency-badge.moderate { color: #f59e0b; background: #1a1000; border-color: #4d3000; }
+.flip-recency-badge.stale    { color: #6b7280; background: #0f1623; border-color: #1e2d45; }
+
+/* ── 6. ADX Trajectory Sparkline ── */
+.adx-spark-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #0c1624;
+  border-top: 1px solid #1e2d45;
+  flex-wrap: wrap;
+}
+.adx-spark-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #2e4a68;
+  flex-shrink: 0;
+}
+.adx-spark-svg {
+  display: block;
+  flex-shrink: 0;
+}
+.adx-spark-vals {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.adx-spark-num {
+  font-size: 10px;
+  font-weight: 600;
+}
+.adx-spark-trend {
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: auto;
+}
+
+/* ── 7. Pre-Signal Readiness Score ── */
+.readiness-wrap {
+  padding: 12px 14px;
+  border: 1px solid;
+  border-radius: 8px;
+  margin: 2px 0;
+}
+.readiness-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.readiness-title {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #2e4a68;
+  text-transform: uppercase;
+  flex: 1;
+}
+.readiness-score {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+.readiness-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.readiness-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.readiness-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  padding: 2px 0;
+}
+.readiness-check-name {
+  flex: 1;
+}
+.readiness-check-pts {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* ── 8. Position Health Meter ── */
+.pos-health-wrap {
+  padding: 12px 14px;
+  border: 1px solid;
+  border-radius: 8px;
+  margin: 2px 0;
+}
+.pos-health-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.pos-health-title {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #2e4a68;
+  text-transform: uppercase;
+  flex: 1;
+}
+.pos-health-score {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+.pos-health-label {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: 1px solid;
+}
+.pos-health-bar-track {
+  height: 6px;
+  background: #182438;
+  border-radius: 3px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.pos-health-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.pos-health-warns {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pos-health-warn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 5px;
+  line-height: 1.3;
+}
+.pos-health-warn-low      { color: #f59e0b; background: rgba(26,16,0,0.7); }
+.pos-health-warn-medium   { color: #f97316; background: rgba(26,8,0,0.7); }
+.pos-health-warn-high     { color: #ef4444; background: rgba(28,1,1,0.7); }
+

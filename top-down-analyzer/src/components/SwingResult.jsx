@@ -17,6 +17,234 @@ function fmt(price) {
   return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+// ── Timing Intelligence helpers ───────────────────────────────────────────────
+function fhEmaSeries(arr, period) {
+  if (!arr || arr.length < period) return []
+  const k = 2 / (period + 1)
+  const out = Array(period - 1).fill(null)
+  let v = arr.slice(0, period).reduce((a, b) => a + b, 0) / period
+  out.push(v)
+  for (let i = period; i < arr.length; i++) { v = arr[i] * k + v * (1 - k); out.push(v) }
+  return out
+}
+
+// 1. Bar Quality Score — body/range ratio, size vs ATR, volume vs 20-day avg
+function computeBarQuality(fourHBars) {
+  if (!fourHBars) return null
+  const { closes, highs, lows, volumes } = fourHBars
+  const n = closes.length
+  if (n < 22) return null
+  let atrSum = 0
+  for (let i = n - 14; i < n; i++) {
+    const pc = closes[i - 1] ?? closes[i]
+    atrSum += Math.max(highs[i] - lows[i], Math.abs(highs[i] - pc), Math.abs(lows[i] - pc))
+  }
+  const atr = atrSum / 14
+  const volAvg = volumes.slice(n - 20, n).reduce((a, b) => a + b, 0) / 20
+  const scoreBar = i => {
+    const range     = highs[i] - lows[i]
+    const bodySize  = Math.abs(closes[i] - (closes[i - 1] ?? closes[i]))
+    const bodyRatio = range > 0 ? bodySize / range : 0
+    const sizeVsAtr = atr > 0 ? range / atr : 0
+    const volRatio  = volAvg > 0 ? volumes[i] / volAvg : 0
+    let score = 0
+    if (bodyRatio > 0.6) score += 2; else if (bodyRatio > 0.3) score += 1
+    if (sizeVsAtr > 1.2) score += 2; else if (sizeVsAtr > 0.7) score += 1
+    if (volRatio  > 1.5) score += 2; else if (volRatio  > 0.8) score += 1
+    return {
+      score,
+      label: score >= 5 ? 'STRONG' : score >= 3 ? 'MODERATE' : 'WEAK',
+      bodyRatio: Math.round(bodyRatio * 100),
+      sizeVsAtr: Math.round(sizeVsAtr * 100) / 100,
+      volRatio:  Math.round(volRatio  * 100) / 100,
+    }
+  }
+  return { last: scoreBar(n - 1), prev: n >= 2 ? scoreBar(n - 2) : null }
+}
+
+// 2. EMA5 Slope Gate — slope as %/bar over last 5 intervals
+function computeEma5Slope(fourHBars) {
+  if (!fourHBars) return null
+  const { closes } = fourHBars
+  if (closes.length < 15) return null
+  const series = fhEmaSeries(closes, 5)
+  const valid  = series.filter(v => v != null)
+  if (valid.length < 6) return null
+  const last6 = valid.slice(-6)
+  let totalPct = 0
+  for (let i = 1; i < last6.length; i++) totalPct += (last6[i] - last6[i - 1]) / last6[i - 1] * 100
+  const slopePctPerBar = totalPct / (last6.length - 1)
+  const absSlope = Math.abs(slopePctPerBar)
+  return {
+    slopePctPerBar: Math.round(slopePctPerBar * 1000) / 1000,
+    label: absSlope >= 0.20 ? 'STEEP' : absSlope >= 0.10 ? 'MODERATE' : 'FLAT',
+    reliable: absSlope >= 0.10,
+    direction: slopePctPerBar >= 0 ? 'up' : 'down',
+    ema5: valid[valid.length - 1],
+  }
+}
+
+// 3. Trend Age Counter — bars since EMAs first aligned in current direction
+function computeTrendAge(fourHBars, signal) {
+  if (!fourHBars || !signal || signal === 'WATCH') return null
+  const { closes } = fourHBars
+  if (closes.length < 10) return null
+  const ema5 = fhEmaSeries(closes, 5)
+  const isLong = signal === 'LONG'
+  let age = 0
+  for (let i = closes.length - 1; i >= 0; i--) {
+    if (ema5[i] == null) break
+    const above = closes[i] > ema5[i]
+    if ((isLong && above) || (!isLong && !above)) age++
+    else break
+  }
+  const phase = age <= 2 ? 'forming' : age <= 7 ? 'early' : age <= 14 ? 'mid' : 'late'
+  return { age, phase }
+}
+
+// 4. Missed Entry Detector — price >3% from EMA5 = window closed
+function computeMissedEntry(fourHBars, currentPrice, signal) {
+  if (!fourHBars || !currentPrice || !signal || signal === 'WATCH') return null
+  const { closes } = fourHBars
+  if (closes.length < 10) return null
+  const series = fhEmaSeries(closes, 5)
+  const ema5   = series[series.length - 1]
+  if (ema5 == null) return null
+  const pctFrom = ((currentPrice - ema5) / ema5) * 100
+  if (Math.abs(pctFrom) <= 3) return { missed: false, pctFrom: Math.round(pctFrom * 100) / 100, ema5 }
+  return {
+    missed: true,
+    pctFrom: Math.round(pctFrom * 100) / 100,
+    ema5: Math.round(ema5 * 100) / 100,
+    reentryHigh: Math.round(ema5 * 1.015 * 100) / 100,
+    reentryLow:  Math.round(ema5 * 0.985 * 100) / 100,
+  }
+}
+
+// 5. Flip Recency — bars since RSI/MACD last changed direction
+function computeFlipRecency(fourHBars) {
+  if (!fourHBars) return null
+  const { closes } = fourHBars
+  const n = closes.length
+  if (n < 40) return null
+  const ema12s = fhEmaSeries(closes, 12)
+  const ema26s = fhEmaSeries(closes, 26)
+  const macdVals = []
+  for (let i = 0; i < n; i++) {
+    if (ema12s[i] != null && ema26s[i] != null) macdVals.push(ema12s[i] - ema26s[i])
+  }
+  const signalS = fhEmaSeries(macdVals, 9)
+  const histS   = macdVals.map((m, i) => signalS[i] != null ? m - signalS[i] : null)
+  let macdBars = 0
+  const lastH = histS[histS.length - 1]
+  if (lastH != null) {
+    for (let i = histS.length - 2; i >= 0; i--) {
+      if (histS[i] == null) break
+      if ((lastH > 0) === (histS[i] > 0)) macdBars++
+      else break
+    }
+  }
+  let rsiArr = []
+  if (n >= 15) {
+    let avgG = 0, avgL = 0
+    for (let i = 1; i <= 14; i++) { const d = closes[i] - closes[i-1]; if (d > 0) avgG += d; else avgL -= d }
+    avgG /= 14; avgL /= 14
+    for (let i = 14; i < n; i++) {
+      const d = closes[i] - closes[i-1]
+      avgG = (avgG * 13 + Math.max(d, 0)) / 14
+      avgL = (avgL * 13 + Math.max(-d, 0)) / 14
+      rsiArr.push(avgL === 0 ? 100 : 100 - 100 / (1 + avgG / avgL))
+    }
+  }
+  let rsiBars = 0
+  if (rsiArr.length > 1) {
+    const lr = rsiArr[rsiArr.length - 1]
+    for (let i = rsiArr.length - 2; i >= 0; i--) {
+      if ((lr >= 50) === (rsiArr[i] >= 50)) rsiBars++
+      else break
+    }
+  }
+  const lbl = b => b <= 3 ? 'FRESH' : b <= 9 ? 'MODERATE' : 'STALE'
+  return {
+    macd: { bars: macdBars, label: lbl(macdBars), positive: lastH != null && lastH > 0 },
+    rsi:  { bars: rsiBars,  label: lbl(rsiBars),  above50: rsiArr.length > 0 && rsiArr[rsiArr.length - 1] >= 50 },
+  }
+}
+
+// 6. ADX History — last 5 values for sparkline
+function computeAdxHistory(fourHBars) {
+  if (!fourHBars) return null
+  const { closes, highs, lows } = fourHBars
+  const n = closes.length
+  if (n < 60) return null
+  const p = 14
+  const trs = [], pdms = [], mdms = []
+  for (let i = 1; i < n; i++) {
+    const hd = highs[i] - highs[i-1], ld = lows[i-1] - lows[i]
+    trs.push(Math.max(highs[i]-lows[i], Math.abs(highs[i]-closes[i-1]), Math.abs(lows[i]-closes[i-1])))
+    pdms.push(hd > ld && hd > 0 ? hd : 0)
+    mdms.push(ld > hd && ld > 0 ? ld : 0)
+  }
+  const ws = arr => {
+    let v = arr.slice(0,p).reduce((a,b)=>a+b,0)/p, out=[v]
+    for (let i=p; i<arr.length; i++) { v=(v*(p-1)+arr[i])/p; out.push(v) }
+    return out
+  }
+  const sTR=ws(trs), sPDM=ws(pdms), sMDM=ws(mdms)
+  const dx=sTR.map((tr,i)=>{
+    if(!tr) return 0
+    const pdi=(sPDM[i]/tr)*100, mdi=(sMDM[i]/tr)*100, s=pdi+mdi
+    return s===0?0:(Math.abs(pdi-mdi)/s)*100
+  })
+  if (dx.length < p) return null
+  const adxS = ws(dx)
+  const vals  = adxS.slice(-5).map(v => Math.round(v*10)/10)
+  return { values: vals, trend: vals[4]>vals[0]?'rising':'falling', slope: Math.round((vals[4]-vals[3])*10)/10 }
+}
+
+// 7. Pre-Signal Readiness Score — 0-100 when WATCH/no signal
+function computeReadinessScore(rsiSignal, adxSignal, maStack, weeklyAlign, vwapSignal, ema5Slope, trendAge) {
+  const checks = [
+    { name: 'Weekly bias bullish',     pass: weeklyAlign?.signal === 'BULLISH' || weeklyAlign?.signal === 'STRONG BULLISH', pts: 20 },
+    { name: 'Daily MA stack bullish',  pass: maStack?.signal === 'BULLISH', pts: 20 },
+    { name: 'RSI above 44',            pass: rsiSignal?.above44 === true, pts: 15 },
+    { name: 'ADX ≥ 21 (trend exists)', pass: (adxSignal?.adx ?? 0) >= 21, pts: 15 },
+    { name: 'Price above VWAP',        pass: vwapSignal?.aboveVwap === true, pts: 15 },
+    { name: 'EMA5 slope active',       pass: ema5Slope?.reliable === true, pts: 10 },
+    { name: 'Trend not late-cycle',    pass: !trendAge || trendAge.phase !== 'late', pts: 5 },
+  ]
+  const score = checks.filter(c => c.pass).reduce((s, c) => s + c.pts, 0)
+  return { score, checks }
+}
+
+// 8. Position Health — multi-indicator exit warning system
+function computePositionHealth(rsiSignal, adxSignal, vwapSignal, volumeSpike, ema5Slope) {
+  if (!rsiSignal && !adxSignal) return null
+  const warns = []
+  let score = 100
+  const rsi = rsiSignal?.rsi ?? 0
+  if (rsi > 70) { warns.push({ icon: '🔴', text: 'RSI overbought — exit risk rising', sev: 'high' }); score -= 20 }
+  else if (rsi > 60) { warns.push({ icon: '⚠', text: 'RSI elevated — watch for divergence', sev: 'low' }); score -= 5 }
+  if (adxSignal?.adxRising === false && (adxSignal?.adx ?? 0) >= 21) {
+    warns.push({ icon: '↘', text: 'ADX rolling over — trend strength fading', sev: 'medium' }); score -= 20
+  }
+  if ((adxSignal?.adx ?? 21) < 21) {
+    warns.push({ icon: '▽', text: 'ADX < 21 — trend losing steam', sev: 'high' }); score -= 25
+  }
+  if (volumeSpike?.lowVolume === true) {
+    warns.push({ icon: '↓', text: 'Volume contracting — conviction fading', sev: 'medium' }); score -= 15
+  }
+  if (ema5Slope?.label === 'FLAT') {
+    warns.push({ icon: '—', text: 'EMA5 flat — momentum stalling', sev: 'medium' }); score -= 15
+  }
+  if (vwapSignal?.aboveVwap === false) {
+    warns.push({ icon: '↓', text: 'Price below VWAP — losing institutional support', sev: 'high' }); score -= 25
+  }
+  score = Math.max(0, score)
+  const h = score >= 80 ? 'HEALTHY' : score >= 60 ? 'CAUTION' : score >= 40 ? 'WEAKENING' : 'EXIT NOW'
+  return { score, health: h, warnings: warns }
+}
+
 // ── Pattern state ─────────────────────────────────────────────────────────────
 function getPatternState(p, currentPrice) {
   if (!p) return 'FORMING'
@@ -1031,16 +1259,239 @@ function GradeChecklist({ grade }) {
   )
 }
 
+// ── Bar Quality Badge ─────────────────────────────────────────────────────────
+function BarQualityBadge({ barQuality }) {
+  if (!barQuality) return null
+  const { last, prev } = barQuality
+  const qColor = q => q?.label === 'STRONG' ? '#10b981' : q?.label === 'MODERATE' ? '#f59e0b' : '#ef4444'
+  return (
+    <div className="bq-badge-wrap">
+      <span className="bq-title">BAR QUALITY</span>
+      {prev && (
+        <span className="bq-item" style={{ color: qColor(prev) }}>
+          PREV: {prev.label}
+          <span className="bq-detail"> {prev.bodyRatio}% body · {prev.sizeVsAtr}× ATR · {prev.volRatio}× vol</span>
+        </span>
+      )}
+      <span className="bq-item" style={{ color: qColor(last) }}>
+        LAST: {last.label}
+        <span className="bq-detail"> {last.bodyRatio}% body · {last.sizeVsAtr}× ATR · {last.volRatio}× vol</span>
+      </span>
+    </div>
+  )
+}
+
+// ── EMA5 Slope Gauge ──────────────────────────────────────────────────────────
+function Ema5SlopeGauge({ slopeData }) {
+  if (!slopeData) return null
+  const { label, slopePctPerBar, reliable, direction } = slopeData
+  const color = label === 'STEEP' ? '#10b981' : label === 'MODERATE' ? '#f59e0b' : '#6b7280'
+  return (
+    <div className="ema5-slope-wrap">
+      <span className="ema5-slope-label">EMA5 SLOPE</span>
+      <span className="ema5-slope-val" style={{ color }}>{label}</span>
+      <span className="ema5-slope-detail">
+        {direction === 'up' ? '↑' : '↓'} {Math.abs(slopePctPerBar).toFixed(3)}%/bar
+        {!reliable && <span className="ema5-slope-warn"> · flat — signal unreliable</span>}
+      </span>
+    </div>
+  )
+}
+
+// ── Trend Age Bar ─────────────────────────────────────────────────────────────
+function TrendAgeBar({ trendAge }) {
+  if (!trendAge) return null
+  const { age, phase } = trendAge
+  const color    = phase === 'forming' ? '#6b7280' : phase === 'early' ? '#10b981' : phase === 'mid' ? '#4a90c4' : '#ef4444'
+  const phaseStr = phase === 'forming' ? 'FORMING' : phase === 'early' ? 'EARLY TREND' : phase === 'mid' ? 'MID-TREND' : 'LATE CYCLE ⚠'
+  return (
+    <div className="trend-age-wrap">
+      <span className="trend-age-label">TREND AGE</span>
+      <span className="trend-age-val" style={{ color }}>{age} bars</span>
+      <span className="trend-age-phase" style={{ color }}>{phaseStr}</span>
+      {phase === 'late' && <span className="trend-age-warn">Trail stop tight — exhaustion risk</span>}
+    </div>
+  )
+}
+
+// ── Missed Entry Alert ────────────────────────────────────────────────────────
+function MissedEntryAlert({ missedEntry, signal }) {
+  if (!missedEntry?.missed) return null
+  const { pctFrom, reentryLow, reentryHigh, ema5 } = missedEntry
+  return (
+    <div className="missed-entry-wrap">
+      <div className="missed-entry-title">⚠ ENTRY WINDOW CLOSED</div>
+      <div className="missed-entry-desc">
+        Price is {Math.abs(pctFrom).toFixed(1)}% {pctFrom > 0 ? 'above' : 'below'} EMA5 (${fmt(ema5)}) — extended, do not chase
+      </div>
+      <div className="missed-entry-zone">
+        Pullback re-entry zone: <strong>${fmt(reentryLow)} – ${fmt(reentryHigh)}</strong>
+        <span className="missed-entry-note"> (EMA5 ±1.5%)</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Flip Recency Strip ────────────────────────────────────────────────────────
+function FlipRecencyStrip({ flipRecency, adxSignal }) {
+  if (!flipRecency && !adxSignal) return null
+  const adxLabel = adxSignal ? (adxSignal.adxRising ? 'RISING' : 'FADING') : null
+  const adxColor = adxSignal?.adxRising ? '#10b981' : '#ef4444'
+  const bClass   = lbl => lbl === 'FRESH' ? 'fresh' : lbl === 'MODERATE' ? 'moderate' : 'stale'
+  return (
+    <div className="flip-recency-strip">
+      <span className="flip-recency-title">FLIP RECENCY</span>
+      {flipRecency?.rsi && (
+        <div className="flip-recency-item">
+          <span className="flip-recency-name">RSI:</span>
+          <span className={`flip-recency-badge ${bClass(flipRecency.rsi.label)}`}>
+            {flipRecency.rsi.label} {flipRecency.rsi.bars}b
+          </span>
+          <span style={{ fontSize: 10, color: flipRecency.rsi.above50 ? '#10b981' : '#ef4444' }}>
+            {flipRecency.rsi.above50 ? '↑50' : '↓50'}
+          </span>
+        </div>
+      )}
+      {flipRecency?.macd && (
+        <div className="flip-recency-item">
+          <span className="flip-recency-name">MACD:</span>
+          <span className={`flip-recency-badge ${bClass(flipRecency.macd.label)}`}>
+            {flipRecency.macd.label} {flipRecency.macd.bars}b
+          </span>
+          <span style={{ fontSize: 10, color: flipRecency.macd.positive ? '#10b981' : '#ef4444' }}>
+            {flipRecency.macd.positive ? '↑' : '↓'}
+          </span>
+        </div>
+      )}
+      {adxLabel && (
+        <div className="flip-recency-item">
+          <span className="flip-recency-name">ADX:</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: adxColor }}>{adxLabel}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── ADX Trajectory Sparkline ──────────────────────────────────────────────────
+function AdxSparkline({ adxHistory }) {
+  if (!adxHistory || adxHistory.values.length < 2) return null
+  const { values, trend, slope } = adxHistory
+  const min = Math.min(...values) - 1
+  const max = Math.max(...values) + 1
+  const range = max - min || 1
+  const W = 80, H = 28
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * W
+    const y = H - ((v - min) / range) * H
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+  const tColor = trend === 'rising' ? '#10b981' : '#ef4444'
+  return (
+    <div className="adx-spark-wrap">
+      <span className="adx-spark-label">ADX TREND</span>
+      <svg width={W} height={H} className="adx-spark-svg">
+        <polyline points={pts} fill="none" stroke={tColor} strokeWidth="1.5" strokeLinejoin="round" />
+        {values.map((v, i) => {
+          const x = (i / (values.length - 1)) * W
+          const y = H - ((v - min) / range) * H
+          return <circle key={i} cx={x} cy={y} r="2.5" fill={tColor} />
+        })}
+      </svg>
+      <div className="adx-spark-vals">
+        {values.map((v, i) => <span key={i} className="adx-spark-num" style={{ color: i === values.length-1 ? tColor : '#4a6380' }}>{v}</span>)}
+      </div>
+      <span className="adx-spark-trend" style={{ color: tColor }}>
+        {trend === 'rising' ? '↑ accelerating' : '↓ exhausting'} ({slope > 0 ? '+' : ''}{slope})
+      </span>
+    </div>
+  )
+}
+
+// ── Pre-Signal Readiness Score ────────────────────────────────────────────────
+function ReadinessScore({ readiness }) {
+  if (!readiness) return null
+  const { score, checks } = readiness
+  const color = score >= 75 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444'
+  const bg    = score >= 75 ? '#011c10' : score >= 50 ? '#1a1000' : '#1c0101'
+  const bord  = score >= 75 ? '#065f46' : score >= 50 ? '#4d3000' : '#7f1d1d'
+  const lbl   = score >= 75 ? 'NEAR READY' : score >= 50 ? 'BUILDING' : 'NOT READY'
+  return (
+    <div className="readiness-wrap" style={{ background: bg, borderColor: bord }}>
+      <div className="readiness-head">
+        <span className="readiness-title">PRE-SIGNAL READINESS</span>
+        <span className="readiness-score" style={{ color }}>{score}/100</span>
+        <span className="readiness-label" style={{ color }}>{lbl}</span>
+      </div>
+      <div className="readiness-checks">
+        {checks.map((c, i) => (
+          <div key={i} className="readiness-check">
+            <span style={{ color: c.pass ? '#10b981' : '#2a3d59' }}>{c.pass ? '✓' : '○'}</span>
+            <span className="readiness-check-name" style={{ color: c.pass ? '#a0b4c8' : '#3a4d60' }}>{c.name}</span>
+            <span className="readiness-check-pts" style={{ color: c.pass ? color : '#3a4d60' }}>+{c.pts}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Position Health Meter ─────────────────────────────────────────────────────
+function PositionHealthMeter({ health }) {
+  if (!health) return null
+  const { score, health: lbl, warnings } = health
+  const color = lbl === 'HEALTHY' ? '#10b981' : lbl === 'CAUTION' ? '#f59e0b' : lbl === 'WEAKENING' ? '#f97316' : '#ef4444'
+  const bg    = lbl === 'HEALTHY' ? '#011c10' : lbl === 'CAUTION' ? '#1a1000' : lbl === 'WEAKENING' ? '#1a0800' : '#1c0101'
+  const bord  = lbl === 'HEALTHY' ? '#065f46' : lbl === 'CAUTION' ? '#4d3000' : lbl === 'WEAKENING' ? '#7c2d12' : '#7f1d1d'
+  return (
+    <div className="pos-health-wrap" style={{ borderColor: bord, background: bg }}>
+      <div className="pos-health-head">
+        <span className="pos-health-title">POSITION HEALTH</span>
+        <span className="pos-health-score" style={{ color }}>{score}/100</span>
+        <span className="pos-health-label" style={{ color, borderColor: bord }}>{lbl}</span>
+      </div>
+      <div className="pos-health-bar-track">
+        <div className="pos-health-bar-fill" style={{ width: `${score}%`, background: color }} />
+      </div>
+      {warnings.length > 0 && (
+        <div className="pos-health-warns">
+          {warnings.map((w, i) => (
+            <div key={i} className={`pos-health-warn pos-health-warn-${w.sev}`}>
+              <span>{w.icon}</span>
+              <span>{w.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 export default function SwingResult({
   result, ticker, fibLevels, rsiSignal, adxSignal, maStack,
   patterns, vwapSignal, rsScore, volumeSpike, vixData, setupGrade,
   ivData, weeklyAlign, hsPatterns, contPatterns, sectorRS, currentPrice, onLogTrade,
+  fourHBars, backtestResult,
 }) {
   const { signal, confirmed, barsAbove, barsBelow, lastBar, prevBar, warnings } = result
   const cfg          = signal ? SIGNAL_CFG[signal] : null
   const confirmCount = confirmed ? 2 : (barsAbove > 0 || barsBelow > 0) ? 1 : 0
   const dailyBias    = maStack?.signal ?? null
+
+  // ── 8 Timing Intelligence computations ────────────────────────────────────
+  const barQuality  = computeBarQuality(fourHBars)
+  const ema5Slope   = computeEma5Slope(fourHBars)
+  const trendAge    = computeTrendAge(fourHBars, signal)
+  const missedEntry = computeMissedEntry(fourHBars, currentPrice, signal)
+  const flipRecency = computeFlipRecency(fourHBars)
+  const adxHistory  = computeAdxHistory(fourHBars)
+  const readiness   = (!signal || signal === 'WATCH')
+    ? computeReadinessScore(rsiSignal, adxSignal, maStack, weeklyAlign, vwapSignal, ema5Slope, trendAge)
+    : null
+  const posHealth   = signal === 'LONG'
+    ? computePositionHealth(rsiSignal, adxSignal, vwapSignal, volumeSpike, ema5Slope)
+    : null
 
   return (
     <div className="swing-result">
@@ -1082,6 +1533,7 @@ export default function SwingResult({
                 : `1 bar confirmed — waiting for next 4H close`}
             </div>
             <ActionBanner signal={signal} grade={setupGrade} />
+            <MissedEntryAlert missedEntry={missedEntry} signal={signal} />
           </>
         ) : (
           <div className="swing-signal-empty">Fill in the 4H bars to get a signal</div>
@@ -1090,6 +1542,10 @@ export default function SwingResult({
 
       {/* ── Setup Checklist — grade context right below the signal ── */}
       {setupGrade && <GradeChecklist grade={setupGrade} />}
+
+      {/* ── Pre-signal readiness or active position health ── */}
+      {readiness  && <ReadinessScore readiness={readiness} />}
+      {posHealth  && <PositionHealthMeter health={posHealth} />}
 
       {/* ── VIX + IV ── */}
       {vixData && <VixBanner vix={vixData} />}
@@ -1116,6 +1572,16 @@ export default function SwingResult({
         </div>
       )}
 
+      {/* ── Timing Intelligence ── */}
+      {(ema5Slope || trendAge || barQuality) && (
+        <div className="timing-intel-block">
+          <div className="timing-intel-title">TIMING INTELLIGENCE · 4H</div>
+          <Ema5SlopeGauge slopeData={ema5Slope} />
+          <TrendAgeBar trendAge={trendAge} />
+          {confirmed && <BarQualityBadge barQuality={barQuality} />}
+        </div>
+      )}
+
       {/* ── MOMENTUM ── */}
       {(rsiSignal || vwapSignal) && (
         <div className="swing-momentum-row">
@@ -1123,7 +1589,9 @@ export default function SwingResult({
           {vwapSignal && <VwapCrossCard data={vwapSignal} />}
         </div>
       )}
+      {(rsiSignal || vwapSignal) && <FlipRecencyStrip flipRecency={flipRecency} adxSignal={adxSignal} />}
       {adxSignal && <AdxPanel data={adxSignal} />}
+      {adxHistory && <AdxSparkline adxHistory={adxHistory} />}
 
       {/* ── TREND ── */}
       {maStack     && <MaStackPanel data={maStack} currentPrice={currentPrice} />}

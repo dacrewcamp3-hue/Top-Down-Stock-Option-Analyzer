@@ -1474,6 +1474,7 @@ export default function App() {
                   ivData={ivData} weeklyAlign={weeklyAlign} hsPatterns={hsPatterns}
                   contPatterns={contPatterns} sectorRS={sectorRS}
                   currentPrice={currentPrice} onLogTrade={logTrade}
+                  fourHBars={fourHBars} backtestResult={backtestResult}
                 />
               </div>
             </div>
