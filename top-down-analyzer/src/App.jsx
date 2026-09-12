@@ -1269,6 +1269,12 @@ export default function App() {
               rec={primaryRec}
               orbRetest={orbRetest}
               swingTargets={swingTargets}
+              volumeSpike={volumeSpike}
+              adxSignal={adxSignal}
+              fibLevels={fibLevels}
+              dailyBars={dailyBars}
+              ivData={ivData}
+              earningsDate={earningsDate}
             />
           )}
 

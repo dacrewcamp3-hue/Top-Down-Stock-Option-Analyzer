@@ -451,3 +451,172 @@
   :root:not([data-theme="light"]) .stp-share-input,
   :root:not([data-theme="light"]) .stp-pnl-input { background: #0d1624; }
 }
+
+/* ─ 1. Time Window Band ─ */
+.stp-timewin {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  border: 1px solid;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+.stp-timewin-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.stp-timewin-label { font-size: 11px; font-weight: 800; letter-spacing: 0.8px; flex-shrink: 0; }
+.stp-timewin-note { font-size: 11px; color: #8facc5; }
+
+/* ─ 2. Volume Confirm Gate ─ */
+.stp-volgate {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid;
+  border-left: 3px solid;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+.stp-volgate-icon { font-size: 14px; font-weight: 900; flex-shrink: 0; margin-top: 1px; }
+.stp-volgate-label { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; flex-shrink: 0; }
+.stp-volgate-note { font-size: 11px; color: #8facc5; flex: 1; min-width: 180px; }
+
+/* ─ 3. Breakout Quality Grade ─ */
+.stp-grade {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border: 1px solid;
+  border-left: 3px solid;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+.stp-grade-left { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; min-width: 44px; }
+.stp-grade-letter { font-size: 28px; font-weight: 900; line-height: 1; }
+.stp-grade-score { font-size: 10px; color: #4a6888; margin-top: 2px; }
+.stp-grade-mid { flex: 1; min-width: 160px; }
+.stp-grade-title { font-size: 9px; font-weight: 700; letter-spacing: 1px; color: #4a6888; margin-bottom: 5px; }
+.stp-grade-factors { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.stp-grade-factor { font-size: 10px; font-weight: 600; }
+.stp-grade-right { text-align: right; flex-shrink: 0; }
+.stp-grade-size-lbl { font-size: 9px; color: #4a6888; letter-spacing: 0.8px; font-weight: 700; margin-bottom: 2px; }
+.stp-grade-size-val { font-size: 18px; font-weight: 800; line-height: 1.1; }
+.stp-grade-size-sub { font-size: 10px; color: #4a6888; }
+
+/* ─ 4. Option Reverse Matrix ─ */
+.stp-optmatrix { border: 1px solid; border-radius: 8px; overflow: hidden; }
+.stp-optmatrix-head {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 8px 12px 6px; border-bottom: 1px solid #0e1e30; flex-wrap: wrap;
+}
+.stp-optmatrix-title { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; color: #4a6888; }
+.stp-optmatrix-sub { font-size: 10px; color: #2a4060; }
+.stp-optmatrix-grid { display: grid; grid-template-columns: repeat(4,1fr); border-bottom: 1px solid #0e1e30; }
+.stp-optmatrix-cell {
+  padding: 8px 10px; display: flex; flex-direction: column;
+  align-items: center; gap: 2px; border-right: 1px solid; text-align: center;
+}
+.stp-optmatrix-cell:last-child { border-right: none; }
+.stp-optmatrix-pct { font-size: 13px; font-weight: 800; }
+.stp-optmatrix-optval { font-size: 11px; color: #8facc5; }
+.stp-optmatrix-arrow { font-size: 9px; color: #2a4060; }
+.stp-optmatrix-stk { font-size: 12px; font-weight: 700; }
+.stp-optmatrix-move { font-size: 9px; color: #4a6888; }
+.stp-optmatrix-note { padding: 7px 12px; font-size: 10px; color: #4a6888; line-height: 1.5; }
+
+/* ─ 5. Resistance Friction Map ─ */
+.stp-friction { border: 1px solid #1a2d45; border-radius: 8px; overflow: hidden; }
+.stp-friction-title {
+  font-size: 9px; font-weight: 700; letter-spacing: 1px; color: #4a6888;
+  padding: 7px 12px 5px; border-bottom: 1px solid #0e1e30;
+}
+.stp-friction-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 5px 12px; border-bottom: 1px solid #0a1828; flex-wrap: wrap;
+}
+.stp-friction-row:last-child { border-bottom: none; }
+.stp-friction-warn { background: #0f0900; }
+.stp-friction-left { display: flex; align-items: center; gap: 8px; min-width: 72px; flex-shrink: 0; }
+.stp-friction-lbl { font-size: 11px; font-weight: 700; color: #4a6888; }
+.stp-friction-px  { font-size: 11px; font-weight: 600; color: #8facc5; }
+.stp-friction-right { display: flex; flex-direction: column; gap: 1px; }
+.stp-friction-alert { font-size: 10px; font-weight: 700; color: #f59e0b; }
+.stp-friction-advice { font-size: 10px; color: #8facc5; }
+.stp-friction-clear { font-size: 10px; color: #10b981; }
+
+/* ─ 6. Streak Calibration ─ */
+.stp-streak { border: 1px solid; border-radius: 8px; padding: 10px 12px; }
+.stp-streak-head { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+.stp-streak-title { font-size: 9px; font-weight: 700; letter-spacing: 1px; color: #4a6888; flex: 1; }
+.stp-streak-pips { display: flex; gap: 3px; align-items: center; }
+.stp-streak-pip { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.stp-streak-clear-btn {
+  background: none; border: 1px solid #1a2d45; color: #4a6888;
+  border-radius: 4px; padding: 1px 6px; font-size: 11px; cursor: pointer;
+}
+.stp-streak-body { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 7px; }
+.stp-streak-run { font-size: 12px; font-weight: 700; }
+.stp-streak-adj { font-size: 11px; color: #8facc5; }
+.stp-streak-msg { font-size: 11px; font-weight: 600; width: 100%; margin-top: 3px; }
+.stp-streak-empty { font-size: 11px; color: #4a6888; margin-bottom: 7px; }
+.stp-streak-log { display: flex; align-items: center; gap: 8px; }
+.stp-streak-log-lbl { font-size: 10px; color: #4a6888; }
+.stp-streak-btn {
+  border: 1px solid; border-radius: 5px; padding: 3px 12px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px; cursor: pointer; background: transparent;
+}
+.stp-streak-w { border-color: #065f46; color: #10b981; }
+.stp-streak-w:hover { background: #01120a; }
+.stp-streak-l { border-color: #7f1d1d; color: #ef4444; }
+.stp-streak-l:hover { background: #130305; }
+
+/* ─ 7. Theta Urgency Clock ─ */
+.stp-theta { border: 1px solid; border-left: 3px solid; border-radius: 8px; padding: 10px 12px; }
+.stp-theta-head { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 8px; }
+.stp-theta-body { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+.stp-theta-stat { display: flex; flex-direction: column; gap: 2px; }
+.stp-theta-lbl { font-size: 9px; color: #4a6888; letter-spacing: 0.5px; font-weight: 600; }
+.stp-theta-val { font-size: 14px; font-weight: 700; }
+.stp-theta-note { font-size: 11px; color: #8facc5; line-height: 1.5; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 7px; }
+
+/* ─ 8. Free Trade Mode Panel ─ */
+.stp-ftm { border: 1px solid; border-radius: 8px; overflow: hidden; }
+.stp-ftm-dormant {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 10px 14px; border-color: #1a2d45; background: #07111e; flex-wrap: wrap;
+}
+.stp-ftm-dormant-body { flex: 1; }
+.stp-ftm-dormant-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; color: #4a6888; display: block; margin-bottom: 2px; }
+.stp-ftm-dormant-sub { font-size: 10px; color: #2a4060; }
+.stp-ftm-activate-btn {
+  border: 1px solid; border-radius: 6px; padding: 6px 16px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+  cursor: pointer; background: transparent; flex-shrink: 0;
+}
+.stp-ftm-activate-btn:hover { opacity: 0.8; }
+.stp-ftm-active { border-color: #10b981; background: #011a0c; }
+.stp-ftm-banner {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; padding: 10px 14px 8px; border-bottom: 1px solid #065f46;
+}
+.stp-ftm-active-title { font-size: 12px; font-weight: 800; color: #10b981; letter-spacing: 0.3px; }
+.stp-ftm-active-sub { font-size: 11px; color: #34d399; margin-top: 3px; }
+.stp-ftm-reset-btn {
+  background: none; border: 1px solid #065f46; color: #4a6888;
+  border-radius: 5px; padding: 3px 10px; font-size: 10px; cursor: pointer; flex-shrink: 0;
+}
+.stp-ftm-rules { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 7px; }
+.stp-ftm-rule { display: flex; align-items: flex-start; gap: 10px; font-size: 11px; color: #a0bdd0; line-height: 1.5; }
+.stp-ftm-rule-num {
+  flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+  background: #065f46; color: #10b981; font-size: 9px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; margin-top: 1px;
+}
+
+@media (max-width: 520px) {
+  .stp-optmatrix-grid { grid-template-columns: repeat(2,1fr); }
+  .stp-grade { flex-direction: column; align-items: flex-start; }
+  .stp-grade-right { text-align: left; }
+  .stp-theta-body { gap: 10px; }
+}
