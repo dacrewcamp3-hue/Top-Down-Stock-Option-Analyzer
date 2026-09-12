@@ -507,6 +507,126 @@
   font-style: italic;
 }
 
+/* ── Trend context pill ───────────────────────────────────────────────────── */
+.wy-trend-pill {
+  padding: 4px 10px;
+  border: 1px solid;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+/* ── SC / BC Phase A cards ───────────────────────────────────────────────── */
+.wy-sc-card {
+  background: #080010;
+  border: 1px solid #2a0a3b;
+  border-left: 3px solid #a855f7;
+  border-radius: 8px;
+  padding: 15px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wy-sc-title {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #a855f7;
+}
+
+.wy-bc-card {
+  background: #000a10;
+  border: 1px solid #0a2a3b;
+  border-left: 3px solid #38bdf8;
+  border-radius: 8px;
+  padding: 15px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wy-bc-title {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #38bdf8;
+}
+
+.wy-event-note-neutral {
+  background: #0a0a1a;
+  color: #a890d0;
+  border: 1px solid #2a1a4a;
+}
+
+/* ── LPS Zone card ───────────────────────────────────────────────────────── */
+.wy-lps-card {
+  background: #010e07;
+  border: 1px solid #065f46;
+  border-left: 3px solid #10b981;
+  border-radius: 8px;
+  padding: 15px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wy-lps-title {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #10b981;
+}
+
+/* ── Multi-tier C&E targets ──────────────────────────────────────────────── */
+.wy-ce-tier-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 560px) {
+  .wy-ce-tier-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.wy-ce-tier {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 5px;
+}
+
+.wy-ce-tier.wy-ce-hvn {
+  border: 1px solid #4d3000;
+}
+
+.wy-ce-tier-lbl {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: #4a6888;
+}
+
+.wy-ce-tier-price {
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: -0.2px;
+  line-height: 1;
+}
+
+.wy-ce-tier-pct {
+  font-size: 12px;
+  font-weight: 700;
+}
+
 /* ── Trading rule ────────────────────────────────────────────────────────── */
 .wy-rule {
   background: #070d1c;

@@ -31,6 +31,13 @@ function pctChange(from, to) {
   return ((to - from) / from) * 100
 }
 
+function fmtVol(v) {
+  if (v == null) return '—'
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`
+  if (v >= 1_000)     return `${(v / 1_000).toFixed(0)}K`
+  return v.toLocaleString()
+}
+
 /* ─── Trading-range position bar ─────────────────────────────────────────── */
 function RangeBar({ rangeHigh, rangeLow, currentClose }) {
   const clamped = Math.max(rangeLow, Math.min(rangeHigh, currentClose))
@@ -65,9 +72,7 @@ function PressureBar({ buyingPressure }) {
       </div>
       <div className="wy-pbar-labels">
         <span style={{ color: '#ef4444', fontWeight: 700 }}>All Selling</span>
-        <span style={{ color }}>
-          {pct.toFixed(1)}% buying pressure
-        </span>
+        <span style={{ color }}>{pct.toFixed(1)}% buying pressure</span>
         <span style={{ color: '#10b981', fontWeight: 700 }}>All Buying</span>
       </div>
     </div>
@@ -76,34 +81,33 @@ function PressureBar({ buyingPressure }) {
 
 /* ─── Phase map chips ─────────────────────────────────────────────────────── */
 const ACCUM_SEQUENCE = [
-  { id: 'phase-a',      label: 'Phase A' },
-  { id: 'sc-ar',        label: 'SC / AR' },
+  { id: 'phase-a',        label: 'Phase A' },
+  { id: 'sc-ar',          label: 'SC / AR' },
   { id: 'secondary-test', label: 'ST' },
-  { id: 'SPRING',       label: 'Spring' },
-  { id: 'sos',          label: 'SOS' },
-  { id: 'lps',          label: 'LPS' },
-  { id: 'MARKUP',       label: 'Markup' },
+  { id: 'SPRING',         label: 'Spring' },
+  { id: 'sos',            label: 'SOS' },
+  { id: 'lps',            label: 'LPS' },
+  { id: 'MARKUP',         label: 'Markup' },
 ]
 
 const DISTRIB_SEQUENCE = [
-  { id: 'phase-a',      label: 'Phase A' },
-  { id: 'bc-ar',        label: 'BC / AR' },
+  { id: 'phase-a',        label: 'Phase A' },
+  { id: 'bc-ar',          label: 'BC / AR' },
   { id: 'secondary-test', label: 'ST' },
-  { id: 'UTAD',         label: 'UTAD' },
-  { id: 'sow',          label: 'SOW' },
-  { id: 'lpsy',         label: 'LPSY' },
-  { id: 'MARKDOWN',     label: 'Markdown' },
+  { id: 'UTAD',           label: 'UTAD' },
+  { id: 'sow',            label: 'SOW' },
+  { id: 'lpsy',           label: 'LPSY' },
+  { id: 'MARKDOWN',       label: 'Markdown' },
 ]
 
-// Map detected phase names → the chip ID they correspond to in the sequence
 const PHASE_TO_CHIP = {
   MARKUP:       'MARKUP',
   MARKDOWN:     'MARKDOWN',
   SPRING:       'SPRING',
   UTAD:         'UTAD',
-  ACCUMULATION: 'phase-a',   // detected accumulation = Phase A/B of the Wyckoff scheme
-  DISTRIBUTION: 'phase-a',   // detected distribution = Phase A/B of the distribution scheme
-  RANGING:      null,         // no active step — waiting for phase to develop
+  ACCUMULATION: 'phase-a',
+  DISTRIBUTION: 'phase-a',
+  RANGING:      null,
 }
 
 function PhaseMap({ phase, signal }) {
@@ -171,11 +175,29 @@ const TRADING_RULES = {
   },
 }
 
+/* ─── Trend Context Pill ─────────────────────────────────────────────────── */
+function TrendPill({ trendContext }) {
+  const cfg = {
+    UPTREND:   { color: '#10b981', bg: '#00150a', border: '#064e2e', label: '↑ UPTREND' },
+    DOWNTREND: { color: '#ef4444', bg: '#150000', border: '#6b0000', label: '↓ DOWNTREND' },
+    NEUTRAL:   { color: '#6b7280', bg: '#0f1623', border: '#1e2d45', label: '→ NEUTRAL' },
+  }
+  const { color, bg, border, label } = cfg[trendContext] ?? cfg.NEUTRAL
+  return (
+    <span
+      className="wy-trend-pill"
+      style={{ color, background: bg, borderColor: border }}
+      title="50-EMA slope on daily closes. Spring/UTAD confidence is boosted when trend context aligns."
+    >
+      {label}
+    </span>
+  )
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Main component
    ═══════════════════════════════════════════════════════════════════════════ */
 export default function WyckoffPanel({ wyckoff, ticker }) {
-  /* ── Empty state ── */
   if (!wyckoff) {
     return (
       <div className="wy-empty">
@@ -189,10 +211,17 @@ export default function WyckoffPanel({ wyckoff, ticker }) {
     rangeHigh, rangeLow, rangeSize,
     buyingPressure,
     spring, utad,
+    sellingClimax, buyingClimax,
+    lpsZone,
+    trendContext,
+    volContracting, volContraction,
+    rangeTouches, rangeDuration, rangeQuality,
+    targets,
     potentialMoveUp, potentialMoveDown,
     currentClose,
     currentVolRatio,
     avgVol,
+    atr,
   } = wyckoff
 
   const color = signalColor(signal, phase)
@@ -207,13 +236,14 @@ export default function WyckoffPanel({ wyckoff, ticker }) {
       {/* ── Header ── */}
       <div className="wy-header">
         <div className="wy-header-left">
-          <span className="wy-eyebrow" data-tip="Wyckoff Method: A 100-year-old institutional trading framework developed by Richard Wyckoff. It maps how 'smart money' (institutions) accumulate or distribute large positions in trading ranges, then engineer breakouts. The four key phases: Accumulation (institutions quietly buying) → Markup (price rises) → Distribution (institutions selling) → Markdown (price falls).">WYCKOFF PHASE ANALYSIS</span>
+          <span className="wy-eyebrow" data-tip="Wyckoff Method: A 100-year-old institutional trading framework. It maps how 'smart money' accumulate or distribute large positions in trading ranges, then engineer breakouts.">WYCKOFF PHASE ANALYSIS</span>
           <span className="wy-phase-name" style={{ color }}>
             {phase}
             {ticker ? <span className="wy-ticker-suffix"> — {ticker}</span> : null}
           </span>
         </div>
         <div className="wy-badges">
+          <TrendPill trendContext={trendContext ?? 'NEUTRAL'} />
           <span
             className="wy-signal-badge"
             style={{ background: `${color}22`, color, borderColor: `${color}55` }}
@@ -233,7 +263,7 @@ export default function WyckoffPanel({ wyckoff, ticker }) {
 
       {/* ── Trading Range card ── */}
       <div className="wy-card">
-        <div className="wy-card-title" data-tip="Trading Range: The horizontal consolidation zone where price has been bouncing between a support low and a resistance high. Wyckoff theory says institutions use this range to quietly accumulate or distribute large positions without moving price too far. The wider the range and longer it lasts, the more 'cause' is built — and the larger the eventual move when price breaks out.">TRADING RANGE</div>
+        <div className="wy-card-title" data-tip="Trading Range: The horizontal consolidation zone detected via cluster analysis (not raw max/min). Earnings spikes and one-bar outliers are filtered out. Touch count shows how many times price tested each boundary.">TRADING RANGE</div>
         <div className="wy-range-stats">
           <div className="wy-rs">
             <span className="wy-rs-label">Range High</span>
@@ -251,14 +281,103 @@ export default function WyckoffPanel({ wyckoff, ticker }) {
             <span className="wy-rs-label">Current Close</span>
             <span className="wy-rs-val" style={{ color }}>{fmt(currentClose)}</span>
           </div>
+          <div className="wy-rs">
+            <span className="wy-rs-label">Duration (bars)</span>
+            <span className="wy-rs-val">{rangeDuration}</span>
+          </div>
+          <div className="wy-rs">
+            <span className="wy-rs-label">Boundary Touches</span>
+            <span className="wy-rs-val">{rangeTouches}</span>
+          </div>
+          <div className="wy-rs">
+            <span className="wy-rs-label">Range Quality</span>
+            <span className="wy-rs-val" style={{ color: rangeQuality > 0.6 ? '#10b981' : rangeQuality > 0.3 ? '#f59e0b' : '#ef4444' }}>
+              {(rangeQuality * 100).toFixed(0)}%
+            </span>
+          </div>
+          {atr != null && (
+            <div className="wy-rs">
+              <span className="wy-rs-label">ATR</span>
+              <span className="wy-rs-val">{fmt(atr)}</span>
+            </div>
+          )}
         </div>
         <RangeBar rangeHigh={rangeHigh} rangeLow={rangeLow} currentClose={currentClose} />
       </div>
 
+      {/* ── Phase A: SC/BC cards ── */}
+      {sellingClimax && (
+        <div className="wy-sc-card">
+          <div className="wy-sc-title" data-tip="Selling Climax (SC): Phase A event. A panic-selling bar with 2× average volume, a wide range (>1.3× ATR), and a close in the bottom 30% of the bar. SC marks the exhaustion of supply — the last desperate sellers. It defines the bottom of the potential accumulation range.">
+            PHASE A EVENT — SELLING CLIMAX (SC)
+          </div>
+          <div className="wy-event-grid">
+            <div className="wy-eg-row">
+              <span className="wy-eg-label">SC Low (supply climax)</span>
+              <span className="wy-eg-val wy-red">{fmt(sellingClimax.low)}</span>
+            </div>
+            <div className="wy-eg-row">
+              <span className="wy-eg-label">SC High</span>
+              <span className="wy-eg-val">{fmt(sellingClimax.high)}</span>
+            </div>
+            <div className="wy-eg-row">
+              <span className="wy-eg-label">SC Close (weak bar)</span>
+              <span className="wy-eg-val wy-gold">{fmt(sellingClimax.close)}</span>
+            </div>
+            <div className="wy-eg-row">
+              <span className="wy-eg-label">Volume Ratio vs Avg</span>
+              <span className="wy-eg-val wy-red">{sellingClimax.volRatio}× — CLIMAX VOLUME</span>
+            </div>
+            <div className="wy-eg-row">
+              <span className="wy-eg-label">Close Position in Bar</span>
+              <span className="wy-eg-val">{(sellingClimax.closePos * 100).toFixed(0)}% from low (supply dominant)</span>
+            </div>
+          </div>
+          <div className="wy-event-note wy-event-note-neutral">
+            SC detected: peak panic selling visible in the range. This defines Phase A — the floor where smart money begins absorbing supply.
+          </div>
+        </div>
+      )}
+
+      {buyingClimax && (
+        <div className="wy-bc-card">
+          <div className="wy-bc-title" data-tip="Buying Climax (BC): Phase A event in a distribution range. A euphoric buying bar with 2× average volume, wide range (>1.3× ATR), and a close in the top 70%+ of the bar. BC marks the exhaustion of demand — the last desperate buyers chasing price. It defines the ceiling of the distribution range.">
+            PHASE A EVENT — BUYING CLIMAX (BC)
+          </div>
+          <div className="wy-event-grid">
+            <div className="wy-eg-row">
+              <span className="wy-eg-label">BC High (demand climax)</span>
+              <span className="wy-eg-val wy-green">{fmt(buyingClimax.high)}</span>
+            </div>
+            <div className="wy-eg-row">
+              <span className="wy-eg-label">BC Low</span>
+              <span className="wy-eg-val">{fmt(buyingClimax.low)}</span>
+            </div>
+            <div className="wy-eg-row">
+              <span className="wy-eg-label">BC Close (strong bar)</span>
+              <span className="wy-eg-val wy-gold">{fmt(buyingClimax.close)}</span>
+            </div>
+            <div className="wy-eg-row">
+              <span className="wy-eg-label">Volume Ratio vs Avg</span>
+              <span className="wy-eg-val wy-green">{buyingClimax.volRatio}× — CLIMAX VOLUME</span>
+            </div>
+            <div className="wy-eg-row">
+              <span className="wy-eg-label">Close Position in Bar</span>
+              <span className="wy-eg-val">{(buyingClimax.closePos * 100).toFixed(0)}% from low (demand dominant)</span>
+            </div>
+          </div>
+          <div className="wy-event-note wy-event-note-bear">
+            BC detected: peak euphoric buying visible in the range. This defines Phase A — the ceiling where smart money begins distributing supply into demand.
+          </div>
+        </div>
+      )}
+
       {/* ── Spring card ── */}
       {spring && (
         <div className="wy-spring-card">
-          <div className="wy-spring-title" data-tip="Spring: The highest-confidence long entry in the Wyckoff method. Price briefly violated the trading range's support low (flushing out weak holders), then reversed and closed back ABOVE it — rejecting the breakdown. This 'shakeout' absorbs the final selling pressure. Low volume on the violation is ideal: it means sellers couldn't press their advantage, supply is exhausted. The Spring often precedes Markup.">FALSE BREAKDOWN DETECTED — SPRING</div>
+          <div className="wy-spring-title" data-tip="Spring: The highest-confidence long entry in the Wyckoff method. Price briefly violated the trading range's support low then reversed and closed back above it. Quality filters: penetration limited to 30% of range size, next-bar confirmation tracked.">
+            FALSE BREAKDOWN DETECTED — SPRING
+          </div>
           <div className="wy-event-grid">
             <div className="wy-eg-row">
               <span className="wy-eg-label">Range Low (support)</span>
@@ -269,20 +388,29 @@ export default function WyckoffPanel({ wyckoff, ticker }) {
               <span className="wy-eg-val wy-red">{fmt(spring.low)}</span>
             </div>
             <div className="wy-eg-row">
+              <span className="wy-eg-label">Penetration Depth</span>
+              <span className="wy-eg-val">{fmt(spring.penetration)} ({((spring.penetration / (rangeSize || 1)) * 100).toFixed(0)}% of range)</span>
+            </div>
+            <div className="wy-eg-row">
               <span className="wy-eg-label">Recovered To (close)</span>
               <span className="wy-eg-val wy-gold">{fmt(spring.recoveredTo)}</span>
             </div>
             <div className="wy-eg-row">
               <span className="wy-eg-label">Volume Ratio vs Avg</span>
               <span className={`wy-eg-val${spring.isLowVolume ? ' wy-gold' : ''}`}>
-                {spring.volRatio}x
-                {spring.isLowVolume ? ' — LOW VOL (ideal)' : ' — WATCH'}
+                {spring.volRatio}×{spring.isLowVolume ? ' — LOW VOL (ideal)' : ' — WATCH'}
+              </span>
+            </div>
+            <div className="wy-eg-row">
+              <span className="wy-eg-label">Next-Bar Confirmation</span>
+              <span className={`wy-eg-val${spring.confirmed ? ' wy-green' : ' wy-red'}`}>
+                {spring.confirmed ? '✓ CONFIRMED — next bar closed higher' : '✗ UNCONFIRMED — wait for follow-through'}
               </span>
             </div>
           </div>
           <div className="wy-event-note wy-event-note-bull">
             Buy action: Enter at or near the recovery close. Stop below the spring low at {fmt(spring.low)}.
-            A low-volume spring is the highest-quality Wyckoff long entry.
+            {spring.confirmed ? ' Confirmation received — full-size entry valid.' : ' Wait for a high-volume up bar before entering.'}
           </div>
         </div>
       )}
@@ -290,7 +418,9 @@ export default function WyckoffPanel({ wyckoff, ticker }) {
       {/* ── UTAD card ── */}
       {utad && (
         <div className="wy-utad-card">
-          <div className="wy-utad-title" data-tip="UTAD (Upthrust After Distribution): The distribution analog of the Spring — and the highest-confidence short entry in Wyckoff. Price spiked above the trading range's resistance high (triggering breakout buyers), then reversed and closed back BELOW it — a bull trap. The failed breakout absorbs the last remaining buying pressure. High volume on the spike confirms that supply overwhelmed demand. A UTAD often precedes Markdown.">FALSE BREAKOUT DETECTED — UTAD</div>
+          <div className="wy-utad-title" data-tip="UTAD (Upthrust After Distribution): Price spiked above the trading range's resistance high then reversed back inside. Quality filters: penetration limited to 30% of range size, next-bar confirmation tracked.">
+            FALSE BREAKOUT DETECTED — UTAD
+          </div>
           <div className="wy-event-grid">
             <div className="wy-eg-row">
               <span className="wy-eg-label">Range High (resistance)</span>
@@ -301,72 +431,131 @@ export default function WyckoffPanel({ wyckoff, ticker }) {
               <span className="wy-eg-val wy-green">{fmt(utad.high)}</span>
             </div>
             <div className="wy-eg-row">
+              <span className="wy-eg-label">Penetration Depth</span>
+              <span className="wy-eg-val">{fmt(utad.penetration)} ({((utad.penetration / (rangeSize || 1)) * 100).toFixed(0)}% of range)</span>
+            </div>
+            <div className="wy-eg-row">
               <span className="wy-eg-label">Failed At (close)</span>
               <span className="wy-eg-val wy-red">{fmt(utad.failedAt)}</span>
             </div>
             <div className="wy-eg-row">
               <span className="wy-eg-label">Volume Ratio vs Avg</span>
               <span className={`wy-eg-val${utad.isHighVolume ? ' wy-red' : ''}`}>
-                {utad.volRatio}x
-                {utad.isHighVolume ? ' — HIGH VOL (confirmed rejection)' : ' — WATCH'}
+                {utad.volRatio}×{utad.isHighVolume ? ' — HIGH VOL (confirmed rejection)' : ' — WATCH'}
+              </span>
+            </div>
+            <div className="wy-eg-row">
+              <span className="wy-eg-label">Next-Bar Confirmation</span>
+              <span className={`wy-eg-val${utad.confirmed ? ' wy-red' : ' wy-gold'}`}>
+                {utad.confirmed ? '✓ CONFIRMED — next bar closed lower' : '✗ UNCONFIRMED — wait for follow-through'}
               </span>
             </div>
           </div>
           <div className="wy-event-note wy-event-note-bear">
             Sell action: Enter puts or bear spreads at or near the failure close. Stop above the UTAD high at {fmt(utad.high)}.
-            A high-volume rejection is the highest-quality Wyckoff short entry.
+            {utad.confirmed ? ' Confirmation received — full-size short valid.' : ' Wait for a high-volume down bar before entering.'}
           </div>
         </div>
       )}
 
-      {/* ── Cause & Effect ── */}
-      <div className="wy-card">
-        <div className="wy-card-title">CAUSE &amp; EFFECT — PROJECTED MOVE</div>
-        <p className="wy-ce-intro">
-          Wyckoff projects the next move based on the width of the trading range.
-          The wider the base or top, the larger the expected move.
-        </p>
-        <div className="wy-ce-targets">
-          {(signal === 'BULLISH' || signal === 'NEUTRAL') && (
-            <div className="wy-ce-row wy-ce-bull">
-              <div className="wy-ce-dir">UPSIDE TARGET</div>
-              <div className="wy-ce-price wy-green">{fmt(potentialMoveUp)}</div>
-              <div className="wy-ce-pct wy-green">
-                {upPct != null ? fmtPct(upPct) : '—'} from current
-              </div>
-              <div className="wy-ce-formula">
-                rangeHigh ({fmt(rangeHigh)}) + range × 1.5 ({fmt(rangeSize * 1.5)})
-              </div>
+      {/* ── LPS Zone (post-MARKUP) ── */}
+      {lpsZone && (
+        <div className="wy-lps-card">
+          <div className="wy-lps-title" data-tip="LPS (Last Point of Support): After a markup breakout, price often pulls back toward the former range high — now acting as support. This pullback-to-support is the re-entry opportunity on the right side of the move.">
+            LPS RE-ENTRY ZONE DETECTED
+          </div>
+          <div className="wy-event-grid">
+            <div className="wy-eg-row">
+              <span className="wy-eg-label">Former Range High (now support)</span>
+              <span className="wy-eg-val wy-green">{fmt(lpsZone.support)}</span>
             </div>
-          )}
-          {(signal === 'BEARISH' || signal === 'NEUTRAL') && (
-            <div className="wy-ce-row wy-ce-bear">
-              <div className="wy-ce-dir">DOWNSIDE TARGET</div>
-              <div className="wy-ce-price wy-red">{fmt(potentialMoveDown)}</div>
-              <div className="wy-ce-pct wy-red">
-                {downPct != null ? fmtPct(downPct) : '—'} from current
-              </div>
-              <div className="wy-ce-formula">
-                rangeLow ({fmt(rangeLow)}) − range × 1.5 ({fmt(rangeSize * 1.5)})
-              </div>
+            <div className="wy-eg-row">
+              <span className="wy-eg-label">Recent Pullback Low</span>
+              <span className="wy-eg-val wy-gold">{fmt(lpsZone.low)}</span>
             </div>
-          )}
+          </div>
+          <div className="wy-event-note wy-event-note-bull">
+            {lpsZone.note}. Add calls or long entries on the bounce from this level. Stop below {fmt(lpsZone.support)}.
+          </div>
         </div>
+      )}
+
+      {/* ── Cause & Effect — Multi-tier ── */}
+      <div className="wy-card">
+        <div className="wy-card-title">CAUSE &amp; EFFECT — PROJECTED TARGETS</div>
+        <p className="wy-ce-intro">
+          Three-tier targets: T1 = ATR×3 (conservative), T2 = range×1.0 (standard), T3 = range×1.5 (extended).
+          {targets?.upHVN || targets?.downHVN ? ' HVN = High Volume Node from price profile (natural friction point).' : ''}
+        </p>
+        {(signal === 'BULLISH' || signal === 'NEUTRAL') && targets && (
+          <div className="wy-ce-targets">
+            <div className="wy-ce-row wy-ce-bull">
+              <div className="wy-ce-tier-grid">
+                <div className="wy-ce-tier">
+                  <span className="wy-ce-tier-lbl">T1 (ATR×3)</span>
+                  <span className="wy-ce-tier-price wy-green">{fmt(targets.upT1)}</span>
+                  <span className="wy-ce-tier-pct wy-green">{fmtPct(pctChange(currentClose, targets.upT1))}</span>
+                </div>
+                <div className="wy-ce-tier">
+                  <span className="wy-ce-tier-lbl">T2 (range×1.0)</span>
+                  <span className="wy-ce-tier-price wy-green">{fmt(targets.upT2)}</span>
+                  <span className="wy-ce-tier-pct wy-green">{fmtPct(pctChange(currentClose, targets.upT2))}</span>
+                </div>
+                <div className="wy-ce-tier">
+                  <span className="wy-ce-tier-lbl">T3 (range×1.5)</span>
+                  <span className="wy-ce-tier-price wy-green">{fmt(targets.upT3)}</span>
+                  <span className="wy-ce-tier-pct wy-green">{fmtPct(pctChange(currentClose, targets.upT3))}</span>
+                </div>
+                {targets.upHVN && (
+                  <div className="wy-ce-tier wy-ce-hvn">
+                    <span className="wy-ce-tier-lbl">HVN (resistance)</span>
+                    <span className="wy-ce-tier-price wy-gold">{fmt(targets.upHVN)}</span>
+                    <span className="wy-ce-tier-pct wy-gold">{fmtPct(pctChange(currentClose, targets.upHVN))}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        {(signal === 'BEARISH' || signal === 'NEUTRAL') && targets && (
+          <div className="wy-ce-targets">
+            <div className="wy-ce-row wy-ce-bear">
+              <div className="wy-ce-tier-grid">
+                <div className="wy-ce-tier">
+                  <span className="wy-ce-tier-lbl">T1 (ATR×3)</span>
+                  <span className="wy-ce-tier-price wy-red">{fmt(targets.downT1)}</span>
+                  <span className="wy-ce-tier-pct wy-red">{fmtPct(pctChange(currentClose, targets.downT1))}</span>
+                </div>
+                <div className="wy-ce-tier">
+                  <span className="wy-ce-tier-lbl">T2 (range×1.0)</span>
+                  <span className="wy-ce-tier-price wy-red">{fmt(targets.downT2)}</span>
+                  <span className="wy-ce-tier-pct wy-red">{fmtPct(pctChange(currentClose, targets.downT2))}</span>
+                </div>
+                <div className="wy-ce-tier">
+                  <span className="wy-ce-tier-lbl">T3 (range×1.5)</span>
+                  <span className="wy-ce-tier-price wy-red">{fmt(targets.downT3)}</span>
+                  <span className="wy-ce-tier-pct wy-red">{fmtPct(pctChange(currentClose, targets.downT3))}</span>
+                </div>
+                {targets.downHVN && (
+                  <div className="wy-ce-tier wy-ce-hvn">
+                    <span className="wy-ce-tier-lbl">HVN (support)</span>
+                    <span className="wy-ce-tier-price wy-gold">{fmt(targets.downHVN)}</span>
+                    <span className="wy-ce-tier-pct wy-gold">{fmtPct(pctChange(currentClose, targets.downHVN))}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Volume Footprint ── */}
       <div className="wy-card">
-        <div className="wy-card-title" data-tip="Volume Footprint: Wyckoff puts enormous importance on volume because institutions can't hide their activity in volume data. High volume on up bars = accumulation (buying). High volume on down bars = distribution (selling). Low volume on a test of support = Spring potential. This section shows where volume pressure is concentrated.">VOLUME FOOTPRINT</div>
+        <div className="wy-card-title" data-tip="Volume Footprint: Volume contraction (declining volume in second half of range vs first half) is a key Wyckoff sign that supply/demand is exhausting. Vol Contraction% shows how much volume has dried up.">VOLUME FOOTPRINT</div>
         <div className="wy-vol-row">
           <div className="wy-vr">
-            <span className="wy-vr-label">20-Bar Avg Volume</span>
-            <span className="wy-vr-val">
-              {avgVol >= 1_000_000
-                ? `${(avgVol / 1_000_000).toFixed(1)}M`
-                : avgVol >= 1_000
-                ? `${(avgVol / 1_000).toFixed(0)}K`
-                : avgVol?.toLocaleString() ?? '—'}
-            </span>
+            <span className="wy-vr-label">Range Avg Volume</span>
+            <span className="wy-vr-val">{fmtVol(avgVol)}</span>
           </div>
           <div className="wy-vr">
             <span className="wy-vr-label">Current Bar vs Avg</span>
@@ -375,8 +564,16 @@ export default function WyckoffPanel({ wyckoff, ticker }) {
               {currentVolRatio > 1.5 ? ' — SPIKE' : currentVolRatio > 1.2 ? ' — ELEVATED' : currentVolRatio < 0.8 ? ' — LOW' : ' — NORMAL'}
             </span>
           </div>
+          <div className="wy-vr">
+            <span className="wy-vr-label">Vol Contraction</span>
+            <span className={`wy-vr-val${volContracting ? ' wy-gold' : ''}`}>
+              {volContracting
+                ? `${(volContraction * 100).toFixed(0)}% — DRYING UP ✓`
+                : `${(Math.abs(volContraction) * 100).toFixed(0)}% ${volContraction < 0 ? 'expansion' : 'stable'}`}
+            </span>
+          </div>
         </div>
-        <div className="wy-pbar-label" data-tip="Buying Pressure: The percentage of total range volume that occurred on up-close bars (bars where the close was higher than the prior close). Above 55% = buyers are dominant — accumulation signature. Below 45% = sellers are dominant — distribution signature. This is the core Wyckoff volume analysis tool.">Buying Pressure</div>
+        <div className="wy-pbar-label" data-tip="Buying Pressure: Percentage of total range volume that occurred on up-close bars. Above 55% = buyers dominating (accumulation). Below 45% = sellers dominating (distribution).">Buying Pressure</div>
         <PressureBar buyingPressure={buyingPressure} />
         <div className="wy-pbar-note">
           {buyingPressure > 0.55
@@ -384,12 +581,13 @@ export default function WyckoffPanel({ wyckoff, ticker }) {
             : buyingPressure < 0.45
             ? 'Majority of range volume occurred on down-close bars. Institutional distribution signature.'
             : 'Volume split is roughly even between up and down bars. No dominant pressure detected.'}
+          {volContracting ? ' Volume is contracting — drying-up supply/demand consistent with phase completion.' : ''}
         </div>
       </div>
 
       {/* ── Phase Map ── */}
       <div className="wy-card">
-        <div className="wy-card-title" data-tip="Wyckoff Sequence: The typical order of events as institutions build or unwind a position. Accumulation: Phase A (selling climax) → SC/AR (supply absorbed) → Secondary Test → Spring (final shakeout) → SOS (sign of strength) → LPS (last point of support) → Markup. Distribution mirrors this in reverse, ending with a UTAD and Markdown. The highlighted chip shows the estimated current stage.">
+        <div className="wy-card-title" data-tip="Wyckoff Sequence: The typical order of events as institutions build or unwind a position. The highlighted chip shows the estimated current stage.">
           {signal === 'BEARISH' ? 'DISTRIBUTION SEQUENCE' : 'ACCUMULATION SEQUENCE'}
         </div>
         <p className="wy-phasemap-intro">
