@@ -1348,6 +1348,8 @@ export default function App() {
               data={breadthData}
               isLoading={breadthLoading}
               onRefresh={refreshBreadth}
+              vixData={vixData}
+              tradeScore={tradeScore}
             />
           )}
 
