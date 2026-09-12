@@ -91,10 +91,10 @@ function computeMultiFactorBudget(maxRisk, ivRank, wyckoffData, backtestResult) 
   if (ivRank != null) {
     if (ivRank > 60) {
       mult *= 0.60
-      factors.push({ name: 'High IV', detail: `rank ${Math.round(ivRank)}`, adj: '−40%', warn: true })
+      factors.push({ name: 'High IV', detail: `rank ${Math.round(ivRank)}`, adj: 0.60, warn: true })
     } else if (ivRank < 30) {
       mult *= 1.20
-      factors.push({ name: 'Low IV',  detail: `rank ${Math.round(ivRank)}`, adj: '+20%', warn: false })
+      factors.push({ name: 'Low IV',  detail: `rank ${Math.round(ivRank)}`, adj: 1.20, warn: false })
     }
   }
 
@@ -103,9 +103,7 @@ function computeMultiFactorBudget(maxRisk, ivRank, wyckoffData, backtestResult) 
   if (rq != null) {
     const qMult = +(0.60 + rq * 0.60).toFixed(2)   // 0.60 @ rq=0 … 1.20 @ rq=1
     mult *= qMult
-    const adjStr = qMult >= 1.05 ? `+${Math.round((qMult - 1) * 100)}%`
-                 : qMult <= 0.95 ? `−${Math.round((1 - qMult) * 100)}%` : '±0%'
-    factors.push({ name: 'Range quality', detail: `${Math.round(rq * 100)}%`, adj: adjStr, warn: qMult < 0.75 })
+    factors.push({ name: 'Range quality', detail: `${Math.round(rq * 100)}%`, adj: qMult, warn: qMult < 0.75 })
   }
 
   // 3 — Edge freshness (last-3-month win rate vs all-time)
@@ -115,10 +113,10 @@ function computeMultiFactorBudget(maxRisk, ivRank, wyckoffData, backtestResult) 
       const ratio = freshWR / allTimeWR
       if (ratio < 0.65) {
         mult *= 0.55
-        factors.push({ name: 'Edge fading', detail: `${Math.round(freshWR * 100)}% recent vs ${Math.round(allTimeWR * 100)}% all-time`, adj: '−45%', warn: true })
+        factors.push({ name: 'Edge fading', detail: `${Math.round(freshWR * 100)}% recent vs ${Math.round(allTimeWR * 100)}% all-time`, adj: 0.55, warn: true })
       } else if (ratio > 1.25) {
         mult *= 1.10
-        factors.push({ name: 'Hot streak', detail: `${Math.round(freshWR * 100)}% recent`, adj: '+10%', warn: false })
+        factors.push({ name: 'Hot streak', detail: `${Math.round(freshWR * 100)}% recent`, adj: 1.10, warn: false })
       }
     }
   }
@@ -126,10 +124,10 @@ function computeMultiFactorBudget(maxRisk, ivRank, wyckoffData, backtestResult) 
   // 4 — Wyckoff spring/trend confirmation bonus
   if (wyckoffData?.spring?.confirmed && wyckoffData?.trendContext === 'UPTREND') {
     mult *= 1.10
-    factors.push({ name: 'Spring + uptrend', detail: 'Wyckoff confirmed', adj: '+10%', warn: false })
+    factors.push({ name: 'Spring + uptrend', detail: 'Wyckoff confirmed', adj: 1.10, warn: false })
   } else if (wyckoffData?.utad?.confirmed && wyckoffData?.trendContext === 'DOWNTREND') {
     mult *= 1.10
-    factors.push({ name: 'UTAD + downtrend', detail: 'Wyckoff confirmed', adj: '+10%', warn: false })
+    factors.push({ name: 'UTAD + downtrend', detail: 'Wyckoff confirmed', adj: 1.10, warn: false })
   }
 
   const budget = maxRisk * Math.min(1.50, Math.max(0.20, mult))
