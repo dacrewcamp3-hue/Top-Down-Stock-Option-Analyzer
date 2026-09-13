@@ -20,6 +20,7 @@
 }
 
 .pp-regime-left  { flex: 1; min-width: 200px; }
+.pp-regime-right { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
 
 .pp-regime-eyebrow {
   font-size: 9px;
@@ -487,4 +488,278 @@
   background: #0f1200;
   border: 1px solid #3b4a00;
   color: #a3a700;
+}
+
+/* ── Regime trigger + stability ─────────────────────────────────────────────── */
+.pp-regime-trigger {
+  margin-top: 8px;
+  font-size: 10.5px;
+  color: #3a5070;
+  line-height: 1.5;
+}
+.pp-regime-trigger-lbl {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #2a4060;
+}
+
+.pp-stability {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  background: #040b16;
+  border: 1px solid #182840;
+  border-radius: 8px;
+  min-width: 200px;
+}
+.pp-stab-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+}
+.pp-stab-label { color: #3a5070; }
+.pp-stab-val   { font-weight: 700; font-family: monospace; font-size: 10.5px; }
+
+/* ── Sector leadership strip ─────────────────────────────────────────────────── */
+.pp-sectors-section { padding: 14px 16px; }
+
+.pp-sector-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pp-sector-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 10px;
+  background: #050d1a;
+  border: 1px solid #182840;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.1s;
+  min-width: 68px;
+}
+.pp-sector-chip:hover { background: #07101e; }
+
+.pp-sc-ticker { font-size: 11px; font-weight: 800; color: #8aacc8; font-family: monospace; }
+.pp-sc-name   { font-size: 8.5px; color: #3a5070; text-align: center; }
+.pp-sc-rs     { font-size: 11.5px; font-weight: 800; font-family: monospace; }
+.pp-sc-chg    { font-size: 9.5px; font-weight: 600; font-family: monospace; }
+
+/* ── Confluence board ────────────────────────────────────────────────────────── */
+.pp-confluence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.pp-conf-card {
+  padding: 14px 14px;
+  background: #050d1a;
+  border: 1px solid;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.1s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pp-conf-card:hover { background: #07101e; }
+
+.pp-conf-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pp-conf-ticker {
+  font-size: 18px;
+  font-weight: 900;
+  font-family: monospace;
+  letter-spacing: 0.5px;
+}
+
+.pp-conf-tier {
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  padding: 2px 7px;
+  border: 1px solid;
+  border-radius: 4px;
+}
+
+.pp-conf-signals {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pp-conf-signal {
+  font-size: 10.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pp-conf-detail {
+  font-size: 10px;
+  font-weight: 600;
+  color: #4a6888;
+  font-family: monospace;
+}
+
+.pp-conf-or {
+  font-size: 10px;
+  color: #3a5070;
+  font-family: monospace;
+  border-top: 1px solid #182840;
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+.pp-conf-empty {
+  padding: 20px 16px;
+  font-size: 11.5px;
+  color: #3a5070;
+  line-height: 1.6;
+  background: #040b14;
+  border: 1px solid #182840;
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* ── Options regime note ─────────────────────────────────────────────────────── */
+.pp-opt-regime-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #040b14;
+  border: 1px solid #182840;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+.pp-opt-regime-lbl {
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #60a5fa;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.pp-opt-regime-txt {
+  font-size: 11.5px;
+  color: #4a6888;
+  line-height: 1.55;
+  flex: 1;
+}
+
+/* ── Entry condition badges ──────────────────────────────────────────────────── */
+.pp-entry-met {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #011c10;
+  border: 1px solid #065f46;
+  color: #10b981;
+}
+.pp-entry-wait {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #1a0505;
+  border: 1px solid #7f1d1d;
+  color: #ef4444;
+}
+
+/* ── Live price on card ──────────────────────────────────────────────────────── */
+.pp-play-price {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: monospace;
+  text-align: right;
+  flex-shrink: 0;
+}
+.pp-play-chg {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* ── Options panel inside expanded card ─────────────────────────────────────── */
+.pp-opt-panel {
+  background: #040b14;
+  border: 1px solid #182840;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pp-opt-hdr {
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: #3a5070;
+}
+.pp-opt-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.pp-opt-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pp-opt-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #2a4060;
+}
+.pp-opt-val {
+  font-size: 12px;
+  font-weight: 800;
+  color: #8aacc8;
+  font-family: monospace;
+}
+.pp-opt-note {
+  font-size: 11px;
+  color: #4a6888;
+  line-height: 1.55;
+}
+
+/* ── Playbook dot on mover row ───────────────────────────────────────────────── */
+.pp-mover-pb {
+  margin-left: 4px;
+  font-size: 7px;
+  vertical-align: middle;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .pp-rules-grid           { grid-template-columns: 1fr; }
+  .pp-confluence-grid      { grid-template-columns: 1fr 1fr; }
+  .pp-regime               { flex-direction: column; }
+  .pp-regime-right         { align-items: flex-start; }
+  .pp-stability            { min-width: unset; width: 100%; }
+  .pp-sector-strip         { gap: 4px; }
+  .pp-sector-chip          { min-width: 58px; padding: 6px 8px; }
 }

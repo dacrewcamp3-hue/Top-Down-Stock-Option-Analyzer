@@ -177,7 +177,7 @@ function SentimentStrip({ sentiment }) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-export default function FlowTape({ watchlist, vixData, verdict }) {
+export default function FlowTape({ watchlist, vixData, verdict, onSentimentUpdate }) {
   const [tape,      setTape]      = useState([])
   const [sentiment, setSentiment] = useState({})
   const [status,    setStatus]    = useState('idle')
@@ -197,6 +197,7 @@ export default function FlowTape({ watchlist, vixData, verdict }) {
       })
 
       setSentiment(sent ?? {})
+      onSentimentUpdate?.(sent ?? {})
 
       const now     = Date.now()
       const isFirst = !initRef.current

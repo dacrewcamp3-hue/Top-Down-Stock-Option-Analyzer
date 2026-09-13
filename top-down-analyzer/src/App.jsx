@@ -206,6 +206,8 @@ export default function App() {
   const [rsScore, setRsScore]       = useState(null)
   const [volumeSpike, setVolumeSpike] = useState(null)
   const [vixData, setVixData]       = useState(null)
+  const [gapResults, setGapResults]       = useState([])
+  const [flowSentiment, setFlowSentiment] = useState({})
   const [orbRetest, setOrbRetest]   = useState(null)
   const [ivData, setIvData]         = useState(null)
   const [weeklyAlign, setWeeklyAlign]   = useState(null)
@@ -1592,6 +1594,7 @@ export default function App() {
               watchlist={watchlist}
               vixData={vixData}
               verdict={breadthData?.verdict}
+              onScanComplete={r => setGapResults(r)}
               onLoadTicker={t => {
                 setTicker(t); handleFetch(t)
                 setActiveTab('analyze'); setAnalyzeView('brief')
@@ -1616,12 +1619,16 @@ export default function App() {
               watchlist={watchlist}
               vixData={vixData}
               verdict={breadthData?.verdict}
+              onSentimentUpdate={s => setFlowSentiment(s)}
             />
           )}
           {scannerView === 'playbook' && (
             <PlaybookPanel
               breadthData={breadthData}
               vixData={breadthData?.vix ?? vixData}
+              watchlist={watchlist}
+              gapResults={gapResults}
+              flowSentiment={flowSentiment}
               onLoadTicker={t => {
                 setTicker(t); handleFetch(t)
                 setActiveTab('analyze'); setAnalyzeView('brief')

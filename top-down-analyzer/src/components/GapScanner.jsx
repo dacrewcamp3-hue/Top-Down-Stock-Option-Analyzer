@@ -317,7 +317,7 @@ function GapIntelStrip({ r, gapClass, shareSize }) {
 const BATCH   = 5
 const MIN_GAP = 0.75
 
-export default function GapScanner({ watchlist = [], onLoadTicker, vixData, verdict }) {
+export default function GapScanner({ watchlist = [], onLoadTicker, vixData, verdict, onScanComplete }) {
   const defaultList = [...new Set([...UNIVERSE, ...watchlist.map(w => w.ticker)])]
 
   const shareSize = (() => {
@@ -348,7 +348,8 @@ export default function GapScanner({ watchlist = [], onLoadTicker, vixData, verd
       .sort((a, b) => Math.abs(b.gapPct) - Math.abs(a.gapPct))
     setResults(filtered)
     setStatus('done')
-  }, [status, defaultList])
+    onScanComplete?.(filtered.map(r => ({ ...r, gapClass: classifyGap(r) })))
+  }, [status, defaultList])  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!hasScanned.current) { hasScanned.current = true; runScan() }
