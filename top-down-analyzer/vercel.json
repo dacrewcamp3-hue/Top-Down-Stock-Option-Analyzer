@@ -1,8 +1,11 @@
 {
   "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/yf-api/(.*)", "destination": "/api/yf-proxy?yfpath=$1" },
     { "source": "/sec-efts/(.*)", "destination": "/api/sec-proxy?secpath=$1" },
-    { "source": "/alpaca-api/(.*)", "destination": "/api/alpaca-proxy?alpacapath=$1" }
+    { "source": "/alpaca-api/(.*)", "destination": "/api/alpaca-proxy?alpacapath=$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
