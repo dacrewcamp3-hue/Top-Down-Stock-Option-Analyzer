@@ -184,6 +184,8 @@ function SortTH({ label, col, sortCol, sortDir, onSort, tip }) {
   )
 }
 
+const GRADE_COLOR = g => ({ 'A+': '#10b981', A: '#34d399', B: '#f59e0b', C: '#6b7280' }[g] ?? null)
+
 function SectorHeatmap({ sectorData, scanning }) {
   if (scanning && !sectorData.length) {
     return (
@@ -192,7 +194,7 @@ function SectorHeatmap({ sectorData, scanning }) {
         <div className="sc-heatmap-cells">
           {SECTOR_ETFS.map(s => (
             <div key={s.ticker} className="sc-hm-cell sc-hm-neutral sc-hm-loading">
-              <span className="sc-hm-ticker">{s.ticker}</span>
+              <div className="sc-hm-top-row"><span className="sc-hm-ticker">{s.ticker}</span></div>
               <span className="sc-hm-label">{s.label}</span>
               <span className="sc-hm-sig">…</span>
             </div>
@@ -223,9 +225,17 @@ function SectorHeatmap({ sectorData, scanning }) {
           const r   = sectorData.find(x => x.ticker === ticker)
           const sig = r?.ok ? r.signal : null
           const cls = sig === 'CALL' ? 'sc-hm-bull' : sig === 'PUT' ? 'sc-hm-bear' : 'sc-hm-neutral'
+          const gc  = r?.ok && r.grade ? GRADE_COLOR(r.grade) : null
           return (
             <div key={ticker} className={`sc-hm-cell ${cls}`}>
-              <span className="sc-hm-ticker">{ticker}</span>
+              <div className="sc-hm-top-row">
+                <span className="sc-hm-ticker">{ticker}</span>
+                {gc && r.grade && (
+                  <span className="sc-hm-grade" style={{ color: gc, borderColor: gc + '55' }}>
+                    {r.grade}
+                  </span>
+                )}
+              </div>
               <span className="sc-hm-label">{label}</span>
               <span className="sc-hm-sig">
                 {sig ?? (r ? '—' : '…')}
@@ -249,6 +259,99 @@ function SectorHeatmap({ sectorData, scanning }) {
             </div>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+// ── Sector Rotation Quadrant ──────────────────────────────────────────────────
+const QUAD_CFG = {
+  LEADING:   { label: 'LEADING',   icon: '▲', color: '#10b981', bg: '#011209', border: '#065f46', desc: 'Outperforming + momentum building — enter here' },
+  WEAKENING: { label: 'WEAKENING', icon: '◀', color: '#f59e0b', bg: '#100900', border: '#4d3800', desc: 'Outperforming but fading — take CALL profits' },
+  IMPROVING: { label: 'IMPROVING', icon: '▶', color: '#60a5fa', bg: '#040e1c', border: '#1a3a6e', desc: 'Underperforming but gaining — early rotation catch' },
+  LAGGING:   { label: 'LAGGING',   icon: '▼', color: '#ef4444', bg: '#130305', border: '#7f1d1d', desc: 'Underperforming + fading — avoid or short' },
+}
+
+function getSectorQuadrant(r) {
+  if (!r.ok) return null
+  const rs = r.rsVsSpy ?? 0
+  const outperforming = rs >= 0
+
+  // Momentum score: volume velocity is the primary signal; signal direction + rawConf reinforce it
+  let mom = 0
+  if (r.rvolVelocity != null) mom += r.rvolVelocity > 5 ? 1 : r.rvolVelocity < -5 ? -1 : 0
+  if (r.signal === 'CALL')    mom += 1.5
+  else if (r.signal === 'PUT') mom -= 1.5
+  if (r.rawConf != null)      mom += r.rawConf > 0.3 ? 0.5 : r.rawConf < -0.3 ? -0.5 : 0
+
+  const building = mom > 0
+  if (outperforming && building)  return 'LEADING'
+  if (outperforming && !building) return 'WEAKENING'
+  if (!outperforming && building) return 'IMPROVING'
+  return 'LAGGING'
+}
+
+function SectorRotationQuadrant({ sectorData }) {
+  if (!sectorData.length) return null
+
+  const grouped = { LEADING: [], WEAKENING: [], IMPROVING: [], LAGGING: [] }
+  sectorData.forEach(r => {
+    const q = getSectorQuadrant(r)
+    if (q) grouped[q].push(r)
+  })
+  if (!Object.values(grouped).some(a => a.length)) return null
+
+  return (
+    <div className="sc-quad-wrap">
+      <div className="sc-quad-header-row">
+        <span className="sc-quad-title">SECTOR ROTATION QUADRANT</span>
+        <span className="sc-quad-sub">Position = 12-wk RS vs SPY · Momentum = vol velocity + signal direction</span>
+      </div>
+      <div className="sc-quad-grid">
+        {['LEADING', 'IMPROVING', 'WEAKENING', 'LAGGING'].map(key => {
+          const q    = QUAD_CFG[key]
+          const list = grouped[key]
+          return (
+            <div key={key} className="sc-quad-block" style={{ borderColor: q.border, background: q.bg }}>
+              <div className="sc-quad-block-head">
+                <span className="sc-quad-block-icon" style={{ color: q.color }}>{q.icon}</span>
+                <div>
+                  <div className="sc-quad-block-name" style={{ color: q.color }}>{q.label}</div>
+                  <div className="sc-quad-block-desc">{q.desc}</div>
+                </div>
+              </div>
+              {list.length === 0 ? (
+                <div className="sc-quad-empty">None this scan</div>
+              ) : (
+                <div className="sc-quad-chips">
+                  {list.map(r => {
+                    const gc  = r.grade ? (GRADE_COLOR(r.grade) ?? q.color) : q.color
+                    const sig = r.signal === 'CALL' ? '▲' : r.signal === 'PUT' ? '▼' : '—'
+                    const sc  = r.signal === 'CALL' ? '#10b981' : r.signal === 'PUT' ? '#ef4444' : '#4a6380'
+                    return (
+                      <div key={r.ticker} className="sc-quad-chip" style={{ borderColor: q.border }}>
+                        <span className="sc-quad-chip-ticker">{r.ticker}</span>
+                        {r.grade && (
+                          <span className="sc-quad-chip-grade" style={{ color: gc }}>{r.grade}</span>
+                        )}
+                        <span className="sc-quad-chip-sig" style={{ color: sc }}>{sig}</span>
+                        {r.rsVsSpy != null && (
+                          <span className="sc-quad-chip-rs" style={{ color: r.rsVsSpy >= 0 ? '#34d399' : '#f87171' }}>
+                            {r.rsVsSpy > 0 ? '+' : ''}{r.rsVsSpy}pp
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <div className="sc-quad-footer">
+        Leading sectors draw institutional flow first — look for individual stocks in Leading quadrant sectors for highest-probability setups.
+        Improving sectors are the next rotation target; Weakening sectors are where smart money exits.
       </div>
     </div>
   )
@@ -778,6 +881,11 @@ export default function Scanner({ onLoadTicker, onLoadAndBrief }) {
       {/* ── Sector heatmap ── */}
       {(status === 'done' || status === 'running') && (
         <SectorHeatmap sectorData={sectorResults} scanning={status === 'running'} />
+      )}
+
+      {/* ── Sector rotation quadrant ── */}
+      {status === 'done' && (
+        <SectorRotationQuadrant sectorData={sectorResults} />
       )}
 
       {/* ── Sector leaders ── */}

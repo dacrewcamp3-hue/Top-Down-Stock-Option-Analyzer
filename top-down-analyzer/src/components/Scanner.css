@@ -292,6 +292,154 @@
   display: inline-block;
 }
 
+/* ── Heatmap grade overlay ── */
+.sc-hm-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+}
+
+.sc-hm-grade {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  border: 1px solid;
+  border-radius: 3px;
+  padding: 0px 4px;
+  line-height: 14px;
+}
+
+/* ── Sector Rotation Quadrant ── */
+.sc-quad-wrap {
+  background: #090d18;
+  border: 1px solid #1e2d45;
+  border-radius: 8px;
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sc-quad-header-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sc-quad-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #3a5070;
+  text-transform: uppercase;
+}
+
+.sc-quad-sub {
+  font-size: 10px;
+  color: #2a3d58;
+}
+
+.sc-quad-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 8px;
+}
+
+.sc-quad-block {
+  border: 1px solid;
+  border-radius: 7px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sc-quad-block-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.sc-quad-block-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.sc-quad-block-name {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+}
+
+.sc-quad-block-desc {
+  font-size: 10px;
+  color: #3a5070;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.sc-quad-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.sc-quad-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid;
+  border-radius: 5px;
+  background: rgba(0,0,0,0.25);
+}
+
+.sc-quad-chip-ticker {
+  font-size: 11px;
+  font-weight: 700;
+  color: #a0c0dc;
+  letter-spacing: 0.2px;
+}
+
+.sc-quad-chip-grade {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.sc-quad-chip-sig {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.sc-quad-chip-rs {
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.sc-quad-empty {
+  font-size: 10px;
+  color: #2a3d58;
+  font-style: italic;
+}
+
+.sc-quad-footer {
+  font-size: 10px;
+  color: #2a3d58;
+  line-height: 1.5;
+  border-top: 1px solid #111e30;
+  padding-top: 8px;
+}
+
+@media (max-width: 520px) {
+  .sc-quad-grid { grid-template-columns: 1fr; }
+}
+
 /* ── Summary ── */
 .sc-summary {
   display: flex;
