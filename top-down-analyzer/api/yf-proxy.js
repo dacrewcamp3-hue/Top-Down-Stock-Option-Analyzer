@@ -1,17 +1,10 @@
-// Production Yahoo Finance proxy for Vercel serverless.
-// Mirrors the Vite dev proxy in vite.config.js — that file only runs locally.
-// In production every /yf-api/* request is rewritten here by vercel.json.
-
 import https from 'node:https'
 
-// Module-level state persists within a warm serverless instance.
-// Cold starts re-fetch credentials; ensureCrumb() guards against concurrent refreshes.
+// Module-level cache persists within a warm serverless container instance
 const yf = { cookie: '', crumb: '', ts: 0 }
-const CRUMB_TTL = 40 * 60 * 1000   // 40-minute cache
+const CRUMB_TTL = 40 * 60 * 1000
 let pending = null
 
-// HTTPS GET with redirect following and Set-Cookie accumulation.
-// Identical to the version in vite.config.js.
 function nodeGet(hostname, path, extraHeaders = {}, accCookies = '', hop = 0) {
   return new Promise((resolve, reject) => {
     if (hop > 6) { reject(new Error('Too many redirects')); return }
@@ -40,16 +33,16 @@ function nodeGet(hostname, path, extraHeaders = {}, accCookies = '', hop = 0) {
         const loc = res.headers.location
         try {
           const u = new URL(loc.startsWith('http') ? loc : `https://${hostname}${loc}`)
-          nodeGet(u.hostname, u.pathname + u.search, extraHeaders, merged, hop + 1).then(resolve).catch(reject)
+          nodeGet(u.hostname, u.pathname + u.search, extraHeaders, merged, hop + 1)
+            .then(resolve).catch(reject)
         } catch (e) { reject(e) }
         return
       }
 
-      let body = ''
-      res.on('data', d => { body += d })
-      res.on('end', () => resolve({ status: res.statusCode, cookies: merged, body }))
+      const chunks = []
+      res.on('data', d => chunks.push(Buffer.isBuffer(d) ? d : Buffer.from(d)))
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, cookies: merged, body: Buffer.concat(chunks) }))
     })
-    req.setTimeout(8000, () => { req.destroy(); reject(new Error('Request timeout')) })
     req.on('error', reject)
     req.end()
   })
@@ -58,7 +51,6 @@ function nodeGet(hostname, path, extraHeaders = {}, accCookies = '', hop = 0) {
 async function refreshCrumb() {
   const r1 = await nodeGet('finance.yahoo.com', '/quote/SPY/options', { Referer: 'https://www.google.com/' })
   yf.cookie = r1.cookies
-  console.log('[YF] Session cookies length:', yf.cookie.length)
 
   if (yf.cookie) {
     try {
@@ -68,25 +60,21 @@ async function refreshCrumb() {
         { Referer: 'https://finance.yahoo.com/quote/SPY/options' },
         yf.cookie
       )
-      const crumb = r2.body.trim()
+      const crumb = r2.body.toString().trim()
       if (crumb && !crumb.startsWith('<') && crumb !== 'null' && crumb.length >= 3) {
-        yf.crumb = crumb
-        yf.ts    = Date.now()
-        console.log('[YF] Crumb via API:', yf.crumb.slice(0, 6) + '…')
-        return
+        yf.crumb = crumb; yf.ts = Date.now(); return
       }
     } catch (_) {}
   }
 
-  const m = r1.body.match(/"crumb"\s*:\s*"((?:[^"\\]|\\.)*)"/)?.[1]
+  const bodyStr = r1.body.toString()
+  const m = bodyStr.match(/"crumb"\s*:\s*"((?:[^"\\]|\\.)*)"/)?.[1]
   if (m) {
     yf.crumb = m.replace(/\\\//g, '/').replace(/\\"/g, '"')
-    yf.ts    = Date.now()
-    console.log('[YF] Crumb from HTML:', yf.crumb.slice(0, 6) + '…')
+    yf.ts = Date.now()
     return
   }
-
-  throw new Error('Failed to obtain Yahoo Finance crumb — will retry on next request')
+  throw new Error('Failed to obtain Yahoo Finance crumb')
 }
 
 async function ensureCrumb() {
@@ -97,78 +85,38 @@ async function ensureCrumb() {
 }
 
 export default async function handler(req, res) {
-  // CORS headers for all responses
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
-  if (req.method === 'OPTIONS') { res.status(204).end(); return }
+  if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return }
 
-  // yfpath comes from the Vercel rewrite: /yf-api/(.*) → /api/yf-proxy?yfpath=$1
-  let yfpath = req.query.yfpath || ''
-  if (!yfpath.startsWith('/')) yfpath = '/' + yfpath
+  try {
+    const { yfpath = '', ...rest } = req.query || {}
+    const needsCrumb = yfpath.includes('/v7/finance/options/') || yfpath.includes('/v10/finance/quoteSummary/')
 
-  // Rebuild query string — all params forwarded except yfpath (our routing param)
-  const qs = new URLSearchParams()
-  for (const [key, val] of Object.entries(req.query)) {
-    if (key !== 'yfpath') qs.append(key, val)
-  }
-
-  // Options/quoteSummary endpoints require an authenticated crumb.
-  // Also ensure we have a session cookie before any chart data request.
-  const needsCrumb = yfpath.includes('/v7/finance/options') || yfpath.includes('/v10/finance/quoteSummary')
-  if (needsCrumb || !yf.cookie) {
-    try { await ensureCrumb() } catch (e) { console.warn('[YF crumb]', e.message) }
-  }
-  if (needsCrumb && yf.crumb) qs.set('crumb', yf.crumb)
-
-  const qstr = qs.toString()
-  const targetPath = yfpath + (qstr ? '?' + qstr : '')
-
-  return new Promise((resolve) => {
-    const headers = {
-      'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      'Accept':          'application/json, text/plain, */*',
-      'Accept-Encoding': 'identity',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Referer':         'https://finance.yahoo.com',
+    if (needsCrumb) {
+      try { await ensureCrumb() } catch (_) {}
     }
-    if (yf.cookie) headers['Cookie'] = yf.cookie
 
-    const yfReq = https.request({
-      hostname: 'query1.finance.yahoo.com',
-      path:     targetPath,
-      method:   'GET',
-      headers,
-    }, (yfRes) => {
-      if (yfRes.statusCode === 401 || yfRes.statusCode === 403) {
-        yf.crumb = ''; yf.ts = 0
-        console.warn('[YF] Auth error on', yfpath, '— crumb cleared, auto-refresh on next request')
-      }
+    const qs = new URLSearchParams(rest)
+    if (needsCrumb && yf.crumb) qs.set('crumb', yf.crumb)
+    const qsStr = qs.toString()
+    const targetPath = '/' + yfpath + (qsStr ? '?' + qsStr : '')
 
-      const ct = yfRes.headers['content-type']
-      if (ct) res.setHeader('Content-Type', ct)
-      res.statusCode = yfRes.statusCode
-      yfRes.pipe(res)
-      yfRes.on('end', resolve)
-    })
+    const result = await nodeGet(
+      'query1.finance.yahoo.com',
+      targetPath,
+      { Accept: 'application/json, text/plain, */*', Referer: 'https://finance.yahoo.com' },
+      yf.cookie
+    )
 
-    yfReq.setTimeout(9000, () => {
-      yfReq.destroy()
-      if (!res.headersSent) {
-        res.statusCode = 504
-        res.end(JSON.stringify({ error: 'Yahoo Finance request timed out' }))
-      }
-      resolve()
-    })
+    if (result.status === 401 || result.status === 403) {
+      yf.crumb = ''; yf.ts = 0
+    }
 
-    yfReq.on('error', err => {
-      console.error('[YF proxy error]', err.message)
-      if (!res.headersSent) {
-        res.statusCode = 502
-        res.end(JSON.stringify({ error: 'Proxy error', message: err.message }))
-      }
-      resolve()
-    })
-
-    yfReq.end()
-  })
+    res.setHeader('Content-Type', result.headers['content-type'] || 'application/json')
+    res.statusCode = result.status
+    res.end(result.body)
+  } catch (e) {
+    res.statusCode = 500
+    res.end(JSON.stringify({ error: e.message }))
+  }
 }
