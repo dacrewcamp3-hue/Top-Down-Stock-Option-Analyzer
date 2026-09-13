@@ -1612,7 +1612,11 @@ export default function App() {
             />
           )}
           {scannerView === 'tape' && (
-            <FlowTape watchlist={watchlist} />
+            <FlowTape
+              watchlist={watchlist}
+              vixData={vixData}
+              verdict={breadthData?.verdict}
+            />
           )}
           {scannerView === 'playbook' && (
             <PlaybookPanel
