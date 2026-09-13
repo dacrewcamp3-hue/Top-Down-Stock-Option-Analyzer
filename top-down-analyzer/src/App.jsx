@@ -1590,6 +1590,8 @@ export default function App() {
           {scannerView === 'gaps' && (
             <GapScanner
               watchlist={watchlist}
+              vixData={vixData}
+              verdict={breadthData?.verdict}
               onLoadTicker={t => {
                 setTicker(t); handleFetch(t)
                 setActiveTab('analyze'); setAnalyzeView('brief')
