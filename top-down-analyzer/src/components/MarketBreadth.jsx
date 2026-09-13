@@ -326,27 +326,29 @@ export default function MarketBreadth({ data, isLoading, onRefresh, vixData, tra
             <div className="mb-intel-header">REGIME INTELLIGENCE</div>
 
             {/* Row 1: Correlation + Gamma */}
-            <div className="mb-intel-row">
-              {corrRegime && (
-                <div className="mb-intel-card" style={{ background: corrRegime.bg, borderColor: corrRegime.color }}>
-                  <div className="mb-intel-card-top">
-                    <span className="mb-intel-tag" style={{ color: corrRegime.color }}>CORRELATION</span>
-                    <span className="mb-intel-badge" style={{ color: corrRegime.color, borderColor: corrRegime.color }}>{corrRegime.label}</span>
+            {(corrRegime || gammaRegime) && (
+              <div className="mb-intel-row">
+                {corrRegime && (
+                  <div className="mb-intel-card" style={{ background: corrRegime.bg, borderColor: corrRegime.color }}>
+                    <div className="mb-intel-card-top">
+                      <span className="mb-intel-tag" style={{ color: corrRegime.color }}>CORRELATION</span>
+                      <span className="mb-intel-badge" style={{ color: corrRegime.color, borderColor: corrRegime.color }}>{corrRegime.label}</span>
+                    </div>
+                    <div className="mb-intel-desc">{corrRegime.desc}</div>
                   </div>
-                  <div className="mb-intel-desc">{corrRegime.desc}</div>
-                </div>
-              )}
-              {gammaRegime && (
-                <div className="mb-intel-card" style={{ background: gammaRegime.bg, borderColor: gammaRegime.color }}>
-                  <div className="mb-intel-card-top">
-                    <span className="mb-intel-tag" style={{ color: gammaRegime.color }}>GAMMA REGIME</span>
-                    <span className="mb-intel-badge" style={{ color: gammaRegime.color, borderColor: gammaRegime.color }}>{gammaRegime.tag}</span>
+                )}
+                {gammaRegime && (
+                  <div className="mb-intel-card" style={{ background: gammaRegime.bg, borderColor: gammaRegime.color }}>
+                    <div className="mb-intel-card-top">
+                      <span className="mb-intel-tag" style={{ color: gammaRegime.color }}>GAMMA REGIME</span>
+                      <span className="mb-intel-badge" style={{ color: gammaRegime.color, borderColor: gammaRegime.color }}>{gammaRegime.tag}</span>
+                    </div>
+                    <div className="mb-intel-label" style={{ color: gammaRegime.color }}>{gammaRegime.label}</div>
+                    <div className="mb-intel-desc">{gammaRegime.desc}</div>
                   </div>
-                  <div className="mb-intel-label" style={{ color: gammaRegime.color }}>{gammaRegime.label}</div>
-                  <div className="mb-intel-desc">{gammaRegime.desc}</div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* Row 2: Cross-asset + Concentration */}
             {crossAsset && (
