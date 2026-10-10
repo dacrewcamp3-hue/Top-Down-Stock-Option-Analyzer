@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { generateRecommendations, bsPrice, calcGreeks } from '../utils/fetchOptions'
+import { getUpcomingEvents } from '../utils/economicCalendar'
 import GEXChart from './GEXChart'
 import OptionsPnlGraph from './OptionsPnlGraph'
 import './OptionsChain.css'
@@ -192,7 +193,512 @@ function calcMaxPain(contracts) {
   return maxPainK
 }
 
+// ── Master Signal Warnings ────────────────────────────────────────────────────
+function MasterSignalWarnings({ masterSignal }) {
+  if (!masterSignal?.conflicts?.length) return null
+  const blockMsg = masterSignal.blockReason
+
+  return (
+    <div style={{
+      background: blockMsg ? '#0e0101' : '#080600',
+      border: `1px solid ${blockMsg ? '#7f1d1d' : '#4d3000'}`,
+      borderRadius: 8, padding: '10px 14px', marginBottom: 0,
+    }}>
+      <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.2,
+        color: blockMsg ? '#ef4444' : '#f59e0b', textTransform: 'uppercase', marginBottom: 6 }}>
+        {blockMsg ? '⛔ Signal Blocked' : '⚠ Signal Warnings'}
+      </div>
+      {blockMsg && (
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', marginBottom: 5 }}>
+          {blockMsg}
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {masterSignal.conflicts.map((c, i) => (
+          <div key={i} style={{ fontSize: 10, color: '#b0a070', lineHeight: 1.5 }}>
+            · {c}
+          </div>
+        ))}
+      </div>
+      {masterSignal.confidence != null && !blockMsg && (
+        <div style={{ fontSize: 9, color: '#4a6a8a', marginTop: 6 }}>
+          Signal confidence: <span style={{
+            fontWeight: 800,
+            color: masterSignal.confidence >= 70 ? '#10b981'
+                 : masterSignal.confidence >= 45 ? '#f59e0b'
+                 : '#ef4444'
+          }}>{masterSignal.confidence}/100</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Options Regime Classifier ─────────────────────────────────────────────────
+function OptionsRegimeClassifier({ ivData, optionsChain, direction }) {
+  if (!ivData && !optionsChain) return null
+
+  const ivRank = ivData?.ivRank ?? null
+  const ts     = optionsChain?.termStructure ?? []
+  const lean   = optionsChain?.ivLean
+  const gex    = optionsChain?.totalNetGEX
+  const pcoi   = optionsChain?.aggregatePCOI
+
+  const tsShape = (() => {
+    if (ts.length < 2) return null
+    const near = ts[0]?.iv, far = ts[ts.length - 1]?.iv
+    if (near == null || far == null) return null
+    return near > far * 1.05 ? 'backwardation' : far > near * 1.05 ? 'contango' : 'flat'
+  })()
+
+  let regime, color, bg, border, icon, meaning, action
+
+  if (ivRank != null && ivRank > 70) {
+    regime  = 'IV CRUSH RISK'
+    color   = '#ef4444'
+    bg      = '#0e0101'
+    border  = '#7f1d1d'
+    icon    = '⚠'
+    meaning = `IV Rank ${Math.round(ivRank)} — options are historically expensive. Premium buyers are overpaying.`
+    action  = 'Use spreads to cap your debit. Avoid naked long options until IV rank drops below 50.'
+  } else if (gex != null && gex < -500000000) {
+    regime  = 'NEGATIVE GAMMA REGIME'
+    color   = '#f59e0b'
+    bg      = '#0a0700'
+    border  = '#78350f'
+    icon    = '⚡'
+    meaning = `Dealers are SHORT gamma (${(gex / 1e9).toFixed(1)}B). They must buy when price rises and sell when it falls — amplifying every move.`
+    action  = 'Moves can be violent in either direction. Options premiums expand fast. Size down, use defined risk.'
+  } else if (tsShape === 'backwardation') {
+    regime  = 'VOLATILITY FEAR SPIKE'
+    color   = '#ef4444'
+    bg      = '#0e0101'
+    border  = '#7f1d1d'
+    icon    = '🔴'
+    meaning = 'Near-term IV is higher than long-term IV. The market is pricing an imminent event or shock.'
+    action  = 'Short-dated options are expensive. Buy longer DTE to avoid the fear premium. Consider waiting for the event to pass.'
+  } else if (ivRank != null && ivRank < 20) {
+    const isPrime = (direction === 'CALL' && lean?.dir === 'bull')
+                 || (direction === 'PUT'  && lean?.dir === 'bear')
+    regime  = isPrime ? 'IDEAL BUY CONDITIONS' : 'IV CHEAP — GOOD ENTRY WINDOW'
+    color   = '#10b981'
+    bg      = '#010e07'
+    border  = '#065f46'
+    icon    = '✓'
+    meaning = `IV Rank ${Math.round(ivRank)} — options are historically cheap. You are not overpaying for premium.`
+    action  = 'This is a favorable environment for buying directional options. Standard sizing applies.'
+  } else if (tsShape === 'contango' && ivRank != null && ivRank < 45) {
+    regime  = 'NORMAL CONDITIONS'
+    color   = '#60a5fa'
+    bg      = '#020810'
+    border  = '#1e3456'
+    icon    = '◉'
+    meaning = 'Term structure is in normal contango. IV rank is moderate. No unusual pricing anomalies.'
+    action  = 'Standard option buying strategy applies. Use the recommended DTE and conviction tier.'
+  } else if (lean?.dir === 'bull' && lean?.strength === 'strong') {
+    regime  = 'CALL SKEW ELEVATED'
+    color   = '#a78bfa'
+    bg      = '#070410'
+    border  = '#4c1d95'
+    icon    = '△'
+    meaning = 'Call options carry significantly higher IV than puts. The market is pricing a bullish move or squeeze.'
+    action  = 'Calls are relatively expensive. Put buyers get better pricing. Bullish bias confirmed by skew.'
+  } else if (lean?.dir === 'bear' && lean?.strength === 'strong') {
+    regime  = 'PUT SKEW ELEVATED'
+    color   = '#f472b6'
+    bg      = '#0e0108'
+    border  = '#831843'
+    icon    = '▽'
+    meaning = 'Put options carry significantly higher IV than calls — the classic "fear premium." Hedging demand is elevated.'
+    action  = 'Puts are relatively expensive. If buying puts, prefer spreads. Calls may be a better value play.'
+  } else {
+    regime  = 'BALANCED MARKET'
+    color   = '#f59e0b'
+    bg      = '#080600'
+    border  = '#78350f'
+    icon    = '—'
+    meaning = `IV Rank ${ivRank != null ? Math.round(ivRank) : 'N/A'} — neutral conditions. No strong pricing anomaly detected.`
+    action  = 'No regime edge in either direction. Focus on signal quality and position sizing.'
+  }
+
+  return (
+    <div style={{
+      background: bg, border: `1px solid ${border}`,
+      borderRadius: 10, padding: '12px 16px', marginBottom: 0,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.2, color: '#2a4060', textTransform: 'uppercase' }}>Options Regime</span>
+            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.2, color: color,
+              background: `${color}15`, border: `1px solid ${color}40`,
+              borderRadius: 4, padding: '1px 7px',
+            }}>{icon} {regime}</span>
+          </div>
+          <div style={{ fontSize: 12, color: '#b0c4d8', lineHeight: 1.6, marginBottom: 5 }}>{meaning}</div>
+          <div style={{ fontSize: 11, color: color, fontWeight: 700, lineHeight: 1.5 }}>→ {action}</div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 140 }}>
+          {ivRank != null && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#4a6a8a' }}>
+              <span>IV Rank</span>
+              <span style={{ fontWeight: 800, color: ivRank > 60 ? '#ef4444' : ivRank < 25 ? '#10b981' : '#f59e0b' }}>{Math.round(ivRank)}/100</span>
+            </div>
+          )}
+          {tsShape && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#4a6a8a' }}>
+              <span>Term Structure</span>
+              <span style={{ fontWeight: 800, color: tsShape === 'backwardation' ? '#ef4444' : tsShape === 'contango' ? '#10b981' : '#f59e0b', textTransform: 'capitalize' }}>{tsShape}</span>
+            </div>
+          )}
+          {lean?.dir && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#4a6a8a' }}>
+              <span>IV Skew</span>
+              <span style={{ fontWeight: 800, color: lean.dir === 'bull' ? '#10b981' : lean.dir === 'bear' ? '#ef4444' : '#f59e0b', textTransform: 'capitalize' }}>
+                {lean.strength === 'strong' ? 'Strong ' : ''}{lean.dir}
+              </span>
+            </div>
+          )}
+          {gex != null && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#4a6a8a' }}>
+              <span>GEX</span>
+              <span style={{ fontWeight: 800, color: gex >= 0 ? '#10b981' : '#ef4444' }}>
+                {gex >= 0 ? '+' : ''}{(gex / 1e9).toFixed(1)}B
+              </span>
+            </div>
+          )}
+          {pcoi != null && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#4a6a8a' }}>
+              <span>P/C OI</span>
+              <span style={{ fontWeight: 800, color: pcoi < 0.75 ? '#10b981' : pcoi > 1.3 ? '#ef4444' : '#f59e0b' }}>{pcoi.toFixed(2)}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Expected Move Visualizer ──────────────────────────────────────────────────
+function ExpectedMoveVisualizer({ currentPrice, sigma, ivData }) {
+  if (!currentPrice || !sigma) return null
+
+  const DAILY_VOL = sigma / Math.sqrt(252)
+
+  const horizons = [
+    { label: '1 Week',  days: 7  },
+    { label: '2 Weeks', days: 14 },
+    { label: '1 Month', days: 30 },
+    { label: '45 Days', days: 45 },
+  ]
+
+  const moves = horizons.map(h => {
+    const move1s = currentPrice * DAILY_VOL * Math.sqrt(h.days)
+    const move2s = move1s * 2
+    return {
+      ...h,
+      move1s,
+      move2s,
+      lo1: currentPrice - move1s,
+      hi1: currentPrice + move1s,
+      lo2: currentPrice - move2s,
+      hi2: currentPrice + move2s,
+      pct1s: (move1s / currentPrice * 100),
+    }
+  })
+
+  const iv = ivData?.atmIV ?? (sigma * 100)
+
+  return (
+    <div style={{
+      background: '#030a14', border: '1px solid #0e1e30',
+      borderRadius: 10, padding: '12px 16px', marginBottom: 0,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+        <div>
+          <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.2, color: '#2a4060', textTransform: 'uppercase' }}>Expected Move</span>
+          <span style={{ fontSize: 10, color: '#4a6a8a', marginLeft: 8 }}>from options-implied volatility ({iv.toFixed(1)}% IV)</span>
+        </div>
+        <div style={{ fontSize: 10, color: '#2a4060' }}>
+          68% probability = 1σ · 95% probability = 2σ
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+        {moves.map(m => (
+          <div key={m.label} style={{
+            background: '#060d18', borderRadius: 8, padding: '10px 12px',
+            border: '1px solid #0e1e30',
+          }}>
+            <div style={{ fontSize: 9, color: '#2a4060', fontWeight: 700, marginBottom: 6 }}>{m.label.toUpperCase()}</div>
+            <div style={{ marginBottom: 5 }}>
+              <div style={{ fontSize: 8, color: '#2a4060', marginBottom: 2 }}>68% chance stays between</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#60a5fa' }}>
+                ${m.lo1.toFixed(2)} – ${m.hi1.toFixed(2)}
+              </div>
+              <div style={{ fontSize: 10, color: '#4a6a8a' }}>±{m.pct1s.toFixed(1)}%</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 8, color: '#2a4060', marginBottom: 2 }}>95% chance stays between</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#2a4060' }}>
+                ${m.lo2.toFixed(2)} – ${m.hi2.toFixed(2)}
+              </div>
+              <div style={{ fontSize: 10, color: '#1a3050' }}>±{(m.pct1s * 2).toFixed(1)}%</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 10, color: '#1a3050', marginTop: 8, lineHeight: 1.5 }}>
+        These ranges are calculated from the options market's own implied volatility — not a price target.
+        A 1σ range means the market is pricing a 68% probability that price stays inside those bounds over that timeframe.
+        Wide ranges = high uncertainty. Narrow ranges = low volatility environment.
+      </div>
+    </div>
+  )
+}
+
+// ── GEX Strike Bars (compact) ─────────────────────────────────────────────────
+function GEXStripCompact({ optionsChain, currentPrice }) {
+  if (!optionsChain?.contracts?.length || !currentPrice) return null
+
+  const byStrike = {}
+  for (const c of optionsChain.contracts) {
+    if (!c.strike) continue
+    const sk = c.strike
+    if (!byStrike[sk]) byStrike[sk] = { strike: sk, net: 0 }
+    const gexContrib = (c.gamma ?? 0) * (c.openInterest ?? 0) * 100 * currentPrice * currentPrice * 0.01
+    if (c.type === 'call') byStrike[sk].net += gexContrib
+    else                   byStrike[sk].net -= gexContrib
+  }
+
+  const rows = Object.values(byStrike)
+    .filter(r => Math.abs(r.net) > 0)
+    .sort((a, b) => Math.abs(b.net) - Math.abs(a.net))
+    .slice(0, 8)
+
+  if (!rows.length) return null
+
+  const maxAbs = Math.max(...rows.map(r => Math.abs(r.net)))
+  if (maxAbs === 0) return null
+
+  rows.sort((a, b) => a.strike - b.strike)
+
+  const keyStrikes = [
+    optionsChain.callWall,
+    optionsChain.putWall,
+    optionsChain.maxPain,
+  ].filter(Boolean)
+
+  return (
+    <div style={{
+      background: '#030a14', border: '1px solid #0e1e30',
+      borderRadius: 10, padding: '12px 16px', marginBottom: 0,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div>
+          <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.2, color: '#2a4060', textTransform: 'uppercase' }}>GEX by Strike</span>
+          <span style={{ fontSize: 10, color: '#4a6a8a', marginLeft: 8 }}>Dealer gamma exposure — where price gets pinned or amplified</span>
+        </div>
+        <div style={{ fontSize: 9, color: '#2a4060' }}>
+          <span style={{ color: '#10b981' }}>■</span> Long gamma (stabilizing){'  '}
+          <span style={{ color: '#ef4444' }}>■</span> Short gamma (amplifying)
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {rows.map(r => {
+          const isPos   = r.net >= 0
+          const barPct  = Math.abs(r.net) / maxAbs * 100
+          const isCur   = Math.abs(r.strike - currentPrice) / currentPrice < 0.005
+          const col     = isPos ? '#10b981' : '#ef4444'
+          const label   = (() => {
+            if (r.strike === optionsChain.callWall) return 'CALL WALL'
+            if (r.strike === optionsChain.putWall)  return 'PUT WALL'
+            if (r.strike === optionsChain.maxPain)  return 'MAX PAIN'
+            return null
+          })()
+
+          return (
+            <div key={r.strike} style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: isCur ? '#030f20' : 'transparent',
+              borderRadius: 4, padding: '2px 4px',
+            }}>
+              <div style={{ width: 54, fontSize: 11, fontWeight: 700,
+                color: isCur ? '#60a5fa' : '#4a6a8a', textAlign: 'right', flexShrink: 0 }}>
+                ${r.strike}
+                {isCur && <span style={{ fontSize: 8, color: '#60a5fa', marginLeft: 3 }}>←</span>}
+              </div>
+              <div style={{ flex: 1, height: 14, background: '#0a1520', borderRadius: 3, overflow: 'hidden', position: 'relative' }}>
+                {isPos ? (
+                  <div style={{ position: 'absolute', left: 0, top: 0, height: '100%',
+                    width: `${barPct}%`, background: `${col}66`, borderRadius: 3 }} />
+                ) : (
+                  <div style={{ position: 'absolute', right: 0, top: 0, height: '100%',
+                    width: `${barPct}%`, background: `${col}66`, borderRadius: 3 }} />
+                )}
+              </div>
+              <div style={{ width: 80, fontSize: 9, color: col, fontWeight: 700, flexShrink: 0 }}>
+                {isPos ? '+' : ''}{(r.net / 1e6).toFixed(0)}M
+                {label && <span style={{ fontSize: 8, color: '#2a4060', marginLeft: 4 }}>{label}</span>}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div style={{ fontSize: 10, color: '#1a3050', marginTop: 8, lineHeight: 1.5 }}>
+        Positive GEX (green): dealers are long gamma here — they buy dips and sell rips, acting as a stabilizer.
+        Negative GEX (red): dealers are short gamma — they must buy when price rises and sell when it falls, amplifying moves.
+        The strike with the most positive GEX is a gravitational pin level.
+      </div>
+    </div>
+  )
+}
+
 // ── Direction bar ─────────────────────────────────────────────────────────────
+// ── Green Light Protocol ──────────────────────────────────────────────────────
+// Unified go/no-go banner — checks all conditions before entry.
+function GreenLightProtocol({ masterSignal, ivData, earningsDate, recs }) {
+  if (!masterSignal) return null
+
+  const now    = new Date()
+  const etMin  = (now.getUTCHours() * 60 + now.getUTCMinutes() - 300 + 1440) % 1440
+  const marketOpen = etMin >= 570 && etMin < 960        // 9:30am–4:00pm ET
+
+  const inNoiseWin = marketOpen && ((etMin >= 570 && etMin < 600) || (etMin >= 930 && etMin < 960))  // 9:30-10, 3:30-4
+  const events     = getUpcomingEvents(3)
+  const hasCalRisk = events.some(e => ['FOMC', 'CPI'].includes(e.type) && e.daysAway <= 2)
+  const ivRank     = ivData?.ivRank ?? null
+  const ivOk       = ivRank == null || ivRank < 60
+  const sigOk      = !masterSignal.blocked && !!masterSignal.direction
+  const confOk     = (masterSignal.confidence ?? 0) >= 55
+  const tfOk       = (masterSignal.tfScore    ?? 0) >= 3
+  const earningsOk = !earningsDate || !recs?.primary
+    ? true
+    : Math.ceil((new Date(earningsDate) - now) / 86400000) > recs.primary.dte
+
+  const checks = [
+    { label: 'Signal not blocked',             ok: sigOk,        critical: true  },
+    { label: `Confidence ≥55 (${masterSignal.confidence ?? '?'})`, ok: confOk, critical: false },
+    { label: `TFs ≥3/4 (${masterSignal.tfScore ?? 0}/4)`,         ok: tfOk,   critical: false },
+    { label: ivRank != null ? `IV rank <60 (${Math.round(ivRank)})` : 'IV rank unknown', ok: ivOk, critical: false },
+    { label: 'No FOMC/CPI within 2 days',       ok: !hasCalRisk,  critical: true  },
+    { label: inNoiseWin ? 'In noise window ⚠' : 'Outside noise window', ok: !inNoiseWin, critical: false },
+    { label: 'No earnings in DTE window',        ok: earningsOk,   critical: true  },
+  ]
+
+  const hardFails  = checks.filter(c => c.critical && !c.ok)
+  const totalFails = checks.filter(c => !c.ok)
+  const allClear   = totalFails.length === 0
+
+  const color  = allClear ? '#10b981' : hardFails.length ? '#ef4444' : '#f59e0b'
+  const bg     = allClear ? '#001a0d' : hardFails.length ? '#1a0000' : '#100800'
+  const border = allClear ? '#065f46' : hardFails.length ? '#7f1d1d' : '#78350f'
+  const label  = !marketOpen
+    ? (allClear ? '📋 PRE-MARKET PLAN — conditions clear' : hardFails.length ? '📋 PRE-MARKET PLAN — hard blocks present' : '📋 PRE-MARKET PLAN — review cautions before open')
+    : (allClear ? '🟢 CLEARED TO ENTER' : hardFails.length ? '🔴 DO NOT ENTER' : '🟡 PROCEED WITH CAUTION')
+
+  return (
+    <div style={{ background: bg, border: `2px solid ${border}`, borderRadius: 8, padding: '10px 14px', margin: '6px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+        <span style={{ fontWeight: 900, fontSize: 12, letterSpacing: 0.8, color }}>{label}</span>
+        {totalFails.length > 0 && (
+          <span style={{ fontSize: 10, color: '#64748b' }}>
+            {totalFails.length} condition{totalFails.length > 1 ? 's' : ''} not met
+          </span>
+        )}
+        {allClear && (
+          <span style={{ fontSize: 10, color: '#065f46' }}>
+            {marketOpen ? 'All conditions aligned — execute your plan.' : 'All conditions favorable — ready for market open.'}
+          </span>
+        )}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+        {checks.map((c, i) => (
+          <span key={i} style={{
+            fontSize: 9, padding: '2px 7px', borderRadius: 3, fontWeight: 600,
+            background: c.ok ? '#011a0d' : '#1a0000',
+            color:      c.ok ? '#10b981' : '#ef4444',
+            border:     `1px solid ${c.ok ? '#065f46' : '#7f1d1d'}`,
+          }}>
+            {c.ok ? '✓' : '✗'} {c.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SeverityDivider({ emoji, label, color, borderColor }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '18px 0 6px' }}>
+      <span style={{
+        fontSize: 9, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase',
+        color, padding: '2px 8px', background: 'rgba(0,0,0,0.5)',
+        borderRadius: 3, border: `1px solid ${borderColor}`, whiteSpace: 'nowrap',
+      }}>
+        {emoji} {label}
+      </span>
+      <div style={{ flex: 1, height: 1, background: borderColor, opacity: 0.35 }} />
+    </div>
+  )
+}
+
+function SignalSummaryBar({ masterSignal, direction, conflict, sigmaLabel }) {
+  if (!masterSignal && !direction && !conflict) return null
+  const blocked  = masterSignal?.blocked || conflict
+  const dir      = masterSignal?.direction ?? direction
+  const conf     = masterSignal?.confidence
+  const tfScore  = masterSignal?.tfScore
+  const reason   = masterSignal?.blockReason
+
+  const dirColor  = blocked ? '#ef4444' : dir === 'CALL' ? '#10b981' : dir === 'PUT' ? '#ef4444' : '#64748b'
+  const dirBg     = blocked ? '#1a0000' : dir === 'CALL' ? '#001a0d' : dir === 'PUT' ? '#1a0000' : '#0a0f1a'
+  const dirBorder = blocked ? '#7f1d1d' : dir === 'CALL' ? '#065f46' : dir === 'PUT' ? '#7f1d1d' : '#1e2d45'
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10,
+      padding: '7px 12px', margin: '6px 0 4px',
+      background: dirBg, border: `1px solid ${dirBorder}`, borderRadius: 6,
+      fontSize: 11,
+    }}>
+      <span style={{
+        fontWeight: 800, fontSize: 12, letterSpacing: 1.2, color: dirColor,
+        padding: '2px 10px', background: 'rgba(0,0,0,0.35)', borderRadius: 4,
+        border: `1px solid ${dirBorder}`,
+      }}>
+        {blocked ? 'BLOCKED' : dir ?? 'NO TRADE'}
+      </span>
+      {conf != null && (
+        <span style={{ color: conf >= 70 ? '#10b981' : conf >= 45 ? '#f59e0b' : '#ef4444' }}>
+          {conf}/100 confidence
+        </span>
+      )}
+      {tfScore != null && dir && (
+        <>
+          <span style={{ color: '#334155' }}>·</span>
+          <span style={{ color: '#64748b' }}>{tfScore}/4 TFs aligned</span>
+        </>
+      )}
+      {sigmaLabel && (
+        <>
+          <span style={{ color: '#334155' }}>·</span>
+          <span style={{ color: '#475569' }}>{sigmaLabel}</span>
+        </>
+      )}
+      {reason && (
+        <>
+          <span style={{ color: '#334155' }}>·</span>
+          <span style={{ color: '#ef4444', fontSize: 10, fontWeight: 700 }}>{reason}</span>
+        </>
+      )}
+    </div>
+  )
+}
+
 function DirBar({ direction, conflict, ticker, currentPrice, setupGrade, swingSignal, cfSignal }) {
   if (conflict) return (
     <div className="opt-dir-bar opt-dir-conflict">
@@ -257,16 +763,10 @@ function IVRankBanner({ ivData }) {
   const bg   = r < 30 ? '#001a0d' : r < 60 ? '#1a0f00' : '#1a0000'
   const bord = r < 30 ? '#064e2e' : r < 60 ? '#4d3000' : '#6b0000'
   const status = r < 30 ? 'IV CHEAP' : r < 60 ? 'IV MODERATE' : 'IV EXPENSIVE'
-  const msg    = r < 30
-    ? 'Premium is cheap — good time to buy options, sizing up slightly'
-    : r < 60
-    ? 'Premium is moderate — enter with standard sizing'
-    : 'Premium is costly — sizing reduced 40% · consider waiting for IV to drop'
   return (
     <div className="opt-iv-bar" style={{ background: bg, borderColor: bord }}>
       <div className="opt-iv-left">
         <span className="opt-iv-status" style={{ color: clr }}>{status}</span>
-        <span className="opt-iv-msg">{msg}</span>
       </div>
       <div className="opt-iv-right">
         {atm && <span className="opt-iv-atm">Market IV <strong>{atm}%</strong></span>}
@@ -1171,7 +1671,7 @@ function EntryChecklist({ direction, conflict, adxSignal, earningsDate, ivData, 
 }
 
 // ── Recommendation card ───────────────────────────────────────────────────────
-function RecCard({ rec, ticker, maxRisk, currentPrice, ivRank, isQuickPlay, sigma, grade, adxSignal, wyckoffData, backtestResult }) {
+function RecCard({ rec, ticker, maxRisk, currentPrice, ivRank, isQuickPlay, sigma, grade, adxSignal, wyckoffData, backtestResult, onLog }) {
   if (!rec) return null
   const { label, dte, expDate, strike, premium, contractCost, isCall } = rec
 
@@ -1394,6 +1894,35 @@ function RecCard({ rec, ticker, maxRisk, currentPrice, ivRank, isQuickPlay, sigm
         </div>
       )}
 
+      {onLog && (
+        <button
+          onClick={() => onLog({
+            timestamp:    new Date().toISOString(),
+            ticker,
+            direction:    rec.isCall ? 'CALL' : 'PUT',
+            label:        rec.label,
+            strike:       rec.strike,
+            expDate:      rec.expDate,
+            dte:          rec.dte,
+            premium:      rec.premium,
+            contractCost: rec.contractCost,
+            qty,
+            totalCost,
+            isLive:       !!rec.isLive,
+            isQuickPlay:  !!isQuickPlay,
+          })}
+          style={{
+            width: '100%', marginTop: 10,
+            padding: '7px 0', cursor: 'pointer',
+            background: '#080f1a', border: '1px solid #1e3a5f',
+            borderRadius: 5, color: '#60a5fa',
+            fontSize: 10, fontWeight: 800, letterSpacing: 1,
+          }}
+        >
+          📋 LOG THIS TRADE
+        </button>
+      )}
+
     </div>
   )
 }
@@ -1589,14 +2118,235 @@ function ExpiryCompare({ optionsChain, currentPrice, sigma }) {
   )
 }
 
+// ── Breakeven Speed Check ─────────────────────────────────────────────────────
+function BreakevenSpeed({ rec, currentPrice, backtestResult, direction }) {
+  if (!rec || !currentPrice) return null
+
+  const { strike, dte, premium, isCall, contractCost } = rec
+
+  const bePricePerShare = premium != null ? premium : contractCost / 100
+  const bePrice = isCall
+    ? strike + bePricePerShare
+    : strike - bePricePerShare
+
+  const bePct = ((bePrice - currentPrice) / currentPrice) * 100
+  const absBePct = Math.abs(bePct)
+
+  const midPct = absBePct * 0.60
+
+  const trades = backtestResult?.trades ?? []
+  const relevantTrades = trades.filter(t => {
+    const tradeDir = direction === 'CALL' ? t.pct > 0 : t.pct < 0
+    return tradeDir
+  })
+
+  const hitBE   = relevantTrades.filter(t => Math.abs(t.pct ?? 0) >= absBePct / 100).length
+  const hitHalf = relevantTrades.filter(t => Math.abs(t.pct ?? 0) >= midPct / 100).length
+  const histFreq = relevantTrades.length > 0 ? (hitBE / relevantTrades.length * 100) : null
+  const halfFreq = relevantTrades.length > 0 ? (hitHalf / relevantTrades.length * 100) : null
+
+  const freqColor = histFreq == null ? '#4a6a8a'
+    : histFreq >= 45 ? '#10b981'
+    : histFreq >= 25 ? '#f59e0b'
+    : '#ef4444'
+
+  const verdict = histFreq == null ? null
+    : histFreq >= 45 ? 'HISTORICALLY ACHIEVABLE'
+    : histFreq >= 25 ? 'CHALLENGING BUT POSSIBLE'
+    : 'RARELY ACHIEVED — HIGH BAR'
+
+  const thetaPerDay = rec.theta != null ? Math.abs(rec.theta) * 100 : null
+
+  return (
+    <div style={{
+      background: '#030a14', border: '1px solid #0e1e30',
+      borderRadius: 10, padding: '14px 16px', marginBottom: 0,
+    }}>
+      <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.2, color: '#2a4060', textTransform: 'uppercase', marginBottom: 10 }}>
+        Breakeven Speed Check
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, marginBottom: 12 }}>
+        <div style={{ background: '#060d18', borderRadius: 8, padding: '10px 12px', border: '1px solid #0e1e30' }}>
+          <div style={{ fontSize: 8, color: '#2a4060', fontWeight: 700, marginBottom: 4 }}>BREAKEVEN PRICE</div>
+          <div style={{ fontSize: 15, fontWeight: 900, color: '#e2e8f0' }}>${bePrice.toFixed(2)}</div>
+          <div style={{ fontSize: 10, color: '#4a6a8a' }}>
+            {bePct >= 0 ? '+' : ''}{bePct.toFixed(1)}% from ${currentPrice.toFixed(2)}
+          </div>
+        </div>
+        <div style={{ background: '#060d18', borderRadius: 8, padding: '10px 12px', border: '1px solid #0e1e30' }}>
+          <div style={{ fontSize: 8, color: '#2a4060', fontWeight: 700, marginBottom: 4 }}>MOVE REQUIRED</div>
+          <div style={{ fontSize: 15, fontWeight: 900, color: '#e2e8f0' }}>{absBePct.toFixed(1)}%</div>
+          <div style={{ fontSize: 10, color: '#4a6a8a' }}>in {dte} days to expiry</div>
+        </div>
+        {histFreq != null && (
+          <div style={{ background: '#060d18', borderRadius: 8, padding: '10px 12px', border: `1px solid ${freqColor}33` }}>
+            <div style={{ fontSize: 8, color: '#2a4060', fontWeight: 700, marginBottom: 4 }}>HIST. FREQUENCY</div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: freqColor }}>{histFreq.toFixed(0)}%</div>
+            <div style={{ fontSize: 10, color: '#4a6a8a' }}>of past signals hit this</div>
+          </div>
+        )}
+        {thetaPerDay != null && (
+          <div style={{ background: '#060d18', borderRadius: 8, padding: '10px 12px', border: '1px solid #0e1e30' }}>
+            <div style={{ fontSize: 8, color: '#2a4060', fontWeight: 700, marginBottom: 4 }}>TIME COST</div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#f59e0b' }}>${thetaPerDay.toFixed(2)}/day</div>
+            <div style={{ fontSize: 10, color: '#4a6a8a' }}>theta decay per contract</div>
+          </div>
+        )}
+      </div>
+
+      {verdict && (
+        <div style={{
+          padding: '8px 12px',
+          background: histFreq >= 45 ? '#010e07' : histFreq >= 25 ? '#080600' : '#0e0101',
+          border: `1px solid ${freqColor}33`,
+          borderRadius: 6, marginBottom: 8,
+        }}>
+          <span style={{ fontSize: 10, fontWeight: 800, color: freqColor }}>{verdict}</span>
+          <span style={{ fontSize: 10, color: '#4a6a8a', marginLeft: 8 }}>
+            {histFreq != null && relevantTrades.length > 0
+              ? `Based on ${relevantTrades.length} historical ${direction?.toLowerCase()} signals.`
+              : ''}
+          </span>
+        </div>
+      )}
+
+      {halfFreq != null && (
+        <div style={{ fontSize: 10, color: '#4a6a8a', lineHeight: 1.6 }}>
+          <strong style={{ color: '#2a4060' }}>Early exit at 50% time:</strong>{' '}
+          Only needs a ~{midPct.toFixed(1)}% move to be profitable if you exit before expiry.
+          Historically achieved {halfFreq.toFixed(0)}% of the time.{' '}
+          <span style={{ color: '#1a3050' }}>Rule of thumb: if your option doubles, sell half. Never hold to expiry unless you have to.</span>
+        </div>
+      )}
+
+      {!trades.length && (
+        <div style={{ fontSize: 10, color: '#1a3050', fontStyle: 'italic' }}>
+          Run the Backtest tab to add historical frequency data to this calculator.
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Optimal Expiry Selector ───────────────────────────────────────────────────
+function OptimalExpirySelector({ optionsChain, currentPrice, sigma, direction, backtestResult }) {
+  if (!currentPrice || !sigma) return null
+
+  const trades = backtestResult?.trades ?? []
+
+  const DTE_BUCKETS = [
+    { label: '2 Weeks', dte: 14, desc: 'Fastest / cheapest. High theta risk.' },
+    { label: '3 Weeks', dte: 21, desc: 'Minimum recommended DTE for directional plays.' },
+    { label: '1 Month', dte: 30, desc: 'Standard entry DTE. Balanced cost vs. time.' },
+    { label: '45 Days', dte: 45, desc: 'Sweet spot for most swing trades.' },
+    { label: '2 Months', dte: 60, desc: 'More time, more cost. Best for lower-conviction setups.' },
+  ]
+
+  const approxPremium = (S, dte, sig) => {
+    const T = dte / 365
+    const move = S * sig * Math.sqrt(T)
+    return Math.max(0.01, move * 0.4)
+  }
+
+  const winRateForDTE = dte => {
+    if (!trades.length) return null
+    const rel = trades.filter(t => (t.bars ?? 999) <= dte * 0.7)
+    if (rel.length < 3) return null
+    return rel.filter(t => t.win).length / rel.length * 100
+  }
+
+  const rows = DTE_BUCKETS.map(b => {
+    const estCost = approxPremium(currentPrice, b.dte, sigma) * 100
+    const wr      = winRateForDTE(b.dte)
+    const theta   = estCost / b.dte
+    const isBest  = b.dte >= 30 && b.dte <= 45
+    return { ...b, estCost, wr, theta, isBest }
+  })
+
+  const hasHistData = rows.some(r => r.wr != null)
+
+  return (
+    <div style={{
+      background: '#030a14', border: '1px solid #0e1e30',
+      borderRadius: 10, padding: '14px 16px', marginTop: 12,
+    }}>
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.2, color: '#2a4060', textTransform: 'uppercase', marginBottom: 4 }}>
+          Optimal Expiry Selector
+        </div>
+        <div style={{ fontSize: 11, color: '#4a6a8a' }}>
+          Which expiration gives you the best balance of cost, time, and historical edge for this ticker?
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 8 }}>
+        {rows.map(r => (
+          <div key={r.dte} style={{
+            background: r.isBest ? '#010e07' : '#060d18',
+            border: `1px solid ${r.isBest ? '#065f46' : '#0e1e30'}`,
+            borderRadius: 8, padding: '10px 12px',
+            position: 'relative',
+          }}>
+            {r.isBest && (
+              <div style={{
+                position: 'absolute', top: -1, right: -1,
+                background: '#065f46', color: '#10b981',
+                fontSize: 8, fontWeight: 800, padding: '2px 7px',
+                borderRadius: '0 8px 0 6px', letterSpacing: 0.5,
+              }}>SWEET SPOT</div>
+            )}
+            <div style={{ fontSize: 10, fontWeight: 800, color: r.isBest ? '#10b981' : '#e2e8f0', marginBottom: 6 }}>
+              {r.label}
+              <span style={{ fontSize: 9, color: '#2a4060', marginLeft: 4 }}>({r.dte}d)</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 10, color: '#4a6a8a' }}>Est. cost</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#e2e8f0' }}>${r.estCost.toFixed(0)}/contract</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 10, color: '#4a6a8a' }}>Theta/day</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b' }}>-${r.theta.toFixed(2)}</span>
+              </div>
+              {r.wr != null && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 10, color: '#4a6a8a' }}>Hist. win rate</span>
+                  <span style={{ fontSize: 10, fontWeight: 700,
+                    color: r.wr >= 50 ? '#10b981' : r.wr >= 35 ? '#f59e0b' : '#ef4444'
+                  }}>{r.wr.toFixed(0)}%</span>
+                </div>
+              )}
+            </div>
+            <div style={{ fontSize: 9, color: '#1a3050', marginTop: 6, lineHeight: 1.4 }}>{r.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      {!hasHistData && (
+        <div style={{ fontSize: 10, color: '#1a3050', marginTop: 10, fontStyle: 'italic' }}>
+          Historical win rates by DTE appear here once you run the Backtest tab for this ticker.
+        </div>
+      )}
+
+      <div style={{ fontSize: 10, color: '#1a3050', marginTop: 10, lineHeight: 1.6 }}>
+        <strong style={{ color: '#2a4060' }}>General rule:</strong> 30–45 DTE is the sweet spot for most directional plays.
+        You have enough time for the trade to work without paying excessive theta.
+        Never buy options with less than 21 days unless you have an A+ grade setup with confirmed entry.
+      </div>
+    </div>
+  )
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 export default function OptionsChain({
   ticker, currentPrice, historicalVol, swingResult, confluenceResult,
   setupGrade, patterns, hsPatterns, ivData, lastUpdated,
   earningsDate, adxSignal, optionsChain, chainFetchDone, onRetryChain,
-  backtestResult, wyckoffData,
+  backtestResult, wyckoffData, masterSignal, onLogTrade,
 }) {
   const [conviction,    setConviction]    = useState('standard')
+  const convictionLockedRef = useRef(false)  // prevents auto-set from overriding user's click
   const [optionsView,   setOptionsView]   = useState('recommendations')  // 'recommendations' | 'structure'
 
   const accountSize = +(localStorage.getItem('rp_account')  || 25000)
@@ -1606,26 +2356,101 @@ export default function OptionsChain({
   const swingSignal = swingResult?.signal
   const cfSignal    = confluenceResult?.signal
 
-  let direction = null
-  if      (swingSignal === 'LONG') direction = 'CALL'
-  else if (swingSignal === 'EXIT') direction = 'PUT'
-  else if (cfSignal === 'CALL')    direction = 'CALL'
-  else if (cfSignal === 'PUT')     direction = 'PUT'
+  // masterSignal is the single source of truth for direction, conflict, and sigma.
+  // Falls back to local computation if masterSignal is not yet available.
+  const direction = masterSignal != null
+    ? masterSignal.direction
+    : (() => {
+        if (swingSignal === 'LONG' || cfSignal === 'CALL') return 'CALL'
+        if (swingSignal === 'EXIT' || cfSignal === 'PUT')  return 'PUT'
+        return null
+      })()
 
-  const conflict = (swingSignal === 'LONG' && cfSignal === 'PUT') ||
-                   (swingSignal === 'EXIT' && cfSignal === 'CALL')
+  const conflict = masterSignal != null
+    ? masterSignal.blocked
+    : ((swingSignal === 'LONG' && cfSignal === 'PUT') || (swingSignal === 'EXIT' && cfSignal === 'CALL'))
 
-  // Prefer market IV from Yahoo Finance quote; fall back to historical vol
-  const sigma      = ivData?.atmIV != null ? ivData.atmIV / 100 : (historicalVol ?? 0.30)
-  const sigmaLabel = ivData?.atmIV != null
+  // Use masterSignal sigma (best available, computed from live IV → 30d HVol → ticker-derived estimate)
+  const sigma      = masterSignal?.sigma ?? (ivData?.atmIV != null ? ivData.atmIV / 100 : (historicalVol ?? 0.25))
+  const sigmaLabel = masterSignal?.sigmaLabel ?? (ivData?.atmIV != null
     ? `Market IV ${(+ivData.atmIV).toFixed(1)}%`
-    : `30d HVol ${(sigma * 100).toFixed(1)}%`
+    : `30d HVol ${(sigma * 100).toFixed(1)}%`)
 
   const patternTarget = direction === 'CALL'
     ? (patterns?.doubleBottom?.target ?? hsPatterns?.inverseHAndS?.target ?? null)
     : (patterns?.doubleTop?.target    ?? hsPatterns?.headAndShoulders?.target ?? null)
 
   const ivRank = ivData?.ivRank ?? null
+
+  // ── Auto-Conviction: multi-factor formula ────────────────────────────────────
+  // Reset manual lock when the ticker changes so auto-set applies to each new stock.
+  useEffect(() => { convictionLockedRef.current = false }, [ticker])
+
+  // Runs whenever signal quality, IV, Wyckoff, or backtest changes.
+  // Skipped if the user has manually clicked a conviction level.
+  useEffect(() => {
+    if (convictionLockedRef.current) return  // user manually selected — don't override
+    if (conflict || !direction) { setConviction('standard'); return }
+    const conf    = masterSignal?.confidence ?? 0
+    const tfScore = masterSignal?.tfScore    ?? 0
+    const r       = ivRank ?? 50
+    const wyPhase = (wyckoffData?.phase ?? '').toLowerCase()
+    const wyckOk  = direction === 'CALL'
+      ? wyPhase.includes('accumulation') || wyPhase.includes('markup')
+      : direction === 'PUT'
+      ? wyPhase.includes('distribution') || wyPhase.includes('markdown')
+      : true
+    const winRate = backtestResult?.winRate ?? 0
+    if (conf < 55 || r > 60 || tfScore < 2) { setConviction('conservative'); return }
+    if (conf >= 70 && tfScore >= 4 && r < 30 && wyckOk && winRate >= 0.60) { setConviction('aggressive'); return }
+    setConviction('standard')
+  }, [direction, conflict, masterSignal, ivRank, wyckoffData, backtestResult])
+
+  // ── Smart Chain Refresh: price-drift tracking ─────────────────────────────────
+  const chainFetchPriceRef  = useRef(null)
+  const chainFetchTimeRef   = useRef(null)
+  const [chainDriftPct, setChainDriftPct] = useState(null)
+  const [refreshIn, setRefreshIn]         = useState(null)  // seconds to next auto-refresh
+
+  // Record price when chain loads
+  useEffect(() => {
+    if (optionsChain && currentPrice) {
+      chainFetchPriceRef.current = currentPrice
+      chainFetchTimeRef.current  = Date.now()
+      setChainDriftPct(null)
+    }
+  }, [optionsChain])
+
+  // Price-drift watcher — trigger retry when price moves > 0.5%
+  useEffect(() => {
+    const fetchPrice = chainFetchPriceRef.current
+    if (!fetchPrice || !currentPrice || !onRetryChain) return
+    const drift = Math.abs(currentPrice - fetchPrice) / fetchPrice
+    setChainDriftPct(drift > 0.001 ? +(drift * 100).toFixed(2) : null)
+    if (drift > 0.005) {
+      chainFetchPriceRef.current = currentPrice  // prevent repeat trigger
+      onRetryChain()
+    }
+  }, [currentPrice])
+
+  // 5-minute auto-refresh countdown + trigger during market hours
+  useEffect(() => {
+    if (!onRetryChain) return
+    const INTERVAL = 5 * 60 * 1000
+    const tick = () => {
+      const elapsed = Date.now() - (chainFetchTimeRef.current ?? Date.now())
+      const secs = Math.max(0, Math.ceil((INTERVAL - elapsed) / 1000))
+      setRefreshIn(secs)
+      if (elapsed >= INTERVAL) {
+        const now = new Date()
+        const etHour = (now.getUTCHours() * 60 + now.getUTCMinutes() - 300 + 1440) % 1440 / 60
+        if (etHour >= 9.5 && etHour < 16) onRetryChain()
+      }
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [onRetryChain, optionsChain])
 
   const chainTimestamps = optionsChain?.expirationDates ?? null
 
@@ -1700,7 +2525,16 @@ export default function OptionsChain({
 
       {/* Expiration comparison table */}
       {optionsView === 'expiry' && (
-        <ExpiryCompare optionsChain={optionsChain} currentPrice={currentPrice} sigma={sigma} />
+        <>
+          <ExpiryCompare optionsChain={optionsChain} currentPrice={currentPrice} sigma={sigma} />
+          <OptimalExpirySelector
+            optionsChain={optionsChain}
+            currentPrice={currentPrice}
+            sigma={sigma}
+            direction={conflict ? null : direction}
+            backtestResult={backtestResult}
+          />
+        </>
       )}
 
       {/* Recommendations view */}
@@ -1719,9 +2553,17 @@ export default function OptionsChain({
         conflict={conflict}
         ticker={ticker}
         currentPrice={currentPrice}
-        setupGrade={setupGrade}   // full object — DirBar uses setupGrade.grade internally
+        setupGrade={setupGrade}
         swingSignal={swingSignal}
         cfSignal={cfSignal}
+      />
+
+      {/* One-line master status bar — direction, confidence, TF score, vol, block reason */}
+      <SignalSummaryBar
+        masterSignal={masterSignal}
+        direction={conflict ? null : direction}
+        conflict={conflict}
+        sigmaLabel={sigmaLabel}
       />
 
       <SignalHint direction={conflict ? null : direction} conflict={conflict} />
@@ -1749,96 +2591,49 @@ export default function OptionsChain({
         <span className="opt-acct-note">Change risk % in Analyze → Timing → Risk Panel</span>
       </div>
 
-      <IVRankBanner ivData={ivData} />
-
-      <MarketSentimentStrip optionsChain={optionsChain} currentPrice={currentPrice} />
-
-      {/* Chain status banners */}
-      {chainFetchDone && !optionsChain && (
-        <div className="opt-chain-unavail">
-          <span className="opt-chain-icon">↺</span>
-          <div>
-            <div className="opt-chain-unavail-title">Live chain unavailable</div>
-            <div className="opt-chain-unavail-sub">
-              Expiration dates are estimated (3rd Friday each month) — actual available expirations
-              may differ. Premiums and strikes are Black-Scholes estimates.
-              Verify all details on your broker before placing any order.
-            </div>
-          </div>
-          {onRetryChain && (
-            <button className="opt-chain-retry-btn" onClick={onRetryChain}>Retry Chain</button>
-          )}
-        </div>
-      )}
-      {optionsChain && !optionsChain.empty && (
-        <div className="opt-chain-ok">
-          ✓ Live chain loaded · real expiry dates · {optionsChain.expiryCount ?? '?'} expiries
-        </div>
-      )}
-
-      <EarningsWarning earningsDate={earningsDate} recs={recs} />
-
-      <SpreadAlert ivRank={ivRank} direction={direction} currentPrice={currentPrice} sigma={sigma} recs={recs} />
-
-      <EdgeDecayBanner
-        monthlyBreakdown={backtestResult?.monthlyBreakdown}
-        allTimeWinRate={backtestResult?.winRate ?? 0}
-      />
-
-      <EntryChecklist
-        direction={conflict ? null : direction}
-        conflict={conflict}
-        adxSignal={adxSignal}
-        earningsDate={earningsDate}
-        ivData={ivData}
-        setupGrade={setupGrade}
-        wyckoffData={wyckoffData}
-        backtestResult={backtestResult}
-      />
-
+      {/* ── Conviction — top of view so it controls the Picks below ── */}
       {direction && !conflict && (
-        <ConvictionBar conviction={conviction} onChange={setConviction} />
+        <>
+          <div style={{ fontSize: 9, color: '#3a5070', marginBottom: 2, letterSpacing: 0.5 }}>
+            CONVICTION — controls which delta (strike moneyness) is targeted · AUTO-SET · click to override
+          </div>
+          <ConvictionBar conviction={conviction} onChange={(key) => {
+            convictionLockedRef.current = true
+            setConviction(key)
+          }} />
+        </>
       )}
 
-      {conflict && (
-        <div className="opt-conflict-note">
-          ⚠ Signals conflict — Timing says {swingSignal === 'LONG' ? 'go long' : 'exit/short'} but Signals (confluence) says {cfSignal}.
-          Both must agree before entering any option position.
-        </div>
-      )}
-
+      {/* ── PICKS ───────────────────────────────────────────────────────────── */}
       {recs && (
         <>
-          {/* Quick play — appears only on A / A+ setups */}
-          {/* GEX structure recommendation */}
+          <SeverityDivider emoji="🎯" label="Picks" color="#6366f1" borderColor="#312e81" />
           <GEXStructureRec
             totalNetGEX={optionsChain?.totalNetGEX}
             direction={conflict ? null : direction}
           />
-
-          {recs.quickPlay && (
-            <div className="opt-quickplay-section">
-              <div className="opt-quickplay-header">
-                ⚡ QUICK PLAY ACTIVATED · {setupGrade?.grade} GRADE · HIGH GAMMA · CONFIRM 4H SIGNAL FIRST
+          <div className="opt-picks-row" style={recs.quickPlay ? { gridTemplateColumns: '1fr 1fr 1fr' } : undefined}>
+            {recs.quickPlay && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                <div className="opt-quickplay-header" style={{ borderRadius: '6px 6px 0 0', marginBottom: 0 }}>
+                  ⚡ QUICK PLAY · {setupGrade?.grade} GRADE · CONFIRM 4H FIRST
+                </div>
+                <RecCard
+                  rec={recs.quickPlay}
+                  ticker={ticker}
+                  maxRisk={maxRisk}
+                  currentPrice={currentPrice}
+                  ivRank={ivRank}
+                  sigma={sigma}
+                  grade={setupGrade}
+                  adxSignal={adxSignal}
+                  wyckoffData={wyckoffData}
+                  backtestResult={backtestResult}
+                  onLog={onLogTrade}
+                  isQuickPlay
+                />
               </div>
-              <RecCard
-                rec={recs.quickPlay}
-                ticker={ticker}
-                maxRisk={maxRisk}
-                currentPrice={currentPrice}
-                ivRank={ivRank}
-                sigma={sigma}
-                grade={setupGrade}
-                adxSignal={adxSignal}
-                wyckoffData={wyckoffData}
-                backtestResult={backtestResult}
-                isQuickPlay
-              />
-            </div>
-          )}
-
-          {/* Primary + Extended side by side */}
-          <div className="opt-picks-row">
+            )}
             <RecCard
               rec={recs.primary}
               ticker={ticker}
@@ -1850,6 +2645,7 @@ export default function OptionsChain({
               adxSignal={adxSignal}
               wyckoffData={wyckoffData}
               backtestResult={backtestResult}
+              onLog={onLogTrade}
             />
             <RecCard
               rec={recs.extended}
@@ -1862,92 +2658,191 @@ export default function OptionsChain({
               adxSignal={adxSignal}
               wyckoffData={wyckoffData}
               backtestResult={backtestResult}
+              onLog={onLogTrade}
             />
-          </div>
-
-          {/* Theta decay calendar — primary pick */}
-          {recs.primary && (
-            <ThetaCalendar
-              rec={recs.primary}
-              sigma={sigma}
-              currentPrice={currentPrice}
-              medianHold={computeMedianBarsHeld(backtestResult?.trades ?? [])}
-            />
-          )}
-
-          {/* Historical strike calibration */}
-          {recs.primary && (
-            <HistoricalStrikeHint
-              trades={backtestResult?.trades}
-              currentPrice={currentPrice}
-              direction={conflict ? null : direction}
-              recStrike={recs.primary?.strike}
-            />
-          )}
-
-          {/* Grade × Regime matrix */}
-          <GradeRegimeMatrix trades={backtestResult?.trades} />
-
-          {/* P&L scenario table — primary pick */}
-          {recs.primary && (() => {
-            const mfb = computeMultiFactorBudget(maxRisk, ivRank, wyckoffData, backtestResult)
-            const qty = recs.primary.contractCost > 0
-              ? Math.floor(mfb.budget / recs.primary.contractCost)
-              : 0
-            return (
-              <PnLScenarios
-                rec={recs.primary}
-                currentPrice={currentPrice}
-                qty={qty}
-                backtestResult={backtestResult}
-              />
-            )
-          })()}
-
-          {/* Strike comparison — primary expiry, real chain strikes when available */}
-          {recs.primary && (
-            <StrikeComparison
-              rec={recs.primary}
-              currentPrice={currentPrice}
-              ticker={ticker}
-              liveContracts={optionsChain?.contracts}
-            />
-          )}
-
-          {/* P&L curve — primary pick */}
-          {recs.primary && recs.primary.strike && recs.primary.dte > 0 && (() => {
-            const { budget } = ivBudget(maxRisk, ivRank)
-            const qty     = recs.primary.contractCost > 0 ? Math.floor(budget / recs.primary.contractCost) : 1
-            const premium = recs.primary.contractCost / 100  // per share
-            return (
-              <OptionsPnlGraph
-                S={currentPrice}
-                K={recs.primary.strike}
-                T={recs.primary.dte / 365}
-                sigma={sigma}
-                isCall={direction === 'CALL'}
-                premium={premium}
-                contracts={Math.max(1, qty)}
-              />
-            )
-          })()}
-
-          <div className="opt-disclaimer">
-            {recs?.primary?.isLive
-              ? `ℹ Premiums sourced from live bid/ask mid-price (${sigmaLabel}). Greeks use per-contract implied volatility. Verify on your broker before placing any order.`
-              : `ℹ Premiums are Black-Scholes theoretical estimates using ${sigmaLabel}. Actual market prices will differ — verify on your broker before placing any order.`
-            }
-            {chainTimestamps?.length
-              ? ' Expiry dates are real Yahoo Finance dates — expirations match your broker.'
-              : ' Expiry dates are estimated (3rd Friday of each month) — actual expirations may differ.'
-            }
-            {setupGrade && ` DTE floors are grade-adaptive: ${setupGrade.grade} grade uses ${
-              setupGrade.grade === 'A+' ? '25' : setupGrade.grade === 'A' ? '30'
-              : setupGrade.grade === 'B' ? '38' : '48'
-            }d minimum.`}
           </div>
         </>
       )}
+
+      {/* ── CRITICAL ────────────────────────────────────────────────────────── */}
+      {/* Compute severity for OptionsRegimeClassifier so it renders in the right tier */}
+      {(() => {
+        const r   = ivRank
+        const gex = optionsChain?.totalNetGEX
+        const ts  = optionsChain?.termStructure ?? []
+        const tsBack = ts.length >= 2
+          ? (() => { const near = ts[0]?.iv, far = ts[ts.length - 1]?.iv; return near != null && far != null && near > far * 1.05 })()
+          : false
+        const regimeCritical = (r != null && r > 70) || (gex != null && gex < -500000000) || tsBack
+        const regimeImportant = !regimeCritical && r != null && r < 20
+
+        const hasCritical = conflict
+          || !!(masterSignal?.blocked)
+          || !!(masterSignal?.conflicts?.length > 0)
+          || regimeCritical
+          || !!earningsDate
+          || (r != null && r > 60)
+
+        return (
+          <>
+            {/* Green Light Protocol — goes between Picks and Critical */}
+            <GreenLightProtocol
+              masterSignal={masterSignal}
+              ivData={ivData}
+              earningsDate={earningsDate}
+              recs={recs}
+            />
+
+            {hasCritical && (
+              <SeverityDivider emoji="🔴" label="Critical — Read Before Trading" color="#ef4444" borderColor="#7f1d1d" />
+            )}
+            {conflict && (
+              <div className="opt-conflict-note">
+                ⚠ Signals conflict — Timing says {swingSignal === 'LONG' ? 'go long' : 'exit/short'} but Signals (confluence) says {cfSignal}.
+                Both must agree before entering any option position.
+              </div>
+            )}
+            <MasterSignalWarnings masterSignal={masterSignal} />
+            {regimeCritical && (
+              <OptionsRegimeClassifier ivData={ivData} optionsChain={optionsChain} direction={conflict ? null : direction} />
+            )}
+            <EarningsWarning earningsDate={earningsDate} recs={recs} />
+            <SpreadAlert ivRank={ivRank} direction={direction} currentPrice={currentPrice} sigma={sigma} recs={recs} />
+
+            {/* ── IMPORTANT ─────────────────────────────────────────────────── */}
+            <SeverityDivider emoji="🟡" label="Important — Verify Before Entry" color="#f59e0b" borderColor="#78350f" />
+            <EntryChecklist
+              direction={conflict ? null : direction}
+              conflict={conflict}
+              adxSignal={adxSignal}
+              earningsDate={earningsDate}
+              ivData={ivData}
+              setupGrade={setupGrade}
+              wyckoffData={wyckoffData}
+              backtestResult={backtestResult}
+            />
+            <EdgeDecayBanner
+              monthlyBreakdown={backtestResult?.monthlyBreakdown}
+              allTimeWinRate={backtestResult?.winRate ?? 0}
+            />
+            <IVRankBanner ivData={ivData} />
+            {regimeImportant && (
+              <OptionsRegimeClassifier ivData={ivData} optionsChain={optionsChain} direction={conflict ? null : direction} />
+            )}
+            {chainFetchDone && !optionsChain && (
+              <div className="opt-chain-unavail">
+                <span className="opt-chain-icon">↺</span>
+                <div>
+                  <div className="opt-chain-unavail-title">Live chain unavailable</div>
+                  <div className="opt-chain-unavail-sub">
+                    Expiration dates are estimated (3rd Friday each month) — actual available expirations
+                    may differ. Premiums and strikes are Black-Scholes estimates.
+                    Verify all details on your broker before placing any order.
+                  </div>
+                </div>
+                {onRetryChain && (
+                  <button className="opt-chain-retry-btn" onClick={onRetryChain}>Retry Chain</button>
+                )}
+              </div>
+            )}
+            {optionsChain && !optionsChain.empty && (
+              <div className="opt-chain-ok">
+                ✓ Live chain loaded · real expiry dates · {optionsChain.expiryCount ?? '?'} expiries
+                {chainDriftPct != null && chainDriftPct >= 0.5 && (
+                  <span style={{ color: '#f59e0b', marginLeft: 8 }}>
+                    · ⚠ price drifted {chainDriftPct.toFixed(1)}% from chain fetch
+                  </span>
+                )}
+                {refreshIn != null && (
+                  <span style={{ color: '#3a5070', marginLeft: 8 }}>
+                    · refresh in {Math.floor(refreshIn / 60)}:{String(refreshIn % 60).padStart(2, '0')}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* ── CONTEXT ───────────────────────────────────────────────────── */}
+            <SeverityDivider emoji="🟢" label="Context" color="#10b981" borderColor="#065f46" />
+            <ExpectedMoveVisualizer currentPrice={currentPrice} sigma={sigma} ivData={ivData} />
+            <MarketSentimentStrip optionsChain={optionsChain} currentPrice={currentPrice} />
+            <GEXStripCompact optionsChain={optionsChain} currentPrice={currentPrice} />
+            {recs?.primary && (
+              <BreakevenSpeed rec={recs.primary} currentPrice={currentPrice} backtestResult={backtestResult} direction={conflict ? null : direction} />
+            )}
+
+            {/* ── ANALYSIS ──────────────────────────────────────────────────── */}
+            {recs?.primary && (
+              <>
+                <SeverityDivider emoji="📊" label="Analysis" color="#94a3b8" borderColor="#334155" />
+                <ThetaCalendar
+                  rec={recs.primary}
+                  sigma={sigma}
+                  currentPrice={currentPrice}
+                  medianHold={computeMedianBarsHeld(backtestResult?.trades ?? [])}
+                />
+                <HistoricalStrikeHint
+                  trades={backtestResult?.trades}
+                  currentPrice={currentPrice}
+                  direction={conflict ? null : direction}
+                  recStrike={recs.primary?.strike}
+                />
+                <GradeRegimeMatrix trades={backtestResult?.trades} />
+                {(() => {
+                  const mfb = computeMultiFactorBudget(maxRisk, ivRank, wyckoffData, backtestResult)
+                  const qty = recs.primary.contractCost > 0
+                    ? Math.floor(mfb.budget / recs.primary.contractCost)
+                    : 0
+                  return (
+                    <PnLScenarios
+                      rec={recs.primary}
+                      currentPrice={currentPrice}
+                      qty={qty}
+                      backtestResult={backtestResult}
+                    />
+                  )
+                })()}
+                <StrikeComparison
+                  rec={recs.primary}
+                  currentPrice={currentPrice}
+                  ticker={ticker}
+                  liveContracts={optionsChain?.contracts}
+                />
+                {recs.primary.strike && recs.primary.dte > 0 && (() => {
+                  const { budget } = ivBudget(maxRisk, ivRank)
+                  const qty     = recs.primary.contractCost > 0 ? Math.floor(budget / recs.primary.contractCost) : 1
+                  const premium = recs.primary.contractCost / 100
+                  return (
+                    <OptionsPnlGraph
+                      S={currentPrice}
+                      K={recs.primary.strike}
+                      T={recs.primary.dte / 365}
+                      sigma={sigma}
+                      isCall={direction === 'CALL'}
+                      premium={premium}
+                      contracts={Math.max(1, qty)}
+                    />
+                  )
+                })()}
+              </>
+            )}
+          </>
+        )
+      })()}
+
+      <div className="opt-disclaimer">
+        {recs?.primary?.isLive
+          ? `ℹ Premiums sourced from live bid/ask mid-price (${sigmaLabel}). Greeks use per-contract implied volatility. Verify on your broker before placing any order.`
+          : `ℹ Premiums are Black-Scholes theoretical estimates using ${sigmaLabel}. Actual market prices will differ — verify on your broker before placing any order.`
+        }
+        {chainTimestamps?.length
+          ? ' Expiry dates are real Yahoo Finance dates — expirations match your broker.'
+          : ' Expiry dates are estimated (3rd Friday of each month) — actual expirations may differ.'
+        }
+        {recs?.primary && setupGrade && ` DTE floors are grade-adaptive: ${setupGrade.grade} grade uses ${
+          setupGrade.grade === 'A+' ? '25' : setupGrade.grade === 'A' ? '30'
+          : setupGrade.grade === 'B' ? '38' : '48'
+        }d minimum.`}
+      </div>
       </>
       )}
     </div>

@@ -57,6 +57,10 @@ import { detectWyckoff } from './utils/wyckoff'
 import SPXGrowth from './components/SPXGrowth'
 import SmartAlertToast from './components/SmartAlertToast'
 import { pushAlert } from './components/AlertCenter'
+import StandDownBanner, { DailyLossGuard } from './components/StandDownBanner'
+import MorningBriefing from './components/MorningBriefing'
+import RRPlanner from './components/RRPlanner'
+import InsightCenter from './components/InsightCenter'
 import './App.css'
 
 // ── Market session detection ──────────────────────────────────────────────────
@@ -240,6 +244,7 @@ export default function App() {
   const [cycleData,      setCycleData]      = useState(null)
   const [volumeProfile,  setVolumeProfile]  = useState(null)
   const [dailyBars,      setDailyBars]      = useState(null)
+  const [spyDailyBars,  setSpyDailyBars]  = useState(null)
   const [fourHBars,      setFourHBars]      = useState(null)
   const [oneHBars,       setOneHBars]       = useState(null)
   const [fifteenMBars,   setFifteenMBars]   = useState(null)
@@ -548,6 +553,25 @@ export default function App() {
   const confluenceResult = analyzeEntry(tfStates, TIMEFRAMES)
   const swingResult      = analyzeSwing(swingStates, SWING_CATEGORIES, vwapSignal)
 
+  // ── Best available sigma — no hardcoded fallback ──────────────────────────
+  const sigmaResult = useMemo(() => {
+    if (ivData?.atmIV != null && ivData.atmIV > 0) {
+      return { sigma: ivData.atmIV / 100, source: 'live_iv', label: `Market IV ${(+ivData.atmIV).toFixed(1)}%` }
+    }
+    if (dailyBars?.closes?.length >= 31) {
+      const c = dailyBars.closes.slice(-31)
+      const rets = c.slice(1).map((v, i) => Math.log(v / c[i]))
+      const mean = rets.reduce((a, b) => a + b, 0) / rets.length
+      const variance = rets.reduce((a, b) => a + (b - mean) ** 2, 0) / rets.length
+      const hv = Math.sqrt(variance * 252)
+      return { sigma: hv, source: 'computed_hvol', label: `30d HVol ${(hv * 100).toFixed(1)}%` }
+    }
+    if (historicalVol != null && historicalVol > 0) {
+      return { sigma: historicalVol, source: 'computed_hvol', label: `30d HVol ${(historicalVol * 100).toFixed(1)}%` }
+    }
+    return { sigma: 0.25, source: 'estimated', label: 'Est. Vol 25.0%' }
+  }, [ivData, dailyBars, historicalVol])
+
   // ── Regime filter — blocks CALL signals when VIX > 28 + weekly net bearish ─
   const regimeBlocked = (() => {
     if (!liveLoaded) return false
@@ -652,16 +676,48 @@ export default function App() {
     try {
       const existing = JSON.parse(localStorage.getItem('tj_notes_v2') ?? '[]')
       const t = ticker || entry.ticker || '—'
-      const text = [
-        `${entry.action} · ${entry.pattern ?? 'Setup'} · Grade ${entry.grade}`,
-        `Entry: $${entry.entryPrice} · Stop: $${entry.stopPrice} · Target: $${entry.targetPrice}`,
-        `R:R ${entry.rrRatio}:1 · Max risk $${entry.maxRisk}`,
-      ].join('\n')
+
+      // Options trade snapshot (from "Log This Trade" button on RecCard)
+      const isOptionSnap = !!entry.strike
+      const text = isOptionSnap
+        ? [
+            `📋 OPTIONS TRADE LOGGED · ${entry.direction} · ${entry.label ?? 'Pick'}`,
+            `Strike: $${entry.strike} · Exp: ${entry.expDate} · DTE: ${entry.dte}`,
+            `Premium: ~$${entry.premium?.toFixed(2) ?? '?'}/sh · $${entry.contractCost?.toFixed(0) ?? '?'}/contract`,
+            `Size: ${entry.qty ?? 0} contract${(entry.qty ?? 0) !== 1 ? 's' : ''} · Total: $${entry.totalCost?.toFixed(0) ?? '?'}`,
+            entry.isQuickPlay ? '⚡ QUICK PLAY — confirm 4H first' : '',
+            `Signal at entry: ${entry.direction} · Logged ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+          ].filter(Boolean).join('\n')
+        : [
+            `${entry.action} · ${entry.pattern ?? 'Setup'} · Grade ${entry.grade}`,
+            `Entry: $${entry.entryPrice} · Stop: $${entry.stopPrice} · Target: $${entry.targetPrice}`,
+            `R:R ${entry.rrRatio}:1 · Max risk $${entry.maxRisk}`,
+          ].join('\n')
+
       const note = {
-        id:     String(entry.id ?? Date.now()),
-        date:   new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        ticker: t,
+        id:              String(entry.id ?? Date.now()),
+        date:            new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        ticker:          t,
         text,
+        // Structured snapshot for post-trade audit
+        tradeSnap:       isOptionSnap ? {
+          timestamp:  entry.timestamp,
+          direction:  entry.direction,
+          strike:     entry.strike,
+          expDate:    entry.expDate,
+          dte:        entry.dte,
+          premium:    entry.premium,
+          qty:        entry.qty,
+          isQuickPlay: entry.isQuickPlay,
+          signalState: masterSignal ? {
+            direction:  masterSignal.direction,
+            confidence: masterSignal.confidence,
+            tfScore:    masterSignal.tfScore,
+            blocked:    masterSignal.blocked,
+            sigmaLabel: masterSignal.sigmaLabel,
+            conflicts:  masterSignal.conflicts,
+          } : null,
+        } : null,
       }
       localStorage.setItem('tj_notes_v2', JSON.stringify([note, ...existing].slice(0, 200)))
     } catch {}
@@ -848,6 +904,168 @@ export default function App() {
 
   // ── Day Type from Initial Balance (5M chart first 30 min) ───────────────────
   const dayType = useMemo(() => calcDayType(fiveMBars), [fiveMBars])
+
+  // Fetch SPY daily closes for RS line — fires when dailyBars loads for a non-SPY ticker
+  useEffect(() => {
+    if (!dailyBars?.timestamps?.length || ticker === 'SPY' || ticker === 'SPXL' || ticker === 'SPXS') {
+      setSpyDailyBars(null)
+      return
+    }
+    let cancelled = false
+    async function fetchSPY() {
+      try {
+        const r = await fetch('/yf-api/v8/finance/chart/SPY?range=1y&interval=1d&includePrePost=false')
+        if (!r.ok) return
+        const j = await r.json()
+        const res = j?.chart?.result?.[0]
+        if (!res) return
+        const ts  = res.timestamp ?? []
+        const q   = res.indicators?.quote?.[0] ?? {}
+        const closes = q.close ?? []
+        if (!cancelled) setSpyDailyBars({ timestamps: ts, closes })
+      } catch {}
+    }
+    fetchSPY()
+    return () => { cancelled = true }
+  }, [dailyBars, ticker])
+
+  const tfAlignment = useMemo(() => {
+    const computeAlign = (bars) => {
+      if (!bars?.closes?.length || bars.closes.length < 10) return null
+      const c = bars.closes
+      const emaLast = (n) => {
+        if (c.length < n) return null
+        const k = 2 / (n + 1)
+        let e = c.slice(0, n).reduce((a, b) => a + b, 0) / n
+        for (let i = n; i < c.length; i++) e = c[i] * k + e * (1 - k)
+        return e
+      }
+      const e5 = emaLast(5), e15 = emaLast(15), e30 = emaLast(30)
+      const e65 = emaLast(65), e200 = emaLast(200)
+      let score = 0
+      if (e5  != null && e15  != null && e5  > e15)  score++
+      if (e15 != null && e30  != null && e15 > e30)  score++
+      if (e30 != null && e65  != null && e30 > e65)  score++
+      if (e65 != null && e200 != null && e65 > e200) score++
+      return {
+        score,
+        label: score >= 3 ? 'BULL' : score <= 1 ? 'BEAR' : 'NEUT',
+        col:   score >= 3 ? '#10b981' : score <= 1 ? '#ef4444' : '#60a5fa',
+        bg:    score >= 3 ? '#0c1e12' : score <= 1 ? '#1e0a0a' : '#0a1422',
+      }
+    }
+    return {
+      W:    computeAlign(weeklyBars),
+      D:    computeAlign(dailyBars),
+      '4H': computeAlign(fourHBars),
+      '1H': computeAlign(oneHBars),
+      '15M': computeAlign(fifteenMBars),
+    }
+  }, [weeklyBars, dailyBars, fourHBars, oneHBars, fifteenMBars])
+
+  // ── Master Signal Resolver — single source of truth for direction ─────────
+  // Must be after tfAlignment (uses it) and sigmaResult (uses it).
+  const masterSignal = useMemo(() => {
+    const cfSig   = confluenceResult?.signal
+    const swSig   = swingResult?.signal
+    const swConf  = swingResult?.confirmed ?? false
+    const vix     = vixData?.current ?? null
+    const ivRank  = ivData?.ivRank ?? null
+    const wyPhase = wyckoffData?.phase ?? null
+
+    const conflicts = []
+    let direction = null
+    let blocked = false
+    let blockReason = null
+
+    if (cfSig === 'CALL' || cfSig === 'PUT') {
+      direction = cfSig
+      if ((cfSig === 'CALL' && swSig === 'EXIT') || (cfSig === 'PUT' && swSig === 'LONG')) {
+        blocked = true
+        blockReason = `${cfSig} signal conflicts with 4H timing — wait for alignment`
+        direction = null
+        conflicts.push(`Confluence says ${cfSig} but 4H timing says ${swSig === 'LONG' ? 'LONG' : 'EXIT'} — do not trade`)
+      }
+      if (!blocked && swSig === 'NEUTRAL') {
+        conflicts.push(`4H timing is NEUTRAL — ${cfSig} direction valid but no confirmed entry trigger yet`)
+      }
+    }
+
+    if (!blocked && direction === 'CALL' && vix != null && vix > 28) {
+      const weeklyBD  = confluenceResult?.breakdown?.find(b => b.id === 'weekly')
+      const weeklyNet = weeklyBD ? weeklyBD.bull - weeklyBD.bear : 0
+      if (weeklyNet < 0) {
+        blocked = true
+        blockReason = `VIX ${vix.toFixed(0)} with bearish weekly — market risk too high for calls`
+        direction = null
+        conflicts.push(`VIX ${vix.toFixed(0)} blocks CALL — weekly breadth is bearish`)
+      }
+    }
+
+    const bearPhases = ['distribution', 'markdown', 'redistribution', 'utad']
+    const bullPhases = ['accumulation', 'markup', 'reaccumulation', 'spring']
+    const wyckoffConflict = (() => {
+      if (!wyPhase || !direction) return false
+      const wp = wyPhase.toLowerCase()
+      if (direction === 'CALL' && bearPhases.some(p => wp.includes(p))) {
+        conflicts.push(`Wyckoff phase (${wyPhase}) signals distribution — conflicts with CALL`)
+        return true
+      }
+      if (direction === 'PUT' && bullPhases.some(p => wp.includes(p))) {
+        conflicts.push(`Wyckoff phase (${wyPhase}) signals accumulation — conflicts with PUT`)
+        return true
+      }
+      return false
+    })()
+
+    const tfScore = (() => {
+      if (!tfAlignment || !direction) return 0
+      const isBull = direction === 'CALL'
+      return ['W', 'D', '4H', '1H'].filter(tf => {
+        const a = tfAlignment[tf]
+        return a != null && (isBull ? a.label === 'BULL' : a.label === 'BEAR')
+      }).length
+    })()
+
+    if (direction && tfScore < 2) {
+      conflicts.push(`Only ${tfScore}/4 timeframes aligned with ${direction} direction`)
+    }
+
+    const rawConf = Math.abs(confluenceResult?.confluence ?? 0)
+    let confidence = Math.round(rawConf * 60)
+    if (swSig === 'LONG' && direction === 'CALL') confidence += 15
+    if (swSig === 'EXIT' && direction === 'PUT')  confidence += 15
+    if (swConf) confidence += 5
+    confidence += tfScore * 5
+    if (!wyckoffConflict && wyPhase) confidence += 5
+    if (vix != null && vix < 18) confidence += 5
+    if (vix != null && vix > 25) confidence -= 10
+    if (ivRank != null && ivRank > 70) confidence -= 5
+    if (swSig === 'NEUTRAL') confidence -= 10
+    confidence = Math.max(0, Math.min(100, confidence))
+
+    const regime = (() => {
+      const bull = confluenceResult?.totalBull ?? 0
+      const bear = confluenceResult?.totalBear ?? 0
+      if (bull > bear + 2) return 'bull'
+      if (bear > bull + 2) return 'bear'
+      return 'neutral'
+    })()
+
+    return {
+      direction, confidence, blocked, blockReason, conflicts, regime,
+      sigma:       sigmaResult.sigma,
+      sigmaSource: sigmaResult.source,
+      sigmaLabel:  sigmaResult.label,
+      tfScore, wyckoffConflict,
+      neutralSwing: swSig === 'NEUTRAL',
+    }
+  }, [confluenceResult, swingResult, vixData, ivData, wyckoffData, tfAlignment, sigmaResult])
+
+  const tickerGapClass = useMemo(() =>
+    gapResults.find(r => r.ticker === ticker)?.gapClass ?? null,
+    [gapResults, ticker]
+  )
 
   // Yesterday's close for % calculations.
   // Priority order:
@@ -1063,6 +1281,8 @@ export default function App() {
       </header>
 
       <MarketPulse breadthData={breadthData} vixData={breadthData?.vix ?? vixData} />
+      <StandDownBanner breadthData={breadthData} vixData={vixData} />
+      <DailyLossGuard />
 
       <div className="watchlist-bar">
         <span className="wl-label">WATCHLIST</span>
@@ -1109,6 +1329,8 @@ export default function App() {
           ['trades',   'Trades',   'Write your trade thoughts — why you entered, what you saw, why you exited. Your personal record of reasoning.'],
           ['backtest', 'Backtest', 'See how the strategy signals performed historically on the ticker you\'ve loaded — hit rate, average gain, and more.'],
           ['spx',      'S&P 500',  'See what any amount invested in the S&P 500 in any year since 1986 would be worth today — the wealth escalator.'],
+          ['briefing', 'AM Brief', 'Pre-market game plan — regime check, economic calendar, and your daily trade plan.'],
+          ['insight',  'Insight',  'Weight of evidence, AI analysis, regime memory, outcome range, and decision audit trail.'],
         ].map(([id, label, tip]) => (
           <button
             key={id}
@@ -1216,11 +1438,12 @@ export default function App() {
             </div>
           )}
 
-          {analyzeView === 'brief' && !isLoading && (
+          {analyzeView === 'brief' && (
             <BestTradeNow
               watchlist={watchlist}
               onLoadTicker={t => { handleLoadTicker(t); setAnalyzeView('brief') }}
               currentTicker={ticker}
+              masterSignal={masterSignal}
             />
           )}
 
@@ -1260,6 +1483,7 @@ export default function App() {
               wyckoff={wyckoffData}
               swingTargets={swingTargets}
               dayType={dayType}
+              masterSignal={masterSignal}
             />
           )}
 
@@ -1449,6 +1673,23 @@ export default function App() {
                   callWall={optionsChain?.callWall}
                   putWall={optionsChain?.putWall}
                   maxPain={optionsChain?.maxPain}
+                  vixData={vixData}
+                  verdict={breadthData?.verdict}
+                  flowSentiment={flowSentiment[ticker] ?? null}
+                  gapClass={tickerGapClass}
+                  tfAlignment={tfAlignment}
+                  spyCloses={(() => {
+                    if (!spyDailyBars?.timestamps?.length || !dailyBars?.timestamps?.length) return null
+                    const spyMap = {}
+                    spyDailyBars.timestamps.forEach((ts, i) => {
+                      const dk = new Date(ts * 1000).toLocaleDateString('en-US', { timeZone: 'America/New_York' })
+                      if (spyDailyBars.closes[i] != null) spyMap[dk] = spyDailyBars.closes[i]
+                    })
+                    return dailyBars.timestamps.map(ts => {
+                      const dk = new Date(ts * 1000).toLocaleDateString('en-US', { timeZone: 'America/New_York' })
+                      return spyMap[dk] ?? null
+                    })
+                  })()}
                 />
                 <PriceVolumePanel
                   closes={chartBars?.closes}
@@ -1457,6 +1698,12 @@ export default function App() {
                 />
                 <CyclePanel cycle={cycleData} ticker={ticker} />
                 <VolumeProfileCard volumeProfile={volumeProfile} />
+                {liveLoaded && chartBars && (
+                  <RRPlanner
+                    ticker={ticker}
+                    currentPrice={chartBars?.closes?.[chartBars.closes.length - 1] ?? null}
+                  />
+                )}
               </>
             )
           })()}
@@ -1512,6 +1759,8 @@ export default function App() {
           onRetryChain={handleRetryOptionsChain}
           backtestResult={backtestResult}
           wyckoffData={wyckoffData}
+          masterSignal={masterSignal}
+          onLogTrade={logTrade}
         />
       )}
 
@@ -1651,7 +1900,41 @@ export default function App() {
       )}
 
       {/* ── S&P 500 Wealth Escalator tab ── */}
-      {activeTab === 'spx' && <SPXGrowth />}
+      {activeTab === 'spx' && (
+        <SPXGrowth
+          ticker={ticker}
+          dailyBars={dailyBars}
+          spyDailyBars={spyDailyBars}
+        />
+      )}
+
+      {/* ── AM Briefing tab ── */}
+      {activeTab === 'briefing' && (
+        <MorningBriefing
+          breadthData={breadthData}
+          vixData={vixData}
+          ticker={ticker}
+          optionsChain={optionsChain}
+          verdict={breadthData?.verdict}
+        />
+      )}
+
+      {/* ── Insight tab ── */}
+      {activeTab === 'insight' && (
+        <InsightCenter
+          ticker={ticker}
+          breadthData={breadthData}
+          vixData={vixData}
+          tfAlignment={tfAlignment}
+          flowSentiment={flowSentiment?.[ticker] ?? null}
+          optionsChain={optionsChain}
+          dailyBars={dailyBars}
+          spyDailyBars={spyDailyBars}
+          confluenceResult={confluenceResult}
+          earningsDate={earningsDate}
+          masterSignal={masterSignal}
+        />
+      )}
 
       {/* ── Persistent verdict bar (fixed bottom) ── */}
       {liveLoaded && (

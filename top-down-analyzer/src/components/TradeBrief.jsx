@@ -2446,10 +2446,12 @@ export default function TradeBrief({
   wyckoff,
   swingTargets,
   dayType,
+  masterSignal,
 }) {
   // Compute recommended option + spread suggestion
   const { rec, qty, spreads } = useMemo(() => {
     if (!currentPrice || !tradeScore?.direction || tradeScore.direction === 'NO TRADE') return {}
+    if (masterSignal?.blocked) return {}
     const sigma   = ivData?.atmIV != null ? ivData.atmIV / 100 : (historicalVol ?? 0.30)
     const ivRank  = ivData?.ivRank ?? null
     const recs    = generateRecommendations(currentPrice, sigma, tradeScore.direction, 'standard', {
@@ -2493,8 +2495,8 @@ export default function TradeBrief({
   }, [dailyBars])
 
   const [showShare, setShowShare] = useState(false)
-  const [showBreakdown, setShowBreakdown] = useState(false)
-  const [showDeep, setShowDeep] = useState(false)
+  const [showBreakdown, setShowBreakdown] = useState(true)
+  const [showDeep, setShowDeep] = useState(true)
 
   // ── Conditional Win Rate: run backtest in background when ticker+direction change ──
   const [condWinRate, setCondWinRate]       = useState(null)
@@ -2958,82 +2960,54 @@ export default function TradeBrief({
         adxSignal={adxSignal}
       />
 
-      {/* ── Deep Analysis toggle — everything below is supplementary ── */}
-      <button
-        className={`tb-deep-toggle${showDeep ? ' tb-deep-open' : ''}`}
-        onClick={() => setShowDeep(v => !v)}
-      >
-        <span className="tb-deep-icon">{showDeep ? '▲' : '▾'}</span>
-        {showDeep ? 'Hide Deep Analysis' : 'Show Deep Analysis'}
-        <span className="tb-deep-sub">
-          {showDeep ? '' : 'Score breakdown · Signal intel · Macro · Levels · Win rate · Trade thesis'}
-        </span>
-      </button>
-
-      {showDeep && (
-        <>
-          {/* ── Score breakdown ── */}
+      {/* ── Deep Analysis (always visible, 2-column grid to reduce scroll height) ── */}
+      <div style={{
+        borderTop: '1px solid #0e1a28',
+        padding: '10px 0 0',
+      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 14px 8px',
+        }}>
+          <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.2, color: '#2a4060', textTransform: 'uppercase' }}>
+            Deep Analysis
+          </span>
           {tradeScore?.breakdown && (
-            <>
-              <button className="tb-breakdown-toggle" onClick={() => setShowBreakdown(v => !v)}>
-                Score Breakdown {showBreakdown ? '▲' : '▾'}
-              </button>
-              {showBreakdown && <ScoreBreakdown breakdown={tradeScore.breakdown} />}
-            </>
+            <button
+              onClick={() => setShowBreakdown(v => !v)}
+              style={{
+                background: 'none', border: '1px solid #1e3456', borderRadius: 4,
+                padding: '2px 10px', fontSize: 9, color: '#4a6a8a', cursor: 'pointer',
+                fontWeight: 700, letterSpacing: 0.5,
+              }}
+            >
+              Score Breakdown {showBreakdown ? '▲' : '▾'}
+            </button>
           )}
+        </div>
 
-          {/* ── Key levels ── */}
+        {tradeScore?.breakdown && showBreakdown && (
+          <ScoreBreakdown breakdown={tradeScore.breakdown} />
+        )}
+
+        {/* 2-column grid: each pair of cards sits side by side */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 0,
+        }}>
           <KeyLevels
             fibLevels={fibLevels}
             orbRetest={orbRetest}
             currentPrice={currentPrice}
             direction={direction}
           />
-
-          {/* ── Options Levels: Max Pain, Call Wall, Put Wall, UOA ── */}
           <OptionsLevelsCard optionsChain={optionsChain} currentPrice={currentPrice} direction={direction} />
 
-          {/* ── Pullback vs Retracement Classifier ── */}
-          <PullbackMeter pullbackData={pullbackData} />
-
-          {/* ── Macro Regime + Fear & Greed ── */}
           <MacroRegime breadthData={breadthData} />
           <FearGreedMeter breadthData={breadthData} ivData={ivData} cycleData={cycleData} />
 
-          {/* ── Trade Thesis ── */}
-          <TradeThesis
-            ticker={ticker}
-            direction={direction}
-            confluenceResult={confluenceResult}
-            tradeScore={tradeScore}
-            weeklyAlign={weeklyAlign}
-            swingResult={swingResult}
-            adxSignal={adxSignal}
-            vwapSignal={vwapSignal}
-            ivData={ivData}
-            setupGrade={setupGrade}
-          />
-
-          {/* ── Signal Intelligence ── */}
-          <SignalIntel
-            confluenceResult={confluenceResult}
-            swingResult={swingResult}
-            cycleData={cycleData}
-            dailyBars={dailyBars}
-            insiderData={insiderData}
-            earningsDate={earningsDate}
-            sectorRS={sectorRS}
-            weeklyAlign={weeklyAlign}
-            tradeScore={tradeScore}
-            shortInterest={shortInterest}
-            onNavigate={onNavigate}
-            adxSignal={adxSignal}
-            ivData={ivData}
-            orbRetest={orbRetest}
-            rec={rec}
-          />
-
-          {/* ── Smart Money Analysis ── */}
+          <PullbackMeter pullbackData={pullbackData} />
           <SmartMoneyCard
             optionsChain={optionsChain}
             insiderData={insiderData}
@@ -3041,11 +3015,42 @@ export default function TradeBrief({
             volumeProfile={volumeProfile}
             direction={direction}
           />
+        </div>
 
-          {/* ── Signal history ── */}
-          <SignalHistory ticker={ticker} direction={direction} />
-        </>
-      )}
+        {/* Full-width: narrative cards that need horizontal space */}
+        <TradeThesis
+          ticker={ticker}
+          direction={direction}
+          confluenceResult={confluenceResult}
+          tradeScore={tradeScore}
+          weeklyAlign={weeklyAlign}
+          swingResult={swingResult}
+          adxSignal={adxSignal}
+          vwapSignal={vwapSignal}
+          ivData={ivData}
+          setupGrade={setupGrade}
+        />
+
+        <SignalIntel
+          confluenceResult={confluenceResult}
+          swingResult={swingResult}
+          cycleData={cycleData}
+          dailyBars={dailyBars}
+          insiderData={insiderData}
+          earningsDate={earningsDate}
+          sectorRS={sectorRS}
+          weeklyAlign={weeklyAlign}
+          tradeScore={tradeScore}
+          shortInterest={shortInterest}
+          onNavigate={onNavigate}
+          adxSignal={adxSignal}
+          ivData={ivData}
+          orbRetest={orbRetest}
+          rec={rec}
+        />
+
+        <SignalHistory ticker={ticker} direction={direction} />
+      </div>
 
     </div>
   )
