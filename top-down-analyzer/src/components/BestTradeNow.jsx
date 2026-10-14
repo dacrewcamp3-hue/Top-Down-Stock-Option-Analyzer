@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchQuickSignal } from '../utils/fetchQuickSignal'
 import './BestTradeNow.css'
 
-export default function BestTradeNow({ watchlist, onLoadTicker, currentTicker }) {
+export default function BestTradeNow({ watchlist, onLoadTicker, currentTicker, masterSignal }) {
   const [results, setResults]   = useState([])
   const [scanning, setScanning] = useState(false)
   const [lastScan, setLastScan] = useState(null)
@@ -27,7 +27,7 @@ export default function BestTradeNow({ watchlist, onLoadTicker, currentTicker })
         return bStr - aStr
       })
 
-      setResults(ranked.slice(0, 3))
+      setResults(ranked.slice(0, 5))
       setLastScan(new Date())
       if (!ranked.length) setScanErr('No strong setups found')
     } catch {
@@ -88,6 +88,16 @@ export default function BestTradeNow({ watchlist, onLoadTicker, currentTicker })
             const dirColor  = isCall ? '#10b981' : '#ef4444'
             const dirBg     = isCall ? '#01140a' : '#130105'
 
+            // Full-analysis verdict for the currently loaded ticker
+            const fullVerdict = (() => {
+              if (!isCurrent || !masterSignal) return null
+              if (masterSignal.blocked) return { label: `⛔ Full analysis: BLOCKED — ${masterSignal.blockReason ?? 'see Options tab'}`, color: '#ef4444', bg: '#1a0000', border: '#7f1d1d' }
+              const fd = masterSignal.direction
+              if (!fd) return { label: '⚠ Full analysis: NO TRADE — signals unclear', color: '#f59e0b', bg: '#100800', border: '#78350f' }
+              if (fd !== r.signal) return { label: `⚠ Full analysis: ${fd} — contradicts quick scan`, color: '#f59e0b', bg: '#100800', border: '#78350f' }
+              return { label: `✓ Full analysis confirms ${fd} · ${masterSignal.confidence ?? '?'}/100 confidence`, color: '#10b981', bg: '#011a0d', border: '#065f46' }
+            })()
+
             return (
               <div
                 key={r.ticker}
@@ -131,6 +141,15 @@ export default function BestTradeNow({ watchlist, onLoadTicker, currentTicker })
                     {r.pct52  != null && <span>{r.pct52 >= 0 ? '+' : ''}{r.pct52.toFixed(1)}% 52wk</span>}
                     {r.cyclePhase      && <span className="btn-phase" style={{ color: r.cycleColor ?? '#6b7280' }}>{r.cyclePhase}</span>}
                   </div>
+                  {fullVerdict && (
+                    <div style={{
+                      marginTop: 5, padding: '3px 8px', borderRadius: 4,
+                      background: fullVerdict.bg, border: `1px solid ${fullVerdict.border}`,
+                      fontSize: 10, fontWeight: 700, color: fullVerdict.color,
+                    }}>
+                      {fullVerdict.label}
+                    </div>
+                  )}
                 </div>
 
                 <div className="btn-action-col">

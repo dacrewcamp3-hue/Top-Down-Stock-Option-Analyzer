@@ -186,6 +186,12 @@ export default function PriceChart({
   callWall = null,
   putWall = null,
   maxPain = null,
+  spyCloses = null,
+  tfAlignment = null,
+  vixData = null,
+  verdict = null,
+  flowSentiment = null,
+  gapClass = null,
 }) {
   const emaNames = useEmaNames()
 
@@ -202,8 +208,14 @@ export default function PriceChart({
   const [showFib,       setShowFib]       = useState(true)     // Fibonacci levels
   const [showRSI,         setShowRSI]         = useState(false)    // RSI sub-panel
   const [showAllPatterns, setShowAllPatterns] = useState(false)    // all patterns vs. ≥75% win-rate only
+  const [useHA,         setUseHA]         = useState(true)
+  const [anchoredVwaps, setAnchoredVwaps] = useState([])  // [{anchorIdx, color, label}]
+  const [showRS,        setShowRS]        = useState(false)
+  const [proMode,       setProMode]       = useState(false)
+  const [showTools,     setShowTools]     = useState(false)
 
   const svgRef         = useRef(null)
+  const userClosedRSI  = useRef(false)
   const barCountRef    = useRef(TF_DEFAULT_BARS[timeframe] ?? 80)
   const totalBarsRef   = useRef(0)
   const dragFracRef    = useRef(0)
@@ -211,6 +223,21 @@ export default function PriceChart({
   const wheelRafRef    = useRef(null)
   const panAccRef      = useRef(0)
   const panRafRef      = useRef(null)
+
+  // Design system — 3 font sizes, 2 stroke weights, semantic color palette
+  const DS = {
+    fs:  { sm: 7, md: 8.5, lg: 10.5 },
+    sw:  { thin: 0.8, thick: 1.8 },
+    col: {
+      bull:    '#10b981',   // green — bullish signals ONLY
+      bear:    '#ef4444',   // red — bearish signals ONLY
+      caution: '#f59e0b',   // amber — caution/confluence/neutral ONLY
+      info:    '#60a5fa',   // blue — informational/price labels
+      dim:     '#2a4060',   // muted — watermarks, secondary labels
+      grid:    '#0b1c2e',
+      bg:      '#040b16',
+    },
+  }
 
   useEffect(() => { barCountRef.current = barCount }, [barCount])
 
@@ -275,10 +302,10 @@ export default function PriceChart({
 
     // Heikin-Ashi — computed from full history so HA open is properly seeded
     const ha = calcHeikinAshi(opens, highs, lows, closes)
-    const c  = Array.from(ha.haC.slice(s, endIdx))
-    const h  = Array.from(ha.haH.slice(s, endIdx))
-    const l  = Array.from(ha.haL.slice(s, endIdx))
-    const o  = Array.from(ha.haO.slice(s, endIdx))
+    const c  = useHA ? Array.from(ha.haC.slice(s, endIdx)) : Array.from(closes.slice(s, endIdx))
+    const h  = useHA ? Array.from(ha.haH.slice(s, endIdx)) : Array.from(highs.slice(s, endIdx))
+    const l  = useHA ? Array.from(ha.haL.slice(s, endIdx)) : Array.from(lows.slice(s, endIdx))
+    const o  = useHA ? Array.from(ha.haO.slice(s, endIdx)) : Array.from(opens.slice(s, endIdx))
     const v  = (volumes    ?? []).slice(s, endIdx)
     const ts = (timestamps ?? []).slice(s, endIdx)
 
@@ -792,7 +819,7 @@ export default function PriceChart({
       alignScore,
       label: alignScore === 4 ? 'STRONG BULL' : alignScore === 3 ? 'BULL TREND'
            : alignScore === 0 ? 'STRONG BEAR' : alignScore === 1 ? 'BEAR TREND' : 'NEUTRAL',
-      col: alignScore >= 3 ? '#10b981' : alignScore === 0 ? '#ef4444' : alignScore <= 1 ? '#f87171' : '#60a5fa',
+      col: alignScore >= 3 ? '#10b981' : alignScore === 0 ? '#ef4444' : alignScore <= 1 ? '#ef4444' : '#60a5fa',
     }
 
     // ── Volume spike markers (≥2× the 20-bar average) ────────────────────────
@@ -973,6 +1000,177 @@ export default function PriceChart({
       }
     }
 
+    // ── Order Blocks (SMC completion) ─────────────────────────────────────────
+    // Bullish OB: last bearish candle before a strong bullish impulse (≥1.5× avg range)
+    // Bearish OB: last bullish candle before a strong bearish impulse
+    const orderBlocks = []
+    if (nb >= 5) {
+      const avgRange = Array.from({length: nb}, (_, i) => h[i] - l[i])
+        .reduce((a, b) => a + b, 0) / nb
+      for (let i = 1; i < nb - 2; i++) {
+        const impulseH = Math.max(h[i+1], h[i+2])
+        const impulseL = Math.min(l[i+1], l[i+2])
+        const impulseRange = impulseH - impulseL
+        if (impulseRange < avgRange * 1.5) continue
+        const isBullImpulse = c[i+2] > c[i]   // strong up move after bar i
+        const isBearImpulse = c[i+2] < c[i]   // strong down move after bar i
+        const isBarBear = c[i] < o[i]          // bar i is bearish
+        const isBarBull = c[i] >= o[i]         // bar i is bullish
+        if (isBullImpulse && isBarBear) {
+          // Bullish OB: bearish bar before big up move
+          const topP  = Math.max(o[i], c[i])
+          const botP  = Math.min(o[i], c[i])
+          if (topP > priceMin && botP < priceMax) {
+            orderBlocks.push({ kind: 'bull', i, top: topP, bot: botP, x: xOf(i) })
+          }
+        } else if (isBearImpulse && isBarBull) {
+          // Bearish OB: bullish bar before big down move
+          const topP  = Math.max(o[i], c[i])
+          const botP  = Math.min(o[i], c[i])
+          if (topP > priceMin && botP < priceMax) {
+            orderBlocks.push({ kind: 'bear', i, top: topP, bot: botP, x: xOf(i) })
+          }
+        }
+      }
+    }
+
+    // ── RSI Divergences ────────────────────────────────────────────────────────
+    // Bull div: price makes lower low, RSI makes higher low (upside reversal signal)
+    // Bear div: price makes higher high, RSI makes lower high (downside reversal signal)
+    const rsiDivs = []
+    const lookback = 8
+    if (nb > lookback * 2) {
+      // Find local swing highs/lows in price and RSI
+      for (let i = lookback; i < nb - 1; i++) {
+        const rsiV = rsiArr[i]
+        if (rsiV == null) continue
+        // Bear divergence: price higher high, RSI lower high
+        const isHigh = h[i] >= Math.max(...h.slice(Math.max(0,i-4), i), ...h.slice(i+1, Math.min(nb,i+4)))
+        if (isHigh) {
+          for (let j = Math.max(lookback, i - 30); j < i - lookback; j++) {
+            const rsiJ = rsiArr[j]
+            if (rsiJ == null) continue
+            const isHighJ = h[j] >= Math.max(...h.slice(Math.max(0,j-4), j), ...h.slice(j+1, Math.min(nb,j+4)))
+            if (!isHighJ) continue
+            if (h[i] > h[j] && rsiV < rsiJ - 3) {
+              rsiDivs.push({ kind: 'bear', iA: j, iB: i, pA: h[j], pB: h[i], rsiA: rsiJ, rsiB: rsiV })
+              break
+            }
+          }
+        }
+        // Bull divergence: price lower low, RSI higher low
+        const isLow = l[i] <= Math.min(...l.slice(Math.max(0,i-4), i), ...l.slice(i+1, Math.min(nb,i+4)))
+        if (isLow) {
+          for (let j = Math.max(lookback, i - 30); j < i - lookback; j++) {
+            const rsiJ = rsiArr[j]
+            if (rsiJ == null) continue
+            const isLowJ = l[j] <= Math.min(...l.slice(Math.max(0,j-4), j), ...l.slice(j+1, Math.min(nb,j+4)))
+            if (!isLowJ) continue
+            if (l[i] < l[j] && rsiV > rsiJ + 3) {
+              rsiDivs.push({ kind: 'bull', iA: j, iB: i, pA: l[j], pB: l[i], rsiA: rsiJ, rsiB: rsiV })
+              break
+            }
+          }
+        }
+      }
+    }
+
+    // ── RS Line (vs SPY, daily only) ──────────────────────────────────────────
+    // Normalized to 100 at the start of the visible window. Secondary axis on RSI scale.
+    const rsLinePoints = []
+    if (spyCloses?.length && (timeframe === 'D' || timeframe === 'W')) {
+      const spySlice = spyCloses.slice(s, endIdx)
+      const firstTicker = c[0], firstSpy = spySlice[0]
+      if (firstTicker && firstSpy) {
+        // Map to the right side (mini overlay on volume area), normalized
+        for (let i = 0; i < nb; i++) {
+          const spy = spySlice[i]
+          if (!spy || !c[i]) continue
+          const rel = (c[i] / firstTicker) / (spy / firstSpy)
+          // Normalize to fit in volume area: rel ~1.0 is mid, ±20% spans the area
+          const relClamped = Math.max(0.75, Math.min(1.25, rel))
+          const ry = PH + GAP + VH - ((relClamped - 0.75) / 0.50) * VH
+          rsLinePoints.push(`${xOf(i).toFixed(1)},${ry.toFixed(1)}`)
+        }
+      }
+    }
+
+    // ── Key Level Confluence Zones ────────────────────────────────────────────
+    // When 3+ levels cluster within 0.3% of each other, flag the zone
+    const confluenceZones = []
+    {
+      const allLevels = []
+      const tol = 0.003
+      // Collect all active levels with names
+      if (orbHigh != null) allLevels.push({ p: orbHigh, name: 'ORH' })
+      if (orbLow  != null) allLevels.push({ p: orbLow,  name: 'ORL' })
+      if (prevDayH != null) allLevels.push({ p: prevDayH, name: 'PDH' })
+      if (prevDayL != null) allLevels.push({ p: prevDayL, name: 'PDL' })
+      if (gammaFlip != null) allLevels.push({ p: gammaFlip, name: 'γFlip' })
+      if (callWall  != null) allLevels.push({ p: callWall,  name: 'CWall' })
+      if (putWall   != null) allLevels.push({ p: putWall,   name: 'PWall' })
+      if (maxPain   != null) allLevels.push({ p: maxPain,   name: 'MaxP' })
+      // Add EMA levels
+      const lastE65  = e65[nb-1],  lastE200 = e200[nb-1]
+      const lastVwap = vwapArr[nb-1]
+      if (lastE65  != null) allLevels.push({ p: lastE65,  name: 'E65'  })
+      if (lastE200 != null) allLevels.push({ p: lastE200, name: 'E200' })
+      if (lastVwap != null) allLevels.push({ p: lastVwap, name: 'VWAP' })
+      // Fibonacci levels
+      if (fibLevels) {
+        Object.entries(fibLevels).forEach(([k, v]) => {
+          if (typeof v === 'number') allLevels.push({ p: v, name: k })
+        })
+      }
+      // S/R zones
+      srZones.forEach(z => allLevels.push({ p: z.price, name: z.kind === 'resistance' ? 'Res' : 'Sup' }))
+
+      // Cluster: find groups within tol
+      const used = new Set()
+      for (let i = 0; i < allLevels.length; i++) {
+        if (used.has(i)) continue
+        const group = [allLevels[i]]
+        used.add(i)
+        for (let j = i + 1; j < allLevels.length; j++) {
+          if (used.has(j)) continue
+          if (Math.abs(allLevels[j].p - allLevels[i].p) / allLevels[i].p < tol * 4) {
+            group.push(allLevels[j])
+            used.add(j)
+          }
+        }
+        if (group.length >= 3) {
+          const avgP = group.reduce((s, x) => s + x.p, 0) / group.length
+          if (avgP > priceMin && avgP < priceMax) {
+            confluenceZones.push({
+              price: avgP,
+              names: group.map(g => g.name).join(' · '),
+              count: group.length,
+              y: yOf(avgP),
+            })
+          }
+        }
+      }
+    }
+
+    // ── Anchored VWAPs ────────────────────────────────────────────────────────
+    const anchoredVwapLines = anchoredVwaps.map(({ anchorIdx }) => {
+      const pts = []
+      let cumTPV = 0, cumVol = 0
+      for (let i = anchorIdx; i < nb; i++) {
+        const ri = s + i
+        const tp = (highs[ri] + lows[ri] + closes[ri]) / 3
+        cumTPV += tp * (v[i] || 0)
+        cumVol += v[i] || 0
+        if (cumVol > 0) {
+          const avwap = cumTPV / cumVol
+          if (avwap > priceMin && avwap < priceMax) {
+            pts.push(`${xOf(i).toFixed(1)},${yOf(avwap).toFixed(1)}`)
+          }
+        }
+      }
+      return pts.length > 1 ? pts.join(' ') : null
+    })
+
     return { c, h, l, o, v, ts, nb, s, e5, e15, e30, e65, e200, vwapArr, vwapSegments,
       priceMin, priceMax, volMax, pw, ph, xOf, yOf, bw, toPoints,
       yTicks, xLabels, weekSeps, reversals, gapBands, smcData, isToday, totalSlots,
@@ -980,8 +1178,17 @@ export default function PriceChart({
       volSpikes, prevDayH, prevDayL, vwapCrosses,
       goldDeathCrosses, trendState,
       vahPrice, valPrice, vaLo, vaHi, lvnThresh, profAvg,
-      preMarketSet, sessionOpens, rsiArr, srZones, atr14, pmHigh, pmLow }
-  }, [closes, highs, lows, opens, volumes, timestamps, barCount, panOffset, timeframe])
+      preMarketSet, sessionOpens, rsiArr, srZones, atr14, pmHigh, pmLow,
+      orderBlocks, rsiDivs, rsLinePoints, confluenceZones, anchoredVwapLines }
+  }, [closes, highs, lows, opens, volumes, timestamps, barCount, panOffset, timeframe, useHA, spyCloses, anchoredVwaps])
+
+  // RSI auto-open: when divergences are detected and user hasn't manually closed RSI
+  useEffect(() => {
+    if (!d?.rsiDivs?.length) return
+    if (!userClosedRSI.current) {
+      setShowRSI(true)
+    }
+  }, [d?.rsiDivs?.length])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Mouse handlers ────────────────────────────────────────────────────────
   function svgCoords(e) {
@@ -1087,6 +1294,23 @@ export default function PriceChart({
 
   function handleMouseDown(e) {
     if (e.button !== 0) return
+
+    // Shift+click: anchor a VWAP from this bar
+    if (e.shiftKey && drawTool === 'none') {
+      const pos = svgCoords(e)
+      if (pos && d) {
+        const raw = (pos.x - PL) / d.pw * d.totalSlots - 0.5
+        const bi  = Math.max(0, Math.min(Math.round(raw), d.nb - 1))
+        const AVWAP_COLORS = ['#a78bfa', '#38bdf8', '#f472b6', '#34d399', '#fb923c']
+        setAnchoredVwaps(prev => {
+          if (prev.length >= 5) return prev  // max 5 anchors
+          return [...prev, { anchorIdx: bi, color: AVWAP_COLORS[prev.length % AVWAP_COLORS.length] }]
+        })
+      }
+      e.preventDefault()
+      return
+    }
+
     if (drawTool === 'trend') {
       const pos = svgCoords(e)
       if (!pos) return
@@ -1152,7 +1376,8 @@ export default function PriceChart({
     profBins, profMax, pocIdx, priceRange, volAvgPoints, ema5Crosses,
     volSpikes, prevDayH, prevDayL, vwapCrosses,
     goldDeathCrosses, trendState,
-    preMarketSet, sessionOpens, rsiArr, srZones, atr14, pmHigh, pmLow } = d
+    preMarketSet, sessionOpens, rsiArr, srZones, atr14, pmHigh, pmLow,
+    orderBlocks, rsiDivs, rsLinePoints, confluenceZones, anchoredVwapLines } = d
 
   // High-confidence filter: show only patterns with ≥75% win rate by default
   const displayReversals = showAllPatterns ? reversals : reversals.filter(r => r.rate >= 75)
@@ -1225,210 +1450,244 @@ export default function PriceChart({
     : null
 
   return (
-    <div className="pc-wrap">
+    <div className="pc-wrap" style={{ position: 'relative' }}>
 
-      {/* ── Top bar ── always visible, no hover swap */}
-      <div className="pc-topbar">
-        <>
-            <span className="pc-title">
-              {title || 'Chart'} <span className="pc-tf-badge">{timeframe}</span>
-              {showPreMarket && preMarketSet?.has(nb - 1) && (
-                <span style={{ fontSize: 9, fontWeight: 800, color: '#3b82f6', background: '#0a1e36',
-                  border: '1px solid #1e3a5f', borderRadius: 3, padding: '1px 4px', marginLeft: 4,
-                  letterSpacing: '0.4px', verticalAlign: 'middle' }}>PRE</span>
-              )}
-            </span>
-            <span className="pc-price" style={{ color: priceColor }}>${fmtPx(topClose)}</span>
-            <span className={`pc-chg${dayChange >= 0 ? ' pc-green' : ' pc-red'}`}
-              title={showPreMarket && preMarketSet?.has(nb - 1)
-                ? 'Pre-market change vs prior session close'
-                : 'Change vs prior session close'}>
-              {dayChange >= 0 ? '+' : ''}{dayChange.toFixed(2)}%
-            </span>
-            <span className="pc-legend">
-              {/* ── EMA lines (only show active groups) ── */}
-              {showEntryEmas && <><span className="pc-leg-dot" style={{ background: '#f472b6' }} />E5 · {emaNames[5]}</>}
-              {showEntryEmas && <><span className="pc-leg-dot" style={{ background: '#84cc16' }} />E15 · {emaNames[15]}</>}
-              {showEntryEmas && <><span className="pc-leg-dot" style={{ background: '#06b6d4' }} />E30 · {emaNames[30]}</>}
-              {showTrendEmas && <><span className="pc-leg-dot" style={{ background: '#a855f7' }} />E65 · {emaNames[65]}</>}
-              {showTrendEmas && <><span className="pc-leg-dot" style={{ background: '#eab308' }} />E200 · {emaNames[200]}</>}
-              <span className="pc-leg-dot" style={{ background: '#ffffff' }} />VWAP
-              <span className="pc-leg-dot" style={{ background: '#64748b' }} />Avg Vol
-              {/* ── Signals (only when present) ── */}
-              {(vwapCrosses.length > 0 || ema5Crosses.length > 0 || goldDeathCrosses.length > 0 || displayReversals.length > 0 || volSpikes.length > 0) && (
-                <span className="pc-leg-sep" />
-              )}
-              {vwapCrosses.some(c => c.kind === 'bull') && <span style={{ color: '#10b981' }}>⬆ VWAP</span>}
-              {vwapCrosses.some(c => c.kind === 'bear') && <span style={{ color: '#ef4444' }}>⬇ VWAP</span>}
-              {ema5Crosses.some(s => s.kind === 'bull') && <span style={{ color: '#10b981' }}>◎ Entry</span>}
-              {ema5Crosses.some(s => s.kind === 'bear') && <span style={{ color: '#ef4444' }}>◎ Exit</span>}
-              {goldDeathCrosses.some(g => g.kind === 'golden') && <span style={{ color: '#facc15' }}>★ Golden×</span>}
-              {goldDeathCrosses.some(g => g.kind === 'death') && <span style={{ color: '#ef4444' }}>✖ Death×</span>}
-              {displayReversals.some(r => r.kind === 'bull') && <span style={{ color: '#10b981' }}>▲ Rev</span>}
-              {displayReversals.some(r => r.kind === 'bear') && <span style={{ color: '#ef4444' }}>▼ Rev</span>}
-              {volSpikes.length > 0 && <span style={{ color: '#94a3b8' }}>× Spike</span>}
-              {/* ── Levels ── */}
-              {(orbHigh != null || prevDayH != null || prevDayL != null || gapBands.length > 0 || srZones.length > 0) && (
-                <span className="pc-leg-sep" />
-              )}
-              {orbHigh != null && <span style={{ color: '#f59e0b' }}>— ORB</span>}
-              {swingTargets?.length > 0 && <span style={{ color: '#10b981' }}>— T1–T5</span>}
-              {showPreMarket && (pmHigh != null || pmLow != null) && <span style={{ color: '#60a5fa' }}>— PM H/L</span>}
-              {timeframe === '5M' && orbHigh != null && <span style={{ color: '#10b981' }}>▲ Snipe</span>}
-              {(gammaFlip != null || callWall != null || putWall != null || maxPain != null) && <span style={{ color: '#f59e0b' }}>— GEX</span>}
-              {prevDayH != null && <span style={{ color: '#f97316' }}>— PDH</span>}
-              {prevDayL != null && <span style={{ color: '#38bdf8' }}>— PDL</span>}
-              {gapBands.length > 0 && <span style={{ color: '#38bdf8' }}>▬ Gap</span>}
-              {srZones.some(z => z.kind === 'resistance') && <span style={{ color: '#ef4444' }}>▬ Res</span>}
-              {srZones.some(z => z.kind === 'support')    && <span style={{ color: '#10b981' }}>▬ Sup</span>}
-              {/* ── SMC (intraday only) ── */}
-              {showSMC && (bos.length > 0 || choch.length > 0 || sweeps.length > 0 || fvgs.length > 0) && <span className="pc-leg-sep" />}
-              {showSMC && bos.some(b => b.kind === 'bull')   && <span style={{ color: '#10b981', fontWeight: 700 }}>↑ BOS</span>}
-              {showSMC && bos.some(b => b.kind === 'bear')   && <span style={{ color: '#ef4444', fontWeight: 700 }}>↓ BOS</span>}
-              {showSMC && choch.some(c => c.kind === 'bull') && <span style={{ color: '#34d399', fontWeight: 700 }}>↑ CHoCH</span>}
-              {showSMC && choch.some(c => c.kind === 'bear') && <span style={{ color: '#f87171', fontWeight: 700 }}>↓ CHoCH</span>}
-              {showSMC && sweeps.length > 0                  && <span style={{ color: '#a78bfa', fontWeight: 700 }}>~ Sweep</span>}
-              {showSMC && fvgs.some(f => f.kind === 'bull')  && <span style={{ color: '#2dd4bf', fontWeight: 700 }}>▬ FVG↑</span>}
-              {showSMC && fvgs.some(f => f.kind === 'bear')  && <span style={{ color: '#f43f5e', fontWeight: 700 }}>▬ FVG↓</span>}
-            </span>
-          </>
-
-        <div className="pc-zoom-ctrl">
-          {!isLive && (
-            <button className="pc-zbtn pc-zbtn-live" onClick={goLive}
-              title="Jump to most recent bars">LIVE →</button>
+      {/* ── Command Bar ── single row replacing topbar + OHLCV */}
+      <div className="pc-topbar" style={{ padding: '6px 12px', minHeight: 38, gap: 6, flexWrap: 'nowrap' }}>
+        <span className="pc-title">
+          {title || 'Chart'}{' '}
+          <span className="pc-tf-badge">{timeframe}</span>
+          {showPreMarket && preMarketSet?.has(nb - 1) && (
+            <span style={{ fontSize: 9, fontWeight: 800, color: '#3b82f6', background: '#0a1e36',
+              border: '1px solid #1e3a5f', borderRadius: 3, padding: '1px 4px', marginLeft: 4,
+              letterSpacing: '0.4px', verticalAlign: 'middle' }}>PRE</span>
           )}
-          <button className="pc-zbtn" onClick={zoomIn}  title="Zoom in (or scroll up)">+</button>
-          <span className="pc-zcnt">{nb}{timeframe === 'W' ? 'w' : timeframe === 'D' ? 'd' : timeframe === '4H' || timeframe === '1H' ? 'h' : 'm'}</span>
-          <button className="pc-zbtn" onClick={zoomOut} title="Zoom out (or scroll down)">−</button>
-          <button className="pc-zbtn pc-zbtn-reset" onClick={zoomReset} title="Reset to default view">⟳</button>
+        </span>
+
+        <span className="pc-price" style={{ color: priceColor }}>${fmtPx(topClose)}</span>
+        <span className={`pc-chg${dayChange >= 0 ? ' pc-green' : ' pc-red'}`}
+          title={showPreMarket && preMarketSet?.has(nb - 1)
+            ? 'Pre-market change vs prior session close'
+            : 'Change vs prior session close'}>
+          {dayChange >= 0 ? '+' : ''}{dayChange.toFixed(2)}%
+        </span>
+
+        {/* Trend verdict — replaces the entire pc-legend */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
+          padding: '2px 8px', borderRadius: 4,
+          background: `${trendState.col}14`, border: `1px solid ${trendState.col}40`,
+        }}>
+          <span style={{ fontSize: 10, fontWeight: 900, color: trendState.col, letterSpacing: '0.4px' }}>
+            {trendState.label}
+          </span>
+          <span style={{ fontSize: 9, color: `${trendState.col}99`, fontWeight: 700 }}>
+            {trendState.alignScore}/4
+          </span>
+          {verdict && (() => {
+            const regCol = verdict === 'FAVORABLE' || verdict === 'LEANING BULLISH' ? '#10b981'
+              : verdict === 'HOSTILE' || verdict === 'BEARISH' ? '#ef4444'
+              : verdict === 'HIGH VIX' ? '#f59e0b' : '#60a5fa'
+            return (
+              <>
+                <span style={{ color: '#1a3050', fontSize: 8 }}>·</span>
+                <span style={{ fontSize: 9, color: regCol, fontWeight: 700 }}>{verdict}</span>
+              </>
+            )
+          })()}
+          {vixData?.vix != null && (
+            <>
+              <span style={{ color: '#1a3050', fontSize: 8 }}>·</span>
+              <span style={{ fontSize: 9, fontWeight: 700,
+                color: vixData.vix > 25 ? '#ef4444' : vixData.vix < 18 ? '#10b981' : '#f59e0b' }}>
+                VIX {vixData.vix.toFixed(1)}
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* Right cluster: compact OHLCV + ⚙ + PRO + zoom */}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, fontFamily: 'monospace', fontSize: 10 }}>
+            {dispTimeLabel && <span style={{ color: '#3a5a7a', fontSize: 9 }}>{dispTimeLabel}</span>}
+            <span><span style={{ color: '#2a4a6a', fontSize: 8.5, fontWeight: 700 }}>O</span>{' '}<span style={{ color: '#8ab0cc' }}>${dispO != null ? fmtPx(dispO) : '—'}</span></span>
+            <span><span style={{ color: '#2a4a6a', fontSize: 8.5, fontWeight: 700 }}>H</span>{' '}<span style={{ color: '#10b981' }}>${dispH != null ? fmtPx(dispH) : '—'}</span></span>
+            <span><span style={{ color: '#2a4a6a', fontSize: 8.5, fontWeight: 700 }}>L</span>{' '}<span style={{ color: '#ef4444' }}>${dispL != null ? fmtPx(dispL) : '—'}</span></span>
+            <span><span style={{ color: '#2a4a6a', fontSize: 8.5, fontWeight: 700 }}>C</span>{' '}<span style={{ color: dispBull ? '#10b981' : '#ef4444' }}>${dispC != null ? fmtPx(dispC) : '—'}</span></span>
+            <span style={{ color: '#4a6888' }}>{fmtVol(dispV)}</span>
+            <span style={{ color: dispChg >= 0 ? '#10b981' : '#ef4444', fontWeight: 700 }}>{dispChg >= 0 ? '+' : ''}{dispChg.toFixed(2)}%</span>
+          </div>
+
+          <button title={showTools ? 'Close tools panel' : 'Tools & overlays'}
+            onClick={() => setShowTools(v => !v)}
+            style={{
+              background: showTools ? '#0e1e36' : 'transparent',
+              border: `1px solid ${showTools ? '#3b82f6' : '#1e2d45'}`,
+              color: showTools ? '#60a5fa' : '#3a5a7a',
+              borderRadius: 4, padding: '2px 8px', fontSize: 12, cursor: 'pointer', fontWeight: 700,
+            }}>⚙</button>
+
+          <button title={proMode ? 'Pro mode — click for Simple' : 'Simple mode — click for Pro'}
+            onClick={() => setProMode(v => !v)}
+            style={{
+              background: proMode ? '#0e1a2e' : 'transparent',
+              border: `1px solid ${proMode ? '#3b5a8a' : '#1a2e45'}`,
+              color: proMode ? '#60a5fa' : '#2a4a6a',
+              borderRadius: 4, padding: '2px 8px', fontSize: 10,
+              cursor: 'pointer', fontWeight: 800, letterSpacing: '0.5px',
+            }}>{proMode ? 'PRO' : 'SIMPLE'}</button>
+
+          <div className="pc-zoom-ctrl" style={{ marginLeft: 0 }}>
+            {!isLive && (
+              <button className="pc-zbtn pc-zbtn-live" onClick={goLive}
+                title="Jump to most recent bars">LIVE →</button>
+            )}
+            <button className="pc-zbtn" onClick={zoomIn}  title="Zoom in (or scroll up)">+</button>
+            <span className="pc-zcnt">{nb}{timeframe === 'W' ? 'w' : timeframe === 'D' ? 'd' : timeframe === '4H' || timeframe === '1H' ? 'h' : 'm'}</span>
+            <button className="pc-zbtn" onClick={zoomOut} title="Zoom out (or scroll down)">−</button>
+            <button className="pc-zbtn pc-zbtn-reset" onClick={zoomReset} title="Reset to default view">⟳</button>
+          </div>
         </div>
       </div>
 
-      {/* ── OHLCV bar — always visible, updates on crosshair hover ── */}
-      <div className="pc-ohlcv-bar">
-        {dispTimeLabel && <span className="pc-ohlcv-ts">{dispTimeLabel}</span>}
-        <span className="pc-ohlcv-item">
-          <span className="pc-ohlcv-lbl">O</span>
-          <span className="pc-ohlcv-val">${dispO != null ? fmtPx(dispO) : '—'}</span>
-        </span>
-        <span className="pc-ohlcv-item">
-          <span className="pc-ohlcv-lbl">H</span>
-          <span className="pc-ohlcv-val" style={{ color: '#10b981' }}>${dispH != null ? fmtPx(dispH) : '—'}</span>
-        </span>
-        <span className="pc-ohlcv-item">
-          <span className="pc-ohlcv-lbl">L</span>
-          <span className="pc-ohlcv-val" style={{ color: '#ef4444' }}>${dispL != null ? fmtPx(dispL) : '—'}</span>
-        </span>
-        <span className="pc-ohlcv-item">
-          <span className="pc-ohlcv-lbl">C</span>
-          <span className="pc-ohlcv-val" style={{ color: dispBull ? '#10b981' : '#ef4444' }}>
-            ${dispC != null ? fmtPx(dispC) : '—'}
-          </span>
-        </span>
-        <span className="pc-ohlcv-item">
-          <span className="pc-ohlcv-lbl">Vol</span>
-          <span className="pc-ohlcv-val">{fmtVol(dispV)}</span>
-        </span>
-        <span className="pc-ohlcv-chg" style={{ color: dispChg >= 0 ? '#10b981' : '#ef4444' }}>
-          {dispChg >= 0 ? '+' : ''}{dispChg.toFixed(2)}%
-        </span>
-      </div>
+      {/* ── Floating Tools Panel — shown when ⚙ is active ── */}
+      {showTools && (
+        <div style={{
+          position: 'absolute', top: 42, right: 12, zIndex: 200,
+          background: '#020c18', border: '1px solid #1e3a5f', borderRadius: 6,
+          padding: '8px 10px', display: 'flex', flexWrap: 'wrap', gap: 5,
+          minWidth: 200, maxWidth: 340, boxShadow: '0 8px 24px rgba(0,0,0,0.7)',
+        }}>
+          {proMode ? (<>
+            {[
+              { id: 'hline', icon: '—', tip: 'Horizontal line — click chart to place' },
+              { id: 'trend', icon: '╱', tip: 'Trendline — click + drag' },
+              { id: 'erase', icon: '✕', tip: 'Eraser — click a line to delete' },
+            ].map(t => (
+              <button key={t.id} title={t.tip}
+                onClick={() => setDrawTool(prev => prev === t.id ? 'none' : t.id)}
+                style={{
+                  background: drawTool === t.id ? '#1e3a5f' : 'transparent',
+                  border: `1px solid ${drawTool === t.id ? '#3b82f6' : '#1e2d45'}`,
+                  color: drawTool === t.id ? '#60a5fa' : '#3a5a7a',
+                  borderRadius: 4, padding: '2px 8px', fontSize: 13,
+                  cursor: 'pointer', fontWeight: 700, lineHeight: 1.4,
+                }}>{t.icon}</button>
+            ))}
+            <span style={{ width: '100%', height: 1, background: '#0e1e30', margin: '2px 0' }} />
+            <button title="Toggle entry EMAs (5 · 15 · 30)" onClick={() => setShowEntryEmas(v => !v)} style={{
+              background: showEntryEmas ? '#0c1e10' : 'transparent',
+              border: `1px solid ${showEntryEmas ? '#10b981' : '#1e2d45'}`,
+              color: showEntryEmas ? '#10b981' : '#3a5a7a',
+              borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
+            }}>E-Fast</button>
+            <button title="Toggle trend EMAs (65 · 200)" onClick={() => setShowTrendEmas(v => !v)} style={{
+              background: showTrendEmas ? '#12100a' : 'transparent',
+              border: `1px solid ${showTrendEmas ? '#eab308' : '#1e2d45'}`,
+              color: showTrendEmas ? '#eab308' : '#3a5a7a',
+              borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
+            }}>E-Trend</button>
+            {fibLines.length > 0 && (
+              <button title="Toggle Fibonacci levels" onClick={() => setShowFib(v => !v)} style={{
+                background: showFib ? '#110e00' : 'transparent',
+                border: `1px solid ${showFib ? '#c8a830' : '#1e2d45'}`,
+                color: showFib ? '#c8a830' : '#3a5a7a',
+                borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
+              }}>Fib</button>
+            )}
+            <button title="Toggle RSI sub-panel" onClick={() => {
+              setShowRSI(v => {
+                if (v) userClosedRSI.current = true
+                else   userClosedRSI.current = false
+                return !v
+              })
+            }} style={{
+              background: showRSI ? '#060d1a' : 'transparent',
+              border: `1px solid ${showRSI ? '#60a5fa' : '#1e2d45'}`,
+              color: showRSI ? '#60a5fa' : '#3a5a7a',
+              borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
+            }}>RSI</button>
+            <button title={useHA ? 'Heikin-Ashi active — click for OHLC' : 'OHLC active — click for Heikin-Ashi'}
+              onClick={() => setUseHA(v => !v)} style={{
+                background: useHA ? '#0a0a1e' : 'transparent',
+                border: `1px solid ${useHA ? '#6366f1' : '#1e2d45'}`,
+                color: useHA ? '#818cf8' : '#3a5a7a',
+                borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
+              }}>HA</button>
+            {spyCloses?.length > 0 && (
+              <button title="Relative Strength vs SPY" onClick={() => setShowRS(v => !v)} style={{
+                background: showRS ? '#0e1205' : 'transparent',
+                border: `1px solid ${showRS ? '#84cc16' : '#1e2d45'}`,
+                color: showRS ? '#a3e635' : '#3a5a7a',
+                borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
+              }}>RS</button>
+            )}
+            {anchoredVwaps.length > 0 && (
+              <button title="Clear anchored VWAPs" onClick={() => setAnchoredVwaps([])} style={{
+                background: 'transparent', border: '1px solid #1e2d45', color: '#a78bfa',
+                borderRadius: 4, padding: '2px 8px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
+              }}>A-VWAP ✕</button>
+            )}
+            <button title={showAllPatterns ? 'All patterns — click for ★ only' : 'High-confidence (≥75%) — click for all'}
+              onClick={() => setShowAllPatterns(v => !v)} style={{
+                background: showAllPatterns ? '#0e0e1a' : 'transparent',
+                border: `1px solid ${showAllPatterns ? '#a78bfa' : '#1e2d45'}`,
+                color: showAllPatterns ? '#a78bfa' : '#3a5a7a',
+                borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
+              }}>Pats {showAllPatterns ? 'All' : '★'}</button>
+            {curLines.length > 0 && (
+              <button onClick={() => setDrawings(prev => ({ ...prev, [curKey]: [] }))} style={{
+                background: 'transparent', border: '1px solid #1e2d45', color: '#3a5a7a',
+                borderRadius: 4, padding: '2px 8px', fontSize: 11, cursor: 'pointer',
+              }}>Clear Lines</button>
+            )}
+            {drawTool !== 'none' && (
+              <div style={{ width: '100%', fontSize: 9, color: '#3a5a7a', paddingTop: 3 }}>
+                {drawTool === 'hline' ? 'Click chart to place line' :
+                 drawTool === 'trend' ? 'Click + drag to draw trendline' : 'Click line to erase'}
+              </div>
+            )}
+          </>) : (
+            <span style={{ fontSize: 9, color: '#2a4060', padding: '2px 4px' }}>
+              Switch to PRO mode to access drawing tools and overlays.
+            </span>
+          )}
+        </div>
+      )}
 
-      {/* ── Drawing toolbar ── */}
-      <div style={{ display: 'flex', gap: 5, padding: '4px 8px', borderBottom: '1px solid #0e1e30', background: '#020810', alignItems: 'center', flexWrap: 'wrap' }}>
-        {[
-          { id: 'hline', icon: '—', tip: 'Horizontal line — click chart to place' },
-          { id: 'trend', icon: '╱', tip: 'Trendline — click + drag' },
-          { id: 'erase', icon: '✕', tip: 'Eraser — click a line to delete it' },
-        ].map(t => (
-          <button key={t.id} title={t.tip}
-            onClick={() => setDrawTool(prev => prev === t.id ? 'none' : t.id)}
-            style={{
-              background: drawTool === t.id ? '#1e3a5f' : 'transparent',
-              border: `1px solid ${drawTool === t.id ? '#3b82f6' : '#1e2d45'}`,
-              color: drawTool === t.id ? '#60a5fa' : '#3a5a7a',
-              borderRadius: 4, padding: '2px 8px', fontSize: 13, cursor: 'pointer',
-              fontWeight: 700, lineHeight: 1.4,
+      {/* ── Insight banner — surfaces key signals automatically ── */}
+      {d?.rsiDivs?.length > 0 && (() => {
+        const latest = d.rsiDivs[d.rsiDivs.length - 1]
+        const isBull = latest.kind === 'bull'
+        const col    = isBull ? '#10b981' : '#ef4444'
+        const bg     = isBull ? '#030f09' : '#0f0303'
+        return (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '4px 12px', background: bg,
+            borderBottom: `1px solid ${col}22`,
+          }}>
+            <span style={{
+              fontSize: 8, fontWeight: 900, color: col,
+              letterSpacing: '0.5px', opacity: 0.9,
+            }}>
+              {isBull ? '↑ RSI BULL DIVERGENCE' : '↓ RSI BEAR DIVERGENCE'}
+            </span>
+            <span style={{ fontSize: 7.5, color: '#2a4060', fontWeight: 600 }}>
+              {isBull
+                ? 'Price made a lower low — RSI made a higher low. Potential reversal upward.'
+                : 'Price made a higher high — RSI made a lower high. Potential reversal downward.'}
+            </span>
+            <span style={{
+              marginLeft: 'auto', fontSize: 7.5, color: col, fontWeight: 700, opacity: 0.7,
+              cursor: 'pointer', padding: '1px 5px',
             }}
-          >{t.icon}</button>
-        ))}
-
-        {/* ── Overlay toggles ── */}
-        <span style={{ width: 1, background: '#1a3050', margin: '2px 3px', alignSelf: 'stretch' }} />
-        <button
-          title="Toggle entry EMAs (8 · 15 · 30)"
-          onClick={() => setShowEntryEmas(v => !v)}
-          style={{
-            background: showEntryEmas ? '#0c1e10' : 'transparent',
-            border: `1px solid ${showEntryEmas ? '#10b981' : '#1e2d45'}`,
-            color: showEntryEmas ? '#10b981' : '#3a5a7a',
-            borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer',
-            fontWeight: 800, lineHeight: 1.4, letterSpacing: '0.3px',
-          }}
-        >E-Fast</button>
-        <button
-          title="Toggle trend EMAs (65 · 200)"
-          onClick={() => setShowTrendEmas(v => !v)}
-          style={{
-            background: showTrendEmas ? '#12100a' : 'transparent',
-            border: `1px solid ${showTrendEmas ? '#eab308' : '#1e2d45'}`,
-            color: showTrendEmas ? '#eab308' : '#3a5a7a',
-            borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer',
-            fontWeight: 800, lineHeight: 1.4, letterSpacing: '0.3px',
-          }}
-        >E-Trend</button>
-        {fibLines.length > 0 && (
-          <button
-            title="Toggle Fibonacci levels"
-            onClick={() => setShowFib(v => !v)}
-            style={{
-              background: showFib ? '#110e00' : 'transparent',
-              border: `1px solid ${showFib ? '#c8a830' : '#1e2d45'}`,
-              color: showFib ? '#c8a830' : '#3a5a7a',
-              borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer',
-              fontWeight: 800, lineHeight: 1.4, letterSpacing: '0.3px',
-            }}
-          >Fib</button>
-        )}
-        <button
-          title="Toggle RSI sub-panel"
-          onClick={() => setShowRSI(v => !v)}
-          style={{
-            background: showRSI ? '#060d1a' : 'transparent',
-            border: `1px solid ${showRSI ? '#60a5fa' : '#1e2d45'}`,
-            color: showRSI ? '#60a5fa' : '#3a5a7a',
-            borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer',
-            fontWeight: 800, lineHeight: 1.4, letterSpacing: '0.3px',
-          }}
-        >RSI</button>
-        <button
-          title={showAllPatterns ? 'Showing all patterns — click for high-confidence only' : 'High-confidence patterns (≥75%) — click to show all'}
-          onClick={() => setShowAllPatterns(v => !v)}
-          style={{
-            background: showAllPatterns ? '#0e0e1a' : 'transparent',
-            border: `1px solid ${showAllPatterns ? '#a78bfa' : '#1e2d45'}`,
-            color: showAllPatterns ? '#a78bfa' : '#3a5a7a',
-            borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer',
-            fontWeight: 800, lineHeight: 1.4, letterSpacing: '0.3px',
-          }}
-        >Pats {showAllPatterns ? 'All' : '★'}</button>
-
-        {curLines.length > 0 && (
-          <button title="Clear all drawings" onClick={() => setDrawings(prev => ({ ...prev, [curKey]: [] }))}
-            style={{ marginLeft: 'auto', background: 'transparent', border: '1px solid #1e2d45',
-              color: '#3a5a7a', borderRadius: 4, padding: '2px 8px', fontSize: 11, cursor: 'pointer' }}>
-            Clear
-          </button>
-        )}
-        {drawTool !== 'none' && (
-          <span style={{ fontSize: 10, color: '#3a5a7a', marginLeft: curLines.length > 0 ? 4 : 'auto' }}>
-            {drawTool === 'hline' ? 'Click chart to place horizontal line' :
-             drawTool === 'trend' ? 'Click + drag to draw trendline' :
-             'Click a line to erase it'}
-          </span>
-        )}
-      </div>
+              onClick={() => { userClosedRSI.current = true; setShowRSI(false) }}
+              title="Dismiss"
+            >✕</span>
+          </div>
+        )
+      })()}
 
       {/* ── SVG chart ── */}
       <svg
@@ -1444,6 +1703,16 @@ export default function PriceChart({
       >
         {/* Price area background */}
         <rect x={PL} y={PT} width={VW - PL - PR} height={PH - PT} fill="#040b16" rx="2" />
+
+        {/* HA mode badge — top-left of chart, confirms candle type */}
+        {useHA && (
+          <g pointerEvents="none">
+            <rect x={PL + 4} y={PT + 4} width={22} height={10} rx="3"
+              fill="#050e1c" stroke="#1e3a5f" strokeWidth="0.8" opacity="0.88" />
+            <text x={PL + 15} y={PT + 11.5} textAnchor="middle"
+              fontSize="6" fill="#2a5080" fontWeight="800" letterSpacing="0.4">HA</text>
+          </g>
+        )}
 
         {/* Volume area background */}
         <rect x={PL} y={PH + GAP} width={VW - PL - PR} height={VH} fill="#030912" rx="1" />
@@ -1481,6 +1750,7 @@ export default function PriceChart({
               <text x={PL + 6} y={(g.y1 + g.y2) / 2 + 3.5}
                 textAnchor="start" fontSize="7.5" fill={col} opacity="0.85" fontWeight="700">
                 {`GAP${g.type === 'up' ? '↑' : '↓'} $${g.size.toFixed(2)}`}
+                {gapClass?.type ? `  · ${gapClass.type}` : ''}
               </text>
             </g>
           )
@@ -1809,29 +2079,9 @@ export default function PriceChart({
           )
         })}
 
-        {/* ── Fair Value Gaps (drawn below candles so bars render on top) ── */}
-        {showSMC && fvgs.map((fvg, i) => {
-          if (fvg.startI < 0 || fvg.startI >= nb) return null
-          const x1   = xOf(fvg.startI)
-          const x2   = xOf(Math.min((fvg.endI ?? nb - 1), nb - 1) + 1)
-          const topY  = yOf(fvg.top)
-          const botY  = yOf(fvg.bot)
-          const col   = fvg.kind === 'bull' ? '#2dd4bf' : '#f43f5e'
-          const fill  = fvg.kind === 'bull' ? '#2dd4bf33' : '#f43f5e33'
-          const h     = Math.max(1, botY - topY)
-          return (
-            <g key={`fvg-${i}`} pointerEvents="none">
-              <rect x={x1} y={topY} width={Math.max(1, x2 - x1)} height={h}
-                fill={fill} stroke={col} strokeWidth="1.2" strokeDasharray="4,2" opacity="0.95" />
-              <text x={x1 + 3} y={topY + 8} fontSize="6.5" fill={col} fontWeight="800" opacity="1.0">
-                {fvg.kind === 'bull' ? 'FVG↑' : 'FVG↓'}
-              </text>
-            </g>
-          )
-        })}
 
-        {/* ── Liquidity Sweeps ── */}
-        {showSMC && sweeps.map((sw, i) => {
+        {/* ── Liquidity Sweeps (pro mode only) ── */}
+        {showSMC && proMode && sweeps.map((sw, i) => {
           if (sw.i < 0 || sw.i >= nb) return null
           const x1   = xOf(Math.max(0, sw.swingI))
           const x2   = xOf(sw.i)
@@ -1853,8 +2103,8 @@ export default function PriceChart({
           )
         })}
 
-        {/* ── BOS (Break of Structure) ── */}
-        {showSMC && bos.map((b, i) => {
+        {/* ── BOS (Break of Structure) — last 3 in pro, most recent only in simple ── */}
+        {showSMC && (proMode ? bos.slice(-3) : bos.slice(-1)).map((b, i) => {
           if (b.i < 0 || b.i >= nb) return null
           const x1  = xOf(Math.max(0, b.swingI))
           const x2  = xOf(b.i)
@@ -1877,13 +2127,13 @@ export default function PriceChart({
           )
         })}
 
-        {/* ── CHoCH (Change of Character) — dashed, lighter weight ── */}
-        {showSMC && choch.map((ch, i) => {
+        {/* ── CHoCH (Change of Character) — last 3 in pro, most recent only in simple ── */}
+        {showSMC && (proMode ? choch.slice(-3) : choch.slice(-1)).map((ch, i) => {
           if (ch.i < 0 || ch.i >= nb) return null
           const x1  = xOf(Math.max(0, ch.swingI))
           const x2  = xOf(ch.i)
           const y   = yOf(ch.level)
-          const col = ch.kind === 'bull' ? '#34d399' : '#f87171'
+          const col = ch.kind === 'bull' ? '#10b981' : '#ef4444'
           const lbW = 42, lbH = 10
           const lbX = Math.max(PL, Math.min(VW - PR - lbW, x2 - lbW / 2))
           const lbY = ch.kind === 'bull' ? y - lbH - 3 : y + 3
@@ -1902,8 +2152,42 @@ export default function PriceChart({
         })}
 
 
-        {/* EMA 200 — rendered first (bottom layer) so shorter EMAs draw on top */}
-        {showTrendEmas && (
+        {/* ── Order Blocks (SMC: institutional footprints — pro mode only) ── */}
+        {showSMC && proMode && (() => {
+          const bullOBs = orderBlocks.filter(ob => ob.kind === 'bull').slice(-4)
+          const bearOBs = orderBlocks.filter(ob => ob.kind === 'bear').slice(-4)
+          return [...bullOBs, ...bearOBs].map((ob, i) => {
+            const col  = ob.kind === 'bull' ? '#22d3ee' : '#fb923c'
+            const topY = yOf(Math.min(ob.top, d.priceMax))
+            const botY = yOf(Math.max(ob.bot, d.priceMin))
+            const zH   = Math.max(2, botY - topY)
+            if (topY > PH || botY < PT) return null
+            return (
+              <rect key={`ob-${i}`} x={PL} y={topY} width={VW - PL - PR} height={zH}
+                fill={col} fillOpacity="0.05" stroke={col} strokeWidth="0.7"
+                strokeDasharray="3,2" opacity="0.55" pointerEvents="none" />
+            )
+          })
+        })()}
+
+        {/* ── Confluence zones — all in pro; within 0.5% of price in simple ── */}
+        {(proMode ? confluenceZones : confluenceZones.filter(z => Math.abs(z.price - topClose) / topClose < 0.005)).map((z, i) => {
+          const zy = z.y
+          if (zy < PT + 2 || zy > PH - 2) return null
+          return (
+            <g key={`conf-${i}`} pointerEvents="none">
+              <line x1={PL} y1={zy} x2={VW - PR} y2={zy}
+                stroke="#c07a00" strokeWidth="0.8" strokeDasharray="3,3" opacity="0.30" />
+              <text x={VW - PR - 3} y={zy - 2} textAnchor="end"
+                fontSize="6" fill="#c07a00" fontWeight="700" opacity="0.50">
+                {z.names}
+              </text>
+            </g>
+          )
+        })}
+
+        {/* EMA 200 — rendered first (bottom layer); always visible in simple mode */}
+        {(!proMode || showTrendEmas) && (
           <polyline points={toPoints(e200)} fill="none" stroke="#eab308" strokeWidth="2.0"
             strokeLinejoin="round" opacity="0.9" />
         )}
@@ -1914,6 +2198,22 @@ export default function PriceChart({
             fill="none" stroke="#ffffff" strokeWidth="2.0"
             strokeDasharray="5,3" strokeLinejoin="round" opacity="0.95" />
         ))}
+
+        {/* ── Anchored VWAPs (Shift+click to add — pro mode only) ── */}
+        {proMode && anchoredVwapLines.map((pts, i) => {
+          if (!pts) return null
+          const col = anchoredVwaps[i]?.color ?? '#f59e0b'
+          return (
+            <g key={`avwap-${i}`} pointerEvents="none">
+              <polyline points={pts} fill="none" stroke={col}
+                strokeWidth="1.6" strokeDasharray="5,3" strokeLinejoin="round" opacity="0.88" />
+              <text x={VW - PR - 3} y={parseFloat(pts.split(' ').pop().split(',')[1]) + 4}
+                textAnchor="end" fontSize="6.5" fill={col} fontWeight="800" opacity="0.8">
+                A-VWAP
+              </text>
+            </g>
+          )
+        })}
 
         {/* ── VWAP cross markers — volume-confirmed price × VWAP crossings ── */}
         {vwapCrosses.map((vc, i) => {
@@ -1938,23 +2238,23 @@ export default function PriceChart({
           )
         })}
 
-        {/* EMA 65 */}
-        {showTrendEmas && (
+        {/* EMA 65 — always visible in simple mode, toggle-gated in pro mode */}
+        {(!proMode || showTrendEmas) && (
           <polyline points={toPoints(e65)} fill="none" stroke="#a855f7" strokeWidth="2.0" strokeLinejoin="round" />
         )}
 
-        {/* EMA 30 */}
-        {showEntryEmas && (
+        {/* EMA 30 — pro mode only */}
+        {proMode && showEntryEmas && (
           <polyline points={toPoints(e30)} fill="none" stroke="#06b6d4" strokeWidth="1.8" strokeLinejoin="round" />
         )}
 
-        {/* EMA 15 */}
-        {showEntryEmas && (
+        {/* EMA 15 — pro mode only */}
+        {proMode && showEntryEmas && (
           <polyline points={toPoints(e15)} fill="none" stroke="#84cc16" strokeWidth="1.8" strokeLinejoin="round" />
         )}
 
-        {/* EMA 5 */}
-        {showEntryEmas && (
+        {/* EMA 5 — pro mode only */}
+        {proMode && showEntryEmas && (
           <polyline points={toPoints(e5)} fill="none" stroke="#f472b6" strokeWidth="2.2" strokeLinejoin="round" />
         )}
 
@@ -1969,6 +2269,68 @@ export default function PriceChart({
               fill={col} fillOpacity={intensity} rx="1" pointerEvents="none" />
           )
         })}
+
+        {/* ── Pattern arrows — all ≥75% win-rate, recency-first, volume-scaled ── */}
+        {(() => {
+          // Sort oldest → newest so the most recent renders on top
+          const shown = [...displayReversals].sort((a, b) => a.barI - b.barI)
+          return shown.map((r, i) => {
+            const col   = r.kind === 'bull' ? '#10b981' : '#ef4444'
+            const cx    = r.x
+            const cy    = Math.max(PT + 20, Math.min(PH - 20, r.yMark))
+            // Volume confirmation — scale arrow by conviction
+            const scale = r.volRatio >= 2.0 ? 1.45 : r.volRatio >= 1.5 ? 1.2 : r.volRatio < 0.8 ? 0.75 : 1.0
+            const sz    = Math.round(7 * scale)   // half-width of triangle base
+            const ht    = Math.round(11 * scale)  // triangle height
+            const fs    = Math.max(6, Math.round(6.5 * scale))
+            const sw    = +(1.5 * scale).toFixed(1)
+            const op    = r.volRatio < 0.8 ? 0.50 : 0.95
+            // Strip the directional ↑/↓ prefix — shape carries the direction
+            const abbr  = r.label.replace(/^[↑↓]/, '')
+
+            if (r.kind === 'bull') {
+              const pts = `${cx},${cy - ht} ${cx - sz},${cy} ${cx + sz},${cy}`
+              return (
+                <g key={`pat-${i}`} style={{ cursor: 'pointer' }}
+                  onMouseEnter={(e) => setTooltip({
+                    clientX: e.clientX, clientY: e.clientY,
+                    name: r.name, kind: r.kind, candles: r.candles,
+                    rate: r.rate, desc: r.desc, volRatio: r.volRatio,
+                  })}
+                  onMouseLeave={() => setTooltip(null)}
+                >
+                  <polygon points={pts} fill={col} fillOpacity="0.18"
+                    stroke={col} strokeWidth={sw} opacity={op} />
+                  <text x={cx} y={cy + 9} textAnchor="middle"
+                    fontSize={fs} fill={col} fontWeight="900"
+                    opacity={op} pointerEvents="none" letterSpacing="0.2">
+                    {abbr}
+                  </text>
+                </g>
+              )
+            } else {
+              const pts = `${cx},${cy + ht} ${cx - sz},${cy} ${cx + sz},${cy}`
+              return (
+                <g key={`pat-${i}`} style={{ cursor: 'pointer' }}
+                  onMouseEnter={(e) => setTooltip({
+                    clientX: e.clientX, clientY: e.clientY,
+                    name: r.name, kind: r.kind, candles: r.candles,
+                    rate: r.rate, desc: r.desc, volRatio: r.volRatio,
+                  })}
+                  onMouseLeave={() => setTooltip(null)}
+                >
+                  <polygon points={pts} fill={col} fillOpacity="0.18"
+                    stroke={col} strokeWidth={sw} opacity={op} />
+                  <text x={cx} y={cy - 4} textAnchor="middle"
+                    fontSize={fs} fill={col} fontWeight="900"
+                    opacity={op} pointerEvents="none" letterSpacing="0.2">
+                    {abbr}
+                  </text>
+                </g>
+              )
+            }
+          })
+        })()}
 
         {/* ── Candles ── */}
         {c.map((cv, i) => {
@@ -2277,8 +2639,25 @@ export default function PriceChart({
           />
         )}
 
-        {/* Volume spike callouts (≥2× average) */}
-        {volSpikes.map((sp, i) => (
+        {/* ── Relative Strength vs SPY (pro mode only) ── */}
+        {showRS && proMode && rsLinePoints.length > 1 && (
+          <g pointerEvents="none">
+            <polyline points={rsLinePoints.join(' ')} fill="none"
+              stroke="#a3e635" strokeWidth="1.8" strokeLinejoin="round" opacity="0.85" />
+            <text x={PL + 6} y={PH + GAP + 12} fontSize="7" fill="#a3e635" fontWeight="800" opacity="0.75">
+              RS vs SPY
+            </text>
+            {/* Zero line (rel = 1.0) */}
+            {(() => {
+              const zeroY = PH + GAP + VH - (0.25 / 0.50) * VH
+              return <line x1={PL} y1={zeroY} x2={VW - PR} y2={zeroY}
+                stroke="#a3e635" strokeWidth="0.5" strokeDasharray="3,3" opacity="0.30" />
+            })()}
+          </g>
+        )}
+
+        {/* Volume spike callouts (pro mode only) */}
+        {proMode && volSpikes.map((sp, i) => (
           <g key={`vspike-${i}`} pointerEvents="none">
             <rect x={sp.x - 10} y={sp.vy - 12} width={20} height={10} rx="2"
               fill="#0e1420" stroke="#64748b" strokeWidth="0.8" opacity="0.9" />
@@ -2369,6 +2748,33 @@ export default function PriceChart({
                 <polyline points={rsiPts} fill="none" stroke={rsiCol}
                   strokeWidth="1.6" strokeLinejoin="round" opacity="0.9" />
               )}
+
+              {/* ── RSI Divergences ── */}
+              {rsiDivs.map((div, i) => {
+                const col   = div.kind === 'bull' ? '#10b981' : '#ef4444'
+                const yRSIA = yRSI(div.rsiA), yRSIB = yRSI(div.rsiB)
+                const xA = xOf(div.iA), xB = xOf(div.iB)
+                const priceYA = yOf(div.kind === 'bull' ? l[div.iA] : h[div.iA])
+                const priceYB = yOf(div.kind === 'bull' ? l[div.iB] : h[div.iB])
+                const labelY  = div.kind === 'bull' ? yRSIB + 9 : yRSIB - 3
+                return (
+                  <g key={`rdiv-${i}`} pointerEvents="none">
+                    {/* Faint price-area divergence line */}
+                    <line x1={xA} y1={priceYA} x2={xB} y2={priceYB}
+                      stroke={col} strokeWidth="0.9" strokeDasharray="4,2" opacity="0.30" />
+                    {/* RSI-panel divergence line */}
+                    <line x1={xA} y1={yRSIA} x2={xB} y2={yRSIB}
+                      stroke={col} strokeWidth="1.3" strokeDasharray="4,2" opacity="0.75" />
+                    {/* Endpoint dots */}
+                    <circle cx={xA} cy={yRSIA} r="2" fill={col} opacity="0.70" />
+                    <circle cx={xB} cy={yRSIB} r="2.5" fill={col} stroke="#0d1f33" strokeWidth="0.7" opacity="0.85" />
+                    {/* Tiny inline label — no background box */}
+                    <text x={xB + 3} y={labelY} fontSize="6" fill={col} fontWeight="700" opacity="0.75">
+                      {div.kind === 'bull' ? '↑div' : '↓div'}
+                    </text>
+                  </g>
+                )
+              })}
 
               {/* "RSI 14" watermark */}
               <text x={PL + 6} y={RSI_Y + 10} fontSize="8" fill="#1a3050"
@@ -2607,6 +3013,96 @@ export default function PriceChart({
           )
         })()}
       </svg>
+
+      {/* ── TF Alignment Footer ── */}
+      {tfAlignment && (() => {
+        if (!proMode) {
+          const vals = ['W','D','4H','1H','15M'].map(k => tfAlignment?.[k]).filter(Boolean)
+          const avg = vals.length
+            ? vals.reduce((s, v) => s + (v.score ?? 2), 0) / vals.length
+            : 2
+          const label = avg >= 3 ? 'ALIGNED BULL' : avg <= 1 ? 'ALIGNED BEAR' : 'MIXED'
+          const col   = avg >= 3 ? '#10b981' : avg <= 1 ? '#ef4444' : '#f59e0b'
+          const total = (flowSentiment?.callPrem ?? 0) + (flowSentiment?.putPrem ?? 0)
+          const callRatio = total > 25000 ? (flowSentiment?.callPrem ?? 0) / total : null
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 10px', background: '#020709', borderTop: '1px solid #081420' }}>
+              <span style={{ fontSize: 8.5, fontWeight: 800, color: col, letterSpacing: '0.3px' }}>{label}</span>
+              {verdict && (() => {
+                const regCol = verdict === 'FAVORABLE' || verdict === 'LEANING BULLISH' ? '#10b981'
+                  : verdict === 'HOSTILE' || verdict === 'BEARISH' ? '#ef4444'
+                  : verdict === 'HIGH VIX' ? '#f59e0b' : '#60a5fa'
+                return <span style={{ fontSize: 8.5, color: regCol, fontWeight: 700, opacity: 0.85 }}>{verdict}</span>
+              })()}
+              {callRatio != null && (() => {
+                const isBull = callRatio > 0.55, isBear = callRatio < 0.45
+                if (!isBull && !isBear) return null
+                const flowCol = isBull ? '#10b981' : '#ef4444'
+                const flowLbl = isBull ? `CALL ${Math.round(callRatio * 100)}%` : `PUT ${Math.round((1 - callRatio) * 100)}%`
+                return <span style={{ fontSize: 8.5, color: flowCol, fontWeight: 700, opacity: 0.85 }}>· {flowLbl}</span>
+              })()}
+              {vixData?.vix != null && (
+                <span style={{ fontSize: 8.5, fontWeight: 700, opacity: 0.7, color: vixData.vix > 25 ? '#ef4444' : vixData.vix < 18 ? '#4a7a5a' : '#8a6a30' }}>
+                  · VIX {vixData.vix.toFixed(1)}
+                </span>
+              )}
+            </div>
+          )
+        }
+        return (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '3px 10px', background: '#020709',
+            borderTop: '1px solid #081420',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              {[
+                { tf: 'W', bars: tfAlignment?.W },
+                { tf: 'D', bars: tfAlignment?.D },
+                { tf: '4H', bars: tfAlignment?.['4H'] },
+                { tf: '1H', bars: tfAlignment?.['1H'] },
+                { tf: '15M', bars: tfAlignment?.['15M'] },
+              ].map(({ tf, bars }) => {
+                if (!bars) return null
+                const isActive = tf === timeframe
+                return (
+                  <div key={tf} style={{ display: 'flex', alignItems: 'center', gap: 4, opacity: isActive ? 1 : 0.38 }}>
+                    <span style={{ fontSize: 8.5, color: '#354f6a', fontWeight: 600 }}>{tf}</span>
+                    <span style={{
+                      fontSize: 8.5, fontWeight: 800, color: bars.col,
+                      borderBottom: isActive ? `1.5px solid ${bars.col}` : 'none',
+                      paddingBottom: 1, letterSpacing: '0.2px',
+                    }}>{bars.label}</span>
+                  </div>
+                )
+              })}
+            </div>
+            <span style={{ width: 1, background: '#0e1e2e', alignSelf: 'stretch', margin: '1px 2px' }} />
+            {verdict && (() => {
+              const regCol = verdict === 'FAVORABLE' || verdict === 'LEANING BULLISH' ? '#10b981'
+                : verdict === 'HOSTILE' || verdict === 'BEARISH' ? '#ef4444'
+                : verdict === 'HIGH VIX' ? '#f59e0b' : '#60a5fa'
+              return <span style={{ fontSize: 8.5, color: regCol, fontWeight: 700, opacity: 0.85 }}>{verdict}</span>
+            })()}
+            {flowSentiment && (() => {
+              const total = (flowSentiment.callPrem ?? 0) + (flowSentiment.putPrem ?? 0)
+              if (total < 25000) return null
+              const callRatio = (flowSentiment.callPrem ?? 0) / total
+              const isBull = callRatio > 0.55, isBear = callRatio < 0.45
+              if (!isBull && !isBear) return null
+              const flowCol = isBull ? '#10b981' : '#ef4444'
+              const flowLbl = isBull ? `CALL ${Math.round(callRatio * 100)}%` : `PUT ${Math.round((1 - callRatio) * 100)}%`
+              return <span style={{ fontSize: 8.5, color: flowCol, fontWeight: 700, opacity: 0.85 }}>· {flowLbl}</span>
+            })()}
+            {vixData?.vix != null && (
+              <span style={{ fontSize: 8.5, fontWeight: 700, opacity: 0.7,
+                color: vixData.vix > 25 ? '#ef4444' : vixData.vix < 18 ? '#4a7a5a' : '#8a6a30' }}>
+                · VIX {vixData.vix.toFixed(1)}
+              </span>
+            )}
+          </div>
+        )
+      })()}
 
       {/* ── Hover tooltip (fixed position) ── */}
       {tooltip && (() => {

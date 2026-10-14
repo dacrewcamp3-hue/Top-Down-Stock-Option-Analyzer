@@ -3,6 +3,143 @@ import './TradeJournal.css'
 
 const STORAGE_KEY = 'tj_notes_v2'
 
+// ── Options trade card with signal snapshot + close flow ──────────────────────
+function OptionsTradeCard({ note, onUpdate, onDelete }) {
+  const snap = note.tradeSnap
+  const [closing, setClosing]         = useState(false)
+  const [exitPremium, setExitPremium] = useState('')
+
+  if (!snap) return null
+
+  function saveClose() {
+    const exitVal = parseFloat(exitPremium)
+    if (isNaN(exitVal) || exitVal < 0) return
+    const entry   = snap.premium ?? 0
+    const qty     = snap.qty     ?? 1
+    const pnlPerContract = (exitVal - entry) * 100
+    const totalPnl       = pnlPerContract * qty
+    const pctReturn      = entry > 0 ? ((exitVal - entry) / entry) * 100 : 0
+    const updated = {
+      ...note,
+      tradeSnap: {
+        ...snap,
+        exit: {
+          premium:         exitVal,
+          date:            new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          pnlPerContract,
+          totalPnl,
+          pctReturn,
+        },
+      },
+    }
+    onUpdate(updated)
+    setClosing(false)
+    setExitPremium('')
+  }
+
+  const exit = snap.exit
+  const isWin = exit ? exit.totalPnl >= 0 : null
+  const sig   = snap.signalState
+
+  return (
+    <div style={{
+      background: '#080f1a', border: '1px solid #1e3a5f',
+      borderRadius: 6, padding: 10, fontSize: 10,
+    }}>
+      {/* Trade header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <span style={{
+          background: snap.direction === 'CALL' ? '#064e3b' : '#450a0a',
+          color: snap.direction === 'CALL' ? '#34d399' : '#fca5a5',
+          padding: '1px 7px', borderRadius: 3, fontWeight: 900, letterSpacing: 1,
+        }}>{snap.direction}</span>
+        <span style={{ color: '#93c5fd', fontWeight: 700 }}>
+          ${snap.strike} · {snap.expDate} · {snap.dte}d DTE
+        </span>
+        <span style={{ color: '#6b7280' }}>
+          {snap.qty} contract{snap.qty !== 1 ? 's' : ''} @ ${(snap.premium ?? 0).toFixed(2)}/sh
+        </span>
+        {snap.isQuickPlay && (
+          <span style={{ color: '#f59e0b', fontSize: 9, fontWeight: 700 }}>⚡ QUICK PLAY</span>
+        )}
+        {exit && (
+          <span style={{
+            marginLeft: 'auto', fontWeight: 800,
+            color: isWin ? '#10b981' : '#ef4444',
+          }}>
+            {isWin ? '✓' : '✗'} {isWin ? '+' : ''}${exit.totalPnl.toFixed(0)} ({exit.pctReturn > 0 ? '+' : ''}{exit.pctReturn.toFixed(1)}%)
+          </span>
+        )}
+      </div>
+
+      {/* Signal snapshot at entry */}
+      {sig && (
+        <div style={{
+          background: '#0a1628', border: '1px solid #1e3a5f',
+          borderRadius: 4, padding: '6px 8px', marginBottom: 6,
+        }}>
+          <div style={{ color: '#4b7ab5', fontWeight: 700, fontSize: 9, letterSpacing: 1, marginBottom: 3 }}>
+            📊 SIGNAL AT ENTRY
+          </div>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', color: '#93c5fd' }}>
+            <span>Direction: <strong style={{ color: sig.direction === 'CALL' ? '#34d399' : sig.direction === 'PUT' ? '#fca5a5' : '#6b7280' }}>{sig.direction ?? '—'}</strong></span>
+            <span>Confidence: <strong style={{ color: (sig.confidence ?? 0) >= 70 ? '#10b981' : (sig.confidence ?? 0) >= 55 ? '#f59e0b' : '#ef4444' }}>{sig.confidence ?? '?'}/100</strong></span>
+            <span>TF Score: <strong>{sig.tfScore ?? '?'}/5</strong></span>
+            {sig.blocked && <span style={{ color: '#ef4444' }}>⛔ BLOCKED — {sig.blockReason ?? 'see analysis'}</span>}
+            {sig.conflicts?.length ? <span style={{ color: '#f59e0b' }}>⚠ Conflicts: {sig.conflicts.join(', ')}</span> : <span style={{ color: '#10b981' }}>✓ No conflicts</span>}
+          </div>
+        </div>
+      )}
+
+      {/* Post-mortem if closed */}
+      {exit && (
+        <div style={{
+          background: isWin ? '#011a0d' : '#1a0000',
+          border: `1px solid ${isWin ? '#065f46' : '#7f1d1d'}`,
+          borderRadius: 4, padding: '5px 8px', marginBottom: 6,
+          color: isWin ? '#34d399' : '#fca5a5', fontWeight: 600,
+        }}>
+          Closed {exit.date} · Exit ${exit.premium.toFixed(2)} vs Entry ${(snap.premium ?? 0).toFixed(2)} ·{' '}
+          {isWin ? '+' : ''}${exit.pnlPerContract.toFixed(0)}/contract · {isWin ? '+' : ''}{exit.pctReturn.toFixed(1)}% return
+        </div>
+      )}
+
+      {/* Close trade flow */}
+      {!exit && (
+        closing ? (
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <span style={{ color: '#6b7280' }}>Exit premium ($/sh):</span>
+            <input
+              value={exitPremium}
+              onChange={e => setExitPremium(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && saveClose()}
+              placeholder={`e.g. ${((snap.premium ?? 1) * 2).toFixed(2)}`}
+              style={{
+                width: 80, background: '#0d1117', border: '1px solid #374151',
+                borderRadius: 3, color: '#e5e7eb', fontSize: 10, padding: '2px 6px',
+              }}
+              autoFocus
+            />
+            <button onClick={saveClose} style={{
+              background: '#065f46', border: 'none', borderRadius: 3,
+              color: '#34d399', fontSize: 9, fontWeight: 700, padding: '2px 8px', cursor: 'pointer',
+            }}>Save</button>
+            <button onClick={() => setClosing(false)} style={{
+              background: 'none', border: '1px solid #374151', borderRadius: 3,
+              color: '#6b7280', fontSize: 9, padding: '2px 6px', cursor: 'pointer',
+            }}>Cancel</button>
+          </div>
+        ) : (
+          <button onClick={() => setClosing(true)} style={{
+            background: 'none', border: '1px solid #1e3a5f', borderRadius: 3,
+            color: '#60a5fa', fontSize: 9, fontWeight: 700, padding: '2px 10px', cursor: 'pointer',
+          }}>📋 Close This Trade</button>
+        )
+      )}
+    </div>
+  )
+}
+
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
 const hasSpeech = !!SpeechRecognition
 
@@ -127,6 +264,12 @@ export default function TradeJournal() {
     saveNotes(updated)
   }
 
+  function updateNote(updatedNote) {
+    const updated = notes.map(n => n.id === updatedNote.id ? updatedNote : n)
+    setNotes(updated)
+    saveNotes(updated)
+  }
+
   function handleCancel() {
     stopListening()
     setText('')
@@ -235,10 +378,32 @@ export default function TradeJournal() {
               <div className="tj-entry-meta">
                 {n.ticker && <span className="tj-entry-ticker">{n.ticker}</span>}
                 <span className="tj-entry-date">{n.date}</span>
+                {n.tradeSnap && (
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, color: '#60a5fa',
+                    background: '#0c1e38', border: '1px solid #1e3a5f',
+                    borderRadius: 3, padding: '1px 5px',
+                  }}>OPTIONS LOG</span>
+                )}
+                {n.tradeSnap?.exit && (
+                  <span style={{
+                    fontSize: 9, fontWeight: 700,
+                    color: n.tradeSnap.exit.totalPnl >= 0 ? '#10b981' : '#ef4444',
+                    background: n.tradeSnap.exit.totalPnl >= 0 ? '#011a0d' : '#1a0000',
+                    border: `1px solid ${n.tradeSnap.exit.totalPnl >= 0 ? '#065f46' : '#7f1d1d'}`,
+                    borderRadius: 3, padding: '1px 5px',
+                  }}>
+                    {n.tradeSnap.exit.totalPnl >= 0 ? '✓ CLOSED WIN' : '✗ CLOSED LOSS'}
+                  </span>
+                )}
               </div>
               <button className="tj-del-btn" onClick={() => deleteNote(n.id)} title="Delete entry">✕</button>
             </div>
-            <p className="tj-entry-text">{n.text}</p>
+            {n.tradeSnap ? (
+              <OptionsTradeCard note={n} onUpdate={updateNote} onDelete={deleteNote} />
+            ) : (
+              <p className="tj-entry-text">{n.text}</p>
+            )}
           </div>
         ))}
       </div>

@@ -1,8 +1,59 @@
 import { useState, useEffect, useRef } from 'react'
 import { fetchQuickSignal } from '../utils/fetchQuickSignal'
+import { getCalendarRisk } from '../utils/economicCalendar'
 import './WatchlistBoard.css'
 
 const GRADE_ORDER = { 'A+': 0, A: 1, B: 2, C: 3 }
+
+// ── Readiness score (0–100) ───────────────────────────────────────────────────
+// Global factors computed once per render (same for all tickers)
+function getGlobalReadinessFactors() {
+  // Calendar factor (0-20 pts): clear = 20, moderate = 10, high/extreme = 0
+  const calRisk = getCalendarRisk(3)
+  const calFactor = calRisk === 'clear' ? 20 : calRisk === 'monitor' ? 16 : calRisk === 'moderate' ? 10 : 0
+
+  // Time-of-day factor (0-20 pts): prime window 10:00–15:30 ET = 20, outside = 0
+  const now    = new Date()
+  const etMins = (now.getUTCHours() * 60 + now.getUTCMinutes() - 300 + 1440) % 1440
+  const isPrime = etMins >= 600 && etMins <= 930   // 10:00–15:30 ET
+  const isNoise = (etMins >= 570 && etMins < 600) || (etMins >= 930 && etMins <= 960) // 9:30-10 or 3:30-4
+  const timeFactor = isPrime ? 20 : isNoise ? 5 : 0
+
+  return { calFactor, timeFactor, calRisk }
+}
+
+function computeReadiness(r, calFactor, timeFactor) {
+  // Signal quality: 0–40 pts
+  const sigFactor = Math.round((r.score ?? 0) / 100 * 40)
+
+  // ORB factor: 0–10 pts
+  const orbFactor = r.orb?.signal === 'ENTER' ? 10
+                  : r.orb?.signal === 'RETEST' ? 8
+                  : r.orb?.signal === 'BREAK'  ? 5
+                  : r.orb?.signal === 'RECAPTURED' ? 4
+                  : 0
+
+  // Cycle alignment: 0–10 pts
+  const phase = r.cyclePhase ?? ''
+  const isBull = phase === 'Accumulation' || phase === 'Expansion'
+  const isBear = phase === 'Distribution' || phase === 'Contraction'
+  const cycleFactor = (r.signal === 'CALL' && isBull) || (r.signal === 'PUT' && isBear) ? 10
+                    : (r.signal === 'CALL' && isBear) || (r.signal === 'PUT' && isBull) ? 0
+                    : 5  // neutral
+
+  return Math.min(100, sigFactor + calFactor + timeFactor + orbFactor + cycleFactor)
+}
+
+function ReadinessLight({ score }) {
+  const clr = score >= 70 ? '#10b981' : score >= 45 ? '#f59e0b' : '#ef4444'
+  const dot = score >= 70 ? '🟢' : score >= 45 ? '🟡' : '🔴'
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <span style={{ fontSize: 10 }}>{dot}</span>
+      <span style={{ color: clr, fontWeight: 700 }}>{score}</span>
+    </span>
+  )
+}
 
 function scoreGrade(score) {
   if (score >= 75) return { g: 'A+', color: '#10b981' }
@@ -98,8 +149,15 @@ export default function WatchlistBoard({ watchlist, onLoadTicker }) {
     )
   }
 
-  const sorted = [...results].sort((a, b) => {
-    if (sortKey === 'score')  return b.score  - a.score
+  const { calFactor, timeFactor, calRisk } = getGlobalReadinessFactors()
+  const resultsWithReadiness = results.map(r => ({
+    ...r,
+    readiness: computeReadiness(r, calFactor, timeFactor),
+  }))
+
+  const sorted = [...resultsWithReadiness].sort((a, b) => {
+    if (sortKey === 'score')     return b.score     - a.score
+    if (sortKey === 'readiness') return b.readiness - a.readiness
     if (sortKey === 'grade') {
       const ga = scoreGrade(a.score)
       const gb = scoreGrade(b.score)
@@ -158,9 +216,21 @@ export default function WatchlistBoard({ watchlist, onLoadTicker }) {
         </div>
       ) : results.length > 0 ? (
         <>
+          {calRisk !== 'clear' && (
+            <div style={{
+              padding: '4px 12px', fontSize: 10, fontWeight: 600,
+              background: calRisk === 'extreme' || calRisk === 'high' ? '#0f0000' : '#100500',
+              color: calRisk === 'extreme' || calRisk === 'high' ? '#fca5a5' : '#fdba74',
+              borderBottom: `1px solid ${calRisk === 'extreme' || calRisk === 'high' ? '#7f1d1d' : '#78350f'}`,
+            }}>
+              {calRisk === 'extreme' ? '⛔' : calRisk === 'high' ? '🔴' : '⚠'} Calendar risk: {calRisk.toUpperCase()} — high-impact macro event within 3 days. Readiness scores penalized.
+            </div>
+          )}
+
           <div className="wlb-legend">
             <span>Sort:</span>
             {[
+              ['readiness','Ready', 'Sort by Readiness Score — combines signal quality, calendar risk, time of day, ORB, and cycle alignment.'],
               ['score',  'Score',  'Sort by Trade Score — highest conviction setups ranked first.'],
               ['signal', 'Signal', 'Sort by signal direction — CALLs first, then PUTs, then NO TRADE.'],
               ['grade',  'Grade',  'Sort by signal grade — A+ setups first, weakest last.'],
@@ -183,6 +253,7 @@ export default function WatchlistBoard({ watchlist, onLoadTicker }) {
               <span data-tip="Signal — multi-timeframe direction. CALL = bullish setup. PUT = bearish setup. NO TRADE = signals conflict or are too weak.">SIGNAL</span>
               <span data-tip="Trade Score (0–100) — composite signal strength. ≥75 = A+, ≥63 = A, ≥50 = B, below = C. Higher = stronger setup.">SCORE</span>
               <span data-tip="Grade — A+ = strongest setup (≥75 score), A = solid (63–74), B = moderate (50–62), C = weak or conflicting (below 50).">GRADE</span>
+              <span data-tip="Readiness Score (0–100) — composite go/no-go score: signal quality + calendar risk + time of day + ORB priority + cycle alignment. 🟢 ≥70 = ready. 🟡 45–69 = conditional. 🔴 &lt;45 = not ready.">READY</span>
               <span data-tip="52-Week Position — where the price sits within its 52-week range. Far left = near annual low. Far right = near annual high.">52-WK POS</span>
               <span data-tip="Weekly RSI (14) — momentum on the weekly chart. ≥ 44 = weekly trend is bullish. 30–44 = bear zone. Below 30 = oversold.">W RSI</span>
               <span data-tip="Daily RSI (14) — momentum on the daily chart. ≥ 44 = bullish momentum. 30–44 = bear zone. Below 30 = oversold.">D RSI</span>
@@ -216,6 +287,9 @@ export default function WatchlistBoard({ watchlist, onLoadTicker }) {
                     {r.score}
                   </span>
                   <span className="wlb-grade" style={{ color, borderColor: color, background: `${color}18` }} data-tip={gradeTip}>{g}</span>
+                  <span data-tip={`Readiness Score: ${r.readiness}/100. ${r.readiness >= 70 ? '🟢 Ready — all key entry conditions favorable.' : r.readiness >= 45 ? '🟡 Conditional — some conditions unfavorable. Proceed carefully.' : '🔴 Not ready — multiple conditions unfavorable. Wait for better setup.'}`}>
+                    <ReadinessLight score={r.readiness} />
+                  </span>
                   <span data-tip={`52-week position: ${r.pct52 ?? 50}%. ${(r.pct52 ?? 50) >= 70 ? 'Near annual highs — strong momentum or extended.' : (r.pct52 ?? 50) <= 30 ? 'Near annual lows — potential value or downtrend.' : 'Mid-range — no extreme positioning.'}`}>
                     <Bar52 pct={r.pct52} />
                   </span>
