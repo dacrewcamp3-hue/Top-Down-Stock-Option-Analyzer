@@ -38,7 +38,7 @@ A bullish weekly reads: price above the 15 EMA, the 5 EMA above the 15 EMA (EMA 
 
 A bearish weekly is the mirror: price below the 15 EMA, EMAs stacked bearishly, RSI below 57, ADX above 21 with −DI leading. This is the only environment where you trade puts.
 
-WEEKLY ALIGNMENT SCORE: The Trade Score gives 15 points to weekly alignment — the largest share after confluence. It evaluates whether the price is on the right side of the weekly 8 and 15 EMAs, whether the EMA stack is ordered correctly (8 above 15 for bulls, 15 above 8 for bears), and whether all three align with the trade direction. A fully aligned weekly scores 15. A mixed weekly scores 4. An opposing weekly scores 0 — and that 15-point deficit will almost certainly pull the total score below the entry threshold.
+WEEKLY ALIGNMENT SCORE: The Trade Score gives 15 points to weekly alignment — the largest share after confluence. It evaluates whether the price is on the right side of the weekly 5 and 15 EMAs, whether the EMA stack is ordered correctly (5 above 15 for bulls, 15 above 5 for bears), and whether all three align with the trade direction. A fully aligned weekly scores 15. A mixed weekly scores 4. An opposing weekly scores 0 — and that 15-point deficit will almost certainly pull the total score below the entry threshold.
 
 REGIME BLOCK: If VIX is above 28 AND the weekly structure is net bearish, the app automatically blocks all CALL signals with a REGIME BLOCK banner. You are not allowed to buy calls in a high-volatility, bearish-weekly environment. Options pricing reflects the fear — you are paying maximum premium for a trade going against the macro. Sit out, trade puts, or wait for the regime to clear.
 
@@ -51,11 +51,11 @@ The Alignment Matrix in the Confluence sub-tab shows all timeframes in a grid. G
     short: 'The daily confirms the trend is alive and trending now',
     body: `The weekly tells you direction. The daily tells you whether momentum is alive right now. Gate 2 needs both — the daily gate from the confluence analysis, and ADX confirming the trend has real force.
 
-On the daily, you're watching: is the stock in a clear pullback within a trend, or is it topping and rolling over? The Move Classifier (visible on the Brief) measures the depth of the current retracement as a Fibonacci percentage. A tight pullback (23.6%–38.2%) with declining volume and price holding above the 8 or 15 EMA is the cleanest entry zone — the trend is resting, not reversing. A deep pullback (61.8%–78.6%) requires a 15 EMA reclaim before entry. A full reversal (78.6%+) means the trend may be done — wait for a new base to form.
+On the daily, you're watching: is the stock in a clear pullback within a trend, or is it topping and rolling over? The Move Classifier (visible on the Brief) measures the depth of the current retracement as a Fibonacci percentage. A tight pullback (23.6%–38.2%) with declining volume and price holding above the 5 or 15 EMA is the cleanest entry zone — the trend is resting, not reversing. A deep pullback (61.8%–78.6%) requires a 15 EMA reclaim before entry. A full reversal (78.6%+) means the trend may be done — wait for a new base to form.
 
 RSI ON THE DAILY (12 pts in Trade Score): RSI(14) with an EMA(20) signal line applied to RSI values — not price. This is your momentum gate inside the daily. Bullish triggers: RSI crosses above EMA(20) or crosses above 44. Bearish triggers: RSI crosses below 43 or crosses below EMA(20). The RSI gauge on the Swing tab shows this in real time — the pip is the RSI value, the vertical line is the EMA signal line. When the pip is above the line and above 44 (for calls) or below the line and below 43 (for puts), momentum is with you.
 
-MA STACK (10 pts in Trade Score): The daily EMA stack (8, 15, 30, 65, 200) tells you how well organized the trend is. A fully bullish stack has all five in descending order with price above all of them. Each misaligned EMA represents a potential overhead resistance. The 30 EMA is the midfield: above it, bulls control the range. Below it, bears do. Gate 2 scores higher when the stack is ordered and price is on the right side of the 30.
+MA STACK (10 pts in Trade Score): The daily EMA stack (5, 15, 30, 65, 200) tells you how well organized the trend is. A fully bullish stack has all five in descending order with price above all of them. Each misaligned EMA represents a potential overhead resistance. The 30 EMA is the midfield: above it, bulls control the range. Below it, bears do. Gate 2 scores higher when the stack is ordered and price is on the right side of the 30.
 
 ADX FILTER: An ADX reading below 21 means there is no real trend — only noise. The strongest Gate 2 setup has ADX above 25, rising, with DI aligned correctly. That combination scores 13/13 in the Trade Score's trend strength dimension. ADX below 15 scores nothing, regardless of what direction the daily appears to be pointing.`,
     rule: 'No entry if ADX < 21. Check the RSI gauge — RSI must be above the EMA signal line and above 44 for calls, below the line and below 43 for puts.',
@@ -121,7 +121,11 @@ Step 4 — TRAIL at 25%: Free contracts trail at 25% below the running high. Let
 
 EXPIRATION COMPARISON (Options tab → Expirations): The Expirations sub-view shows the ATM strike across every available expiry side-by-side — premium, delta, daily theta cost, implied volatility, and call breakeven for each. Use this to choose your hold time before you enter. A 7-day expiry costs less but decays faster; a 45-day expiry costs more but gives the trade room to breathe. Every column header and individual cell has a hover tooltip explaining the value. The sweet spot for swing entries is 21–45 DTE — enough time for the setup to develop, not so much that premium becomes excessive.
 
-SCALING IN: Enter 50% at signal. Add 50% only when the stock has moved 1%+ in your direction AND the option has not already run +25%. Never chase.`,
+SCALING IN: Enter 50% at signal. Add 50% only when price clears the T1 chart target shown on the option card AND the option has not already run +25%. Never chase.
+
+ITM STOCK REPLACEMENT (the fourth pick, labeled 🔒 ITM PLAY): The app surfaces a fourth option pick targeting delta 0.75 — a deep in-the-money contract that moves nearly dollar-for-dollar with the stock. Unlike ATM/OTM options, the ITM pick carries minimal time value, a lower breakeven distance, and significantly less theta bleed per day. Use it when: you want stock-like exposure with defined risk, IV rank is elevated and OTM premium is expensive, or you want to hold through a choppy consolidation without watching premium evaporate. At Δ0.75, the option moves roughly $0.75 per $1.00 stock move — meaningful leverage with far less time pressure.
+
+CHART TARGETS BRIDGE (shown on every option card): The T1–T4 price levels derived from the Chart tab are displayed directly on each option recommendation card. T1 is the scale-in trigger — the level where you add the second half of your position. T2 is where you take partials. T3 is house money territory. T4 is the full exit target. These are not percentage estimates — they are calculated from confirmed swing pivots at your current timeframe.`,
     rule: "Delta 0.35–0.65. DTE 21+. IV rank below 60 for outright. Stop at −25%, breakeven at +50%, house money at +100%, trail at 25%. Use the Expirations view to compare hold-time cost before entry — the theta column shows exactly what each calendar day costs you at each expiry.",
   },
   {
@@ -138,7 +142,11 @@ MARKET BREADTH (Brief tab → Market Breadth panel): The NYSE advance-decline li
 
 SECTOR ROTATION (5 pts in Trade Score): Your ticker's relative strength versus its sector ETF, and the sector ETF versus SPY. A stock outperforming its sector while the sector outperforms SPY is a double confirmation of relative momentum. The Sectors sub-tab in Scanner shows all 11 SPDR sector ETFs ranked by 20-day performance and EMA position — so you can find the strongest sectors before picking the ticker inside them.
 
-SIGNAL SCANNER (Scanner → Signal Scan): Runs the full confluence analysis on every ticker in your watchlist simultaneously. Results show signal direction, score, and key flags. Load the top-scoring ticker directly from the scanner into the Brief for full analysis. This is the daily hunt — the goal is to find the A+ setup before the move, not after.`,
+SIGNAL SCANNER (Scanner → Signal Scan): Runs the full confluence analysis on every ticker in your watchlist simultaneously. Results show signal direction, score, and key flags. Load the top-scoring ticker directly from the scanner into the Brief for full analysis. This is the daily hunt — the goal is to find the A+ setup before the move, not after.
+
+POSITION SCOREBOARD (Scanner tab): After every scan, the app auto-captures the top 12 CALL setups as tracked longs and the top 12 PUT setups as tracked shorts — sorted by conviction score. The scoreboard shows entry date, entry price, last price, return %, and annualized return % for each position. Entries persist between sessions. When a ticker reappears in later scans, its original entry date and price are preserved so you see the actual return over time. Averages for longs and shorts are shown at the bottom of each column.
+
+OPTION IDEAS PANEL (Scanner tab): Surfaces tickers that appear in multiple scan sources simultaneously — Market Scan, ORB Scan, and Flow Scan. Multi-source confluence is the filter. A ticker firing in only one scanner is noise; one appearing across all three is a high-probability setup. Each idea card shows direction, source count, price, RSI, volume, and an "ANALYZE IN BRIEF →" button that loads the ticker directly into the full analysis view.`,
     rule: 'Enter calls above the gamma flip. Avoid directional options with an inverted term structure. Check market breadth before entering — HOSTILE breadth reduces CALL win rates even on clean individual setups.',
   },
   {
@@ -205,9 +213,9 @@ WHAT RISKGUARD DOESN'T DO: It won't stop you from making a bad trade if all your
 ]
 
 const EMA_META = [
-  { ema: 8,   role: 'Momentum — first to feel every move',     col: '#06b6d4' },
-  { ema: 15,  role: 'Entries & exits — confirms the signal',   col: '#f97316' },
-  { ema: 30,  role: 'Direction — the midfield test',           col: '#84cc16' },
+  { ema: 5,   role: 'Momentum — first to feel every move',     col: '#f472b6' },
+  { ema: 15,  role: 'Entries & exits — confirms the signal',   col: '#84cc16' },
+  { ema: 30,  role: 'Direction — the midfield test',           col: '#06b6d4' },
   { ema: 65,  role: 'Support & resistance — the major levels', col: '#a855f7' },
   { ema: 200, role: 'The foundation — above = bull territory', col: '#eab308' },
 ]

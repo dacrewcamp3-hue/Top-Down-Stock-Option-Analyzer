@@ -6,16 +6,19 @@ import './OnboardingModal.css'
 
 const NAV_ITEMS = [
   { col: '#60a5fa', label: 'Analyze',  desc: 'Load any ticker for a directional signal, trade score, Macro Economic Calendar, Wyckoff structure conflict check, historical win probability, structured Exit Plan, Fear & Greed meter, and macro regime read. Start every session here — the Brief sub-tab gives you a complete trade decision in under 30 seconds.' },
-  { col: '#a78bfa', label: 'Options',  desc: 'Build your options trade — get a complete plan with Greeks, stops, and spread alternatives. The Expirations sub-view shows the ATM strike across all available expiries side-by-side so you can compare premium, theta, and breakeven before choosing your hold time.' },
-  { col: '#34d399', label: 'Scanner',  desc: 'Market health, setup finder, gap watch, sector rotation, price level alerts, options flow, live flow, and your regime playbook — all in one place.' },
+  { col: '#a78bfa', label: 'Options',  desc: 'Build your options trade — get a complete plan with Greeks, stops, and spread alternatives. The Expirations sub-view shows the ATM strike across all available expiries side-by-side so you can compare premium, theta, and breakeven before choosing your hold time. A dedicated ITM pick at Δ0.75 provides stock-replacement exposure with lower breakeven distance and minimal theta bleed.' },
+  { col: '#34d399', label: 'Scanner',  desc: 'Market health, setup finder, gap watch, sector rotation, price level alerts, options flow, live flow, and your regime playbook — all in one place. The Position Scoreboard auto-tracks the top 12 longs and 12 shorts from every scan. The Option Ideas panel surfaces tickers firing across multiple scan sources simultaneously.' },
   { col: '#f59e0b', label: 'Trades',   desc: 'Write your trade thoughts — why you entered, what you saw, why you exited. Your personal record of reasoning that builds pattern recognition over time and catches execution habits the numbers alone never show.' },
   { col: '#4a90c4', label: 'Backtest', desc: 'Replay the strategy signals over historical data — hit rate, equity curve, options P&L simulation, and Kelly sizer. Use the date-range filter to test against the specific regime you are trading in right now.' },
+  { col: '#10b981', label: 'S&P 500',  desc: "See what any amount invested in the S&P 500 in any year since 1993 (SPY's launch year) would be worth today — with real vs. inflation-adjusted returns, a seasonality heatmap, and a CAGR matrix across all buy/sell year combinations." },
+  { col: '#f472b6', label: 'AM Brief', desc: 'Your pre-market game plan — macro regime check, economic calendar, and a structured daily trade plan ready before the open.' },
+  { col: '#818cf8', label: 'Insight',  desc: 'Weight of evidence, AI-assisted analysis, regime memory, outcome probability ranges, and a full decision audit trail for any loaded ticker.' },
 ]
 
 const EMA_META = [
-  { ema: 5,   role: 'Momentum — first to feel every move',       col: '#06b6d4' },
-  { ema: 15,  role: 'Entries & exits — confirms the signal',     col: '#f97316' },
-  { ema: 30,  role: 'Direction — the midfield test',             col: '#84cc16' },
+  { ema: 5,   role: 'Momentum — first to feel every move',       col: '#f472b6' },
+  { ema: 15,  role: 'Entries & exits — confirms the signal',     col: '#84cc16' },
+  { ema: 30,  role: 'Direction — the midfield test',             col: '#06b6d4' },
   { ema: 65,  role: 'Support & resistance — the major levels',   col: '#a855f7' },
   { ema: 200, role: 'The foundation — above = bull territory',   col: '#eab308' },
 ]
@@ -34,7 +37,7 @@ Your job isn't to predict where markets go. It's to execute the system when cond
 
   {
     tag: 'THE APP',
-    title: 'Five Sections, One Flow',
+    title: 'Eight Sections, One Flow',
     accent: '#60a5fa',
     navItems: true,
   },
@@ -102,6 +105,8 @@ Your job isn't to predict where markets go. It's to execute the system when cond
       'RiskGuard banners: when a red banner fires — daily loss limit, 3 consecutive losses, max positions — the answer is no. Yellow means size down. Never dismiss and proceed',
       'Trades → Journal: write why you entered, what the macro calendar said, and why you exited. Add a voice note using the mic button if typing feels slow',
       'Never exceed your grade\'s position size — A+ gets full size, C gets nothing, discipline is the edge',
+      'Chart tab → VS input: type a market proxy (SPY, QQQ) or peer ticker and press Enter to overlay its normalized price line — CONVERGING means both are tracking together, DIVERGING means yours is breaking away from the benchmark',
+      'Options → ITM PLAY (🔒): for stock-like exposure with less theta, choose the ITM pick card at Δ0.75 — it moves ~$0.75 per $1.00 stock move and has a much lower breakeven distance than ATM picks',
     ],
     footer: "The goal isn't to win every trade. It's to stay in the game long enough for the edge to compound.",
   },

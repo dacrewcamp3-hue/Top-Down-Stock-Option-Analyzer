@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-export const EMA_DEFAULTS = { 8: 'Sister', 15: 'Dad', 30: 'Brothers', 65: 'Mom', 200: 'Grandma' }
+export const EMA_DEFAULTS = { 5: 'Sister', 15: 'Dad', 30: 'Brothers', 65: 'Mom', 200: 'Grandma' }
 const LS_KEY = 'ema_custom_names'
 
 export function getEmaNames() {
