@@ -211,7 +211,8 @@ export default function PriceChart({
   const [useHA,         setUseHA]         = useState(true)
   const [anchoredVwaps, setAnchoredVwaps] = useState([])  // [{anchorIdx, color, label}]
   const [showRS,        setShowRS]        = useState(false)
-  const [proMode,       setProMode]       = useState(false)
+  const [showSweeps,    setShowSweeps]    = useState(false)
+  const [showOBs,       setShowOBs]       = useState(false)
   const [showTools,     setShowTools]     = useState(false)
 
   const svgRef         = useRef(null)
@@ -1449,6 +1450,40 @@ export default function PriceChart({
       })()
     : null
 
+  // ── Label collision guard ─────────────────────────────────────────────────────
+  // Registers all horizontal price-level labels in priority order.
+  // Lower-priority labels whose Y falls within 9px of a claimed slot are suppressed
+  // (the line still renders; only the text pill is hidden).
+  const labelGuard = (() => {
+    const GAP = 9
+    const claimed = []
+    const tryAdd = y => {
+      if (y < PT || y > PH) return false
+      if (claimed.some(cy => Math.abs(cy - y) < GAP)) return false
+      claimed.push(y)
+      return true
+    }
+    // P1 — ORB (intraday anchor — always wins)
+    if (orbHigh != null) tryAdd(yOf(orbHigh))
+    if (orbLow  != null) tryAdd(yOf(orbLow))
+    // P2 — Swing targets
+    swingTargets?.forEach(p => { if (p != null) tryAdd(yOf(p)) })
+    // P3 — GEX options levels
+    ;[gammaFlip, callWall, putWall, maxPain].forEach(p => { if (p != null) tryAdd(yOf(p)) })
+    // P4 — Prior-day / pre-market levels
+    ;[prevDayH, prevDayL, pmHigh, pmLow].forEach(p => { if (p != null) tryAdd(yOf(p)) })
+    // P5 — S/R zones
+    srZones.forEach(z => tryAdd(yOf(z.price)))
+    // P6 — Fibonacci retracements
+    fibLines.forEach(f => tryAdd(f.y))
+    // P7 — Confluence zone markers
+    confluenceZones.forEach(z => tryAdd(z.y))
+    // P8 — Gap band labels (lowest priority — informational only)
+    gapBands.forEach(g => tryAdd((g.y1 + g.y2) / 2))
+    const claimedSet = new Set(claimed.map(y => (+y).toFixed(1)))
+    return y => claimedSet.has((+y).toFixed(1))
+  })()
+
   return (
     <div className="pc-wrap" style={{ position: 'relative' }}>
 
@@ -1527,15 +1562,6 @@ export default function PriceChart({
               borderRadius: 4, padding: '2px 8px', fontSize: 12, cursor: 'pointer', fontWeight: 700,
             }}>⚙</button>
 
-          <button title={proMode ? 'Pro mode — click for Simple' : 'Simple mode — click for Pro'}
-            onClick={() => setProMode(v => !v)}
-            style={{
-              background: proMode ? '#0e1a2e' : 'transparent',
-              border: `1px solid ${proMode ? '#3b5a8a' : '#1a2e45'}`,
-              color: proMode ? '#60a5fa' : '#2a4a6a',
-              borderRadius: 4, padding: '2px 8px', fontSize: 10,
-              cursor: 'pointer', fontWeight: 800, letterSpacing: '0.5px',
-            }}>{proMode ? 'PRO' : 'SIMPLE'}</button>
 
           <div className="pc-zoom-ctrl" style={{ marginLeft: 0 }}>
             {!isLive && (
@@ -1558,99 +1584,106 @@ export default function PriceChart({
           padding: '8px 10px', display: 'flex', flexWrap: 'wrap', gap: 5,
           minWidth: 200, maxWidth: 340, boxShadow: '0 8px 24px rgba(0,0,0,0.7)',
         }}>
-          {proMode ? (<>
-            {[
-              { id: 'hline', icon: '—', tip: 'Horizontal line — click chart to place' },
-              { id: 'trend', icon: '╱', tip: 'Trendline — click + drag' },
-              { id: 'erase', icon: '✕', tip: 'Eraser — click a line to delete' },
-            ].map(t => (
-              <button key={t.id} title={t.tip}
-                onClick={() => setDrawTool(prev => prev === t.id ? 'none' : t.id)}
-                style={{
-                  background: drawTool === t.id ? '#1e3a5f' : 'transparent',
-                  border: `1px solid ${drawTool === t.id ? '#3b82f6' : '#1e2d45'}`,
-                  color: drawTool === t.id ? '#60a5fa' : '#3a5a7a',
-                  borderRadius: 4, padding: '2px 8px', fontSize: 13,
-                  cursor: 'pointer', fontWeight: 700, lineHeight: 1.4,
-                }}>{t.icon}</button>
-            ))}
-            <span style={{ width: '100%', height: 1, background: '#0e1e30', margin: '2px 0' }} />
-            <button title="Toggle entry EMAs (5 · 15 · 30)" onClick={() => setShowEntryEmas(v => !v)} style={{
-              background: showEntryEmas ? '#0c1e10' : 'transparent',
-              border: `1px solid ${showEntryEmas ? '#10b981' : '#1e2d45'}`,
-              color: showEntryEmas ? '#10b981' : '#3a5a7a',
+          {[
+            { id: 'hline', icon: '—', tip: 'Horizontal line — click chart to place' },
+            { id: 'trend', icon: '╱', tip: 'Trendline — click + drag' },
+            { id: 'erase', icon: '✕', tip: 'Eraser — click a line to delete' },
+          ].map(t => (
+            <button key={t.id} title={t.tip}
+              onClick={() => setDrawTool(prev => prev === t.id ? 'none' : t.id)}
+              style={{
+                background: drawTool === t.id ? '#1e3a5f' : 'transparent',
+                border: `1px solid ${drawTool === t.id ? '#3b82f6' : '#1e2d45'}`,
+                color: drawTool === t.id ? '#60a5fa' : '#3a5a7a',
+                borderRadius: 4, padding: '2px 8px', fontSize: 13,
+                cursor: 'pointer', fontWeight: 700, lineHeight: 1.4,
+              }}>{t.icon}</button>
+          ))}
+          <span style={{ width: '100%', height: 1, background: '#0e1e30', margin: '2px 0' }} />
+          <button title="Toggle entry EMAs (5 · 15 · 30)" onClick={() => setShowEntryEmas(v => !v)} style={{
+            background: showEntryEmas ? '#0c1e10' : 'transparent',
+            border: `1px solid ${showEntryEmas ? '#10b981' : '#1e2d45'}`,
+            color: showEntryEmas ? '#10b981' : '#3a5a7a',
+            borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
+          }}>E-Fast</button>
+          <button title="Toggle trend EMAs (65 · 200)" onClick={() => setShowTrendEmas(v => !v)} style={{
+            background: showTrendEmas ? '#12100a' : 'transparent',
+            border: `1px solid ${showTrendEmas ? '#eab308' : '#1e2d45'}`,
+            color: showTrendEmas ? '#eab308' : '#3a5a7a',
+            borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
+          }}>E-Trend</button>
+          {fibLines.length > 0 && (
+            <button title="Toggle Fibonacci levels" onClick={() => setShowFib(v => !v)} style={{
+              background: showFib ? '#110e00' : 'transparent',
+              border: `1px solid ${showFib ? '#c8a830' : '#1e2d45'}`,
+              color: showFib ? '#c8a830' : '#3a5a7a',
               borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
-            }}>E-Fast</button>
-            <button title="Toggle trend EMAs (65 · 200)" onClick={() => setShowTrendEmas(v => !v)} style={{
-              background: showTrendEmas ? '#12100a' : 'transparent',
-              border: `1px solid ${showTrendEmas ? '#eab308' : '#1e2d45'}`,
-              color: showTrendEmas ? '#eab308' : '#3a5a7a',
+            }}>Fib</button>
+          )}
+          <button title="Toggle RSI sub-panel" onClick={() => {
+            setShowRSI(v => {
+              if (v) userClosedRSI.current = true
+              else   userClosedRSI.current = false
+              return !v
+            })
+          }} style={{
+            background: showRSI ? '#060d1a' : 'transparent',
+            border: `1px solid ${showRSI ? '#60a5fa' : '#1e2d45'}`,
+            color: showRSI ? '#60a5fa' : '#3a5a7a',
+            borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
+          }}>RSI</button>
+          <button title={useHA ? 'Heikin-Ashi active — click for OHLC' : 'OHLC active — click for Heikin-Ashi'}
+            onClick={() => setUseHA(v => !v)} style={{
+              background: useHA ? '#0a0a1e' : 'transparent',
+              border: `1px solid ${useHA ? '#6366f1' : '#1e2d45'}`,
+              color: useHA ? '#818cf8' : '#3a5a7a',
               borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
-            }}>E-Trend</button>
-            {fibLines.length > 0 && (
-              <button title="Toggle Fibonacci levels" onClick={() => setShowFib(v => !v)} style={{
-                background: showFib ? '#110e00' : 'transparent',
-                border: `1px solid ${showFib ? '#c8a830' : '#1e2d45'}`,
-                color: showFib ? '#c8a830' : '#3a5a7a',
-                borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
-              }}>Fib</button>
-            )}
-            <button title="Toggle RSI sub-panel" onClick={() => {
-              setShowRSI(v => {
-                if (v) userClosedRSI.current = true
-                else   userClosedRSI.current = false
-                return !v
-              })
-            }} style={{
-              background: showRSI ? '#060d1a' : 'transparent',
-              border: `1px solid ${showRSI ? '#60a5fa' : '#1e2d45'}`,
-              color: showRSI ? '#60a5fa' : '#3a5a7a',
+            }}>HA</button>
+          {spyCloses?.length > 0 && (
+            <button title="Relative Strength vs SPY" onClick={() => setShowRS(v => !v)} style={{
+              background: showRS ? '#0e1205' : 'transparent',
+              border: `1px solid ${showRS ? '#84cc16' : '#1e2d45'}`,
+              color: showRS ? '#a3e635' : '#3a5a7a',
               borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
-            }}>RSI</button>
-            <button title={useHA ? 'Heikin-Ashi active — click for OHLC' : 'OHLC active — click for Heikin-Ashi'}
-              onClick={() => setUseHA(v => !v)} style={{
-                background: useHA ? '#0a0a1e' : 'transparent',
-                border: `1px solid ${useHA ? '#6366f1' : '#1e2d45'}`,
-                color: useHA ? '#818cf8' : '#3a5a7a',
-                borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
-              }}>HA</button>
-            {spyCloses?.length > 0 && (
-              <button title="Relative Strength vs SPY" onClick={() => setShowRS(v => !v)} style={{
-                background: showRS ? '#0e1205' : 'transparent',
-                border: `1px solid ${showRS ? '#84cc16' : '#1e2d45'}`,
-                color: showRS ? '#a3e635' : '#3a5a7a',
-                borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
-              }}>RS</button>
-            )}
-            {anchoredVwaps.length > 0 && (
-              <button title="Clear anchored VWAPs" onClick={() => setAnchoredVwaps([])} style={{
-                background: 'transparent', border: '1px solid #1e2d45', color: '#a78bfa',
-                borderRadius: 4, padding: '2px 8px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
-              }}>A-VWAP ✕</button>
-            )}
-            <button title={showAllPatterns ? 'All patterns — click for ★ only' : 'High-confidence (≥75%) — click for all'}
-              onClick={() => setShowAllPatterns(v => !v)} style={{
-                background: showAllPatterns ? '#0e0e1a' : 'transparent',
-                border: `1px solid ${showAllPatterns ? '#a78bfa' : '#1e2d45'}`,
-                color: showAllPatterns ? '#a78bfa' : '#3a5a7a',
-                borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
-              }}>Pats {showAllPatterns ? 'All' : '★'}</button>
-            {curLines.length > 0 && (
-              <button onClick={() => setDrawings(prev => ({ ...prev, [curKey]: [] }))} style={{
-                background: 'transparent', border: '1px solid #1e2d45', color: '#3a5a7a',
-                borderRadius: 4, padding: '2px 8px', fontSize: 11, cursor: 'pointer',
-              }}>Clear Lines</button>
-            )}
-            {drawTool !== 'none' && (
-              <div style={{ width: '100%', fontSize: 9, color: '#3a5a7a', paddingTop: 3 }}>
-                {drawTool === 'hline' ? 'Click chart to place line' :
-                 drawTool === 'trend' ? 'Click + drag to draw trendline' : 'Click line to erase'}
-              </div>
-            )}
-          </>) : (
-            <span style={{ fontSize: 9, color: '#2a4060', padding: '2px 4px' }}>
-              Switch to PRO mode to access drawing tools and overlays.
-            </span>
+            }}>RS</button>
+          )}
+          {anchoredVwaps.length > 0 && (
+            <button title="Clear anchored VWAPs" onClick={() => setAnchoredVwaps([])} style={{
+              background: 'transparent', border: '1px solid #1e2d45', color: '#a78bfa',
+              borderRadius: 4, padding: '2px 8px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
+            }}>A-VWAP ✕</button>
+          )}
+          <button title={showAllPatterns ? 'All patterns — click for ★ only' : 'High-confidence (≥75%) — click for all'}
+            onClick={() => setShowAllPatterns(v => !v)} style={{
+              background: showAllPatterns ? '#0e0e1a' : 'transparent',
+              border: `1px solid ${showAllPatterns ? '#a78bfa' : '#1e2d45'}`,
+              color: showAllPatterns ? '#a78bfa' : '#3a5a7a',
+              borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
+            }}>Pats {showAllPatterns ? 'All' : '★'}</button>
+          <span style={{ width: '100%', height: 1, background: '#0e1e30', margin: '2px 0' }} />
+          <button title="SMC liquidity sweeps (on/off)" onClick={() => setShowSweeps(v => !v)} style={{
+            background: showSweeps ? '#100e1a' : 'transparent',
+            border: `1px solid ${showSweeps ? '#a78bfa' : '#1e2d45'}`,
+            color: showSweeps ? '#a78bfa' : '#3a5a7a',
+            borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
+          }}>Sweeps</button>
+          <button title="SMC order blocks (on/off)" onClick={() => setShowOBs(v => !v)} style={{
+            background: showOBs ? '#0a1118' : 'transparent',
+            border: `1px solid ${showOBs ? '#22d3ee' : '#1e2d45'}`,
+            color: showOBs ? '#22d3ee' : '#3a5a7a',
+            borderRadius: 4, padding: '2px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 800,
+          }}>Blks</button>
+          {curLines.length > 0 && (
+            <button onClick={() => setDrawings(prev => ({ ...prev, [curKey]: [] }))} style={{
+              background: 'transparent', border: '1px solid #1e2d45', color: '#3a5a7a',
+              borderRadius: 4, padding: '2px 8px', fontSize: 11, cursor: 'pointer',
+            }}>Clear Lines</button>
+          )}
+          {drawTool !== 'none' && (
+            <div style={{ width: '100%', fontSize: 9, color: '#3a5a7a', paddingTop: 3 }}>
+              {drawTool === 'hline' ? 'Click chart to place line' :
+               drawTool === 'trend' ? 'Click + drag to draw trendline' : 'Click line to erase'}
+            </div>
           )}
         </div>
       )}
@@ -1747,11 +1780,13 @@ export default function PriceChart({
                 stroke={col} strokeWidth="0.7" strokeDasharray="6,4" opacity="0.38" />
               <line x1={PL} y1={g.y2} x2={VW - PR} y2={g.y2}
                 stroke={col} strokeWidth="0.7" strokeDasharray="6,4" opacity="0.38" />
-              <text x={PL + 6} y={(g.y1 + g.y2) / 2 + 3.5}
-                textAnchor="start" fontSize="7" fill={col} opacity="0.38" fontWeight="700">
-                {`GAP${g.type === 'up' ? '↑' : '↓'} $${g.size.toFixed(2)}`}
-                {gapClass?.type ? `  · ${gapClass.type}` : ''}
-              </text>
+              {labelGuard((g.y1 + g.y2) / 2) && (
+                <text x={PL + 6} y={(g.y1 + g.y2) / 2 + 3.5}
+                  textAnchor="start" fontSize="7" fill={col} opacity="0.38" fontWeight="700">
+                  {`GAP${g.type === 'up' ? '↑' : '↓'} $${g.size.toFixed(2)}`}
+                  {gapClass?.type ? `  · ${gapClass.type}` : ''}
+                </text>
+              )}
             </g>
           )
         })}
@@ -1844,8 +1879,10 @@ export default function PriceChart({
           <g key={label}>
             <line x1={PL} y1={y} x2={VW - PR} y2={y}
               stroke="#c8a830" strokeWidth="0.6" strokeDasharray="4,5" opacity="0.35" />
-            <text x={PL + 5} y={y - 2}
-              textAnchor="start" fontSize="6.5" fill="#8a6e20" fontWeight="700" opacity="0.40">{label}</text>
+            {labelGuard(y) && (
+              <text x={PL + 5} y={y - 2}
+                textAnchor="start" fontSize="6.5" fill="#8a6e20" fontWeight="700" opacity="0.40">{label}</text>
+            )}
           </g>
         ))}
 
@@ -1864,10 +1901,12 @@ export default function PriceChart({
             <g pointerEvents="none">
               <line x1={PL} y1={y} x2={VW - PR} y2={y}
                 stroke="#f97316" strokeWidth="1.0" strokeDasharray="6,4" opacity="0.65" />
-              <text x={VW - PR - 33} y={y - 1} textAnchor="middle"
-                fontSize="6.5" fill="#f97316" fontWeight="700" opacity="0.65">
-                PDH {fmtPx(prevDayH)}
-              </text>
+              {labelGuard(y) && (
+                <text x={VW - PR - 33} y={y - 1} textAnchor="middle"
+                  fontSize="6.5" fill="#f97316" fontWeight="700" opacity="0.65">
+                  PDH {fmtPx(prevDayH)}
+                </text>
+              )}
             </g>
           )
         })()}
@@ -1878,10 +1917,12 @@ export default function PriceChart({
             <g pointerEvents="none">
               <line x1={PL} y1={y} x2={VW - PR} y2={y}
                 stroke="#38bdf8" strokeWidth="1.0" strokeDasharray="6,4" opacity="0.65" />
-              <text x={VW - PR - 33} y={y + 8} textAnchor="middle"
-                fontSize="6.5" fill="#38bdf8" fontWeight="700" opacity="0.65">
-                PDL {fmtPx(prevDayL)}
-              </text>
+              {labelGuard(y) && (
+                <text x={VW - PR - 33} y={y + 8} textAnchor="middle"
+                  fontSize="6.5" fill="#38bdf8" fontWeight="700" opacity="0.65">
+                  PDL {fmtPx(prevDayL)}
+                </text>
+              )}
             </g>
           )
         })()}
@@ -1967,20 +2008,24 @@ export default function PriceChart({
               <g>
                 <line x1={PL} y1={yOf(pmHigh)} x2={VW - PR} y2={yOf(pmHigh)}
                   stroke="#60a5fa" strokeWidth="1.0" strokeDasharray="3,5" opacity="0.60" />
-                <text x={VW - PR - 5} y={yOf(pmHigh) - 2} textAnchor="end"
-                  fontSize="7" fill="#60a5fa" fontWeight="700" opacity="0.60">
-                  PMH  ${fmtPx(pmHigh)}
-                </text>
+                {labelGuard(yOf(pmHigh)) && (
+                  <text x={VW - PR - 5} y={yOf(pmHigh) - 2} textAnchor="end"
+                    fontSize="7" fill="#60a5fa" fontWeight="700" opacity="0.60">
+                    PMH  ${fmtPx(pmHigh)}
+                  </text>
+                )}
               </g>
             )}
             {pmLow != null && pmLow > d.priceMin && pmLow < d.priceMax && (
               <g>
                 <line x1={PL} y1={yOf(pmLow)} x2={VW - PR} y2={yOf(pmLow)}
                   stroke="#93c5fd" strokeWidth="1.0" strokeDasharray="3,5" opacity="0.60" />
-                <text x={VW - PR - 5} y={yOf(pmLow) + 9} textAnchor="end"
-                  fontSize="7" fill="#93c5fd" fontWeight="700" opacity="0.60">
-                  PML  ${fmtPx(pmLow)}
-                </text>
+                {labelGuard(yOf(pmLow)) && (
+                  <text x={VW - PR - 5} y={yOf(pmLow) + 9} textAnchor="end"
+                    fontSize="7" fill="#93c5fd" fontWeight="700" opacity="0.60">
+                    PML  ${fmtPx(pmLow)}
+                  </text>
+                )}
               </g>
             )}
           </g>
@@ -2084,17 +2129,19 @@ export default function PriceChart({
                 stroke={col} strokeWidth="0.8" strokeDasharray="5,4" opacity="0.45" />
               <line x1={PL} y1={botY} x2={VW - PR} y2={botY}
                 stroke={col} strokeWidth="0.5" strokeDasharray="4,4" opacity="0.25" />
-              <text x={VW - PR - 34} y={clampTop + 7} textAnchor="middle"
-                fontSize="6.5" fill={col} fontWeight="700" opacity="0.45">
-                {isRes ? 'RES' : 'SUP'} {fmtPx(z.price)}
-              </text>
+              {labelGuard(yOf(z.price)) && (
+                <text x={VW - PR - 34} y={clampTop + 7} textAnchor="middle"
+                  fontSize="6.5" fill={col} fontWeight="700" opacity="0.45">
+                  {isRes ? 'RES' : 'SUP'} {fmtPx(z.price)}
+                </text>
+              )}
             </g>
           )
         })}
 
 
         {/* ── Liquidity Sweeps (pro mode only) ── */}
-        {showSMC && proMode && sweeps.map((sw, i) => {
+        {showSMC && showSweeps && sweeps.map((sw, i) => {
           if (sw.i < 0 || sw.i >= nb) return null
           const x1   = xOf(Math.max(0, sw.swingI))
           const x2   = xOf(sw.i)
@@ -2117,7 +2164,7 @@ export default function PriceChart({
         })}
 
         {/* ── BOS (Break of Structure) — last 3 in pro, most recent only in simple ── */}
-        {showSMC && (proMode ? bos.slice(-3) : bos.slice(-1)).map((b, i) => {
+        {showSMC && bos.slice(-3).map((b, i) => {
           if (b.i < 0 || b.i >= nb) return null
           const x1  = xOf(Math.max(0, b.swingI))
           const x2  = xOf(b.i)
@@ -2141,7 +2188,7 @@ export default function PriceChart({
         })}
 
         {/* ── CHoCH (Change of Character) — last 3 in pro, most recent only in simple ── */}
-        {showSMC && (proMode ? choch.slice(-3) : choch.slice(-1)).map((ch, i) => {
+        {showSMC && choch.slice(-3).map((ch, i) => {
           if (ch.i < 0 || ch.i >= nb) return null
           const x1  = xOf(Math.max(0, ch.swingI))
           const x2  = xOf(ch.i)
@@ -2166,7 +2213,7 @@ export default function PriceChart({
 
 
         {/* ── Order Blocks (SMC: institutional footprints — pro mode only) ── */}
-        {showSMC && proMode && (() => {
+        {showSMC && showOBs && (() => {
           const bullOBs = orderBlocks.filter(ob => ob.kind === 'bull').slice(-4)
           const bearOBs = orderBlocks.filter(ob => ob.kind === 'bear').slice(-4)
           return [...bullOBs, ...bearOBs].map((ob, i) => {
@@ -2184,23 +2231,25 @@ export default function PriceChart({
         })()}
 
         {/* ── Confluence zones — all in pro; within 0.5% of price in simple ── */}
-        {(proMode ? confluenceZones : confluenceZones.filter(z => Math.abs(z.price - topClose) / topClose < 0.005)).map((z, i) => {
+        {confluenceZones.filter(z => Math.abs(z.price - topClose) / topClose < 0.02).map((z, i) => {
           const zy = z.y
           if (zy < PT + 2 || zy > PH - 2) return null
           return (
             <g key={`conf-${i}`} pointerEvents="none">
               <line x1={PL} y1={zy} x2={VW - PR} y2={zy}
                 stroke="#c07a00" strokeWidth="0.8" strokeDasharray="3,3" opacity="0.30" />
-              <text x={VW - PR - 3} y={zy - 2} textAnchor="end"
-                fontSize="6" fill="#c07a00" fontWeight="700" opacity="0.50">
-                {z.names}
-              </text>
+              {labelGuard(zy) && (
+                <text x={VW - PR - 3} y={zy - 2} textAnchor="end"
+                  fontSize="6" fill="#c07a00" fontWeight="700" opacity="0.50">
+                  {z.names}
+                </text>
+              )}
             </g>
           )
         })}
 
         {/* EMA 200 — rendered first (bottom layer); always visible in simple mode */}
-        {(!proMode || showTrendEmas) && (
+        {showTrendEmas && (
           <polyline points={toPoints(e200)} fill="none" stroke="#eab308" strokeWidth="2.0"
             strokeLinejoin="round" opacity="0.9" />
         )}
@@ -2212,8 +2261,8 @@ export default function PriceChart({
             strokeDasharray="5,3" strokeLinejoin="round" opacity="0.95" />
         ))}
 
-        {/* ── Anchored VWAPs (Shift+click to add — pro mode only) ── */}
-        {proMode && anchoredVwapLines.map((pts, i) => {
+        {/* ── Anchored VWAPs (Shift+click to add) ── */}
+        {anchoredVwapLines.map((pts, i) => {
           if (!pts) return null
           const col = anchoredVwaps[i]?.color ?? '#f59e0b'
           return (
@@ -2252,22 +2301,22 @@ export default function PriceChart({
         })}
 
         {/* EMA 65 — always visible in simple mode, toggle-gated in pro mode */}
-        {(!proMode || showTrendEmas) && (
+        {showTrendEmas && (
           <polyline points={toPoints(e65)} fill="none" stroke="#a855f7" strokeWidth="2.0" strokeLinejoin="round" />
         )}
 
         {/* EMA 30 — pro mode only */}
-        {proMode && showEntryEmas && (
+        {showEntryEmas && (
           <polyline points={toPoints(e30)} fill="none" stroke="#06b6d4" strokeWidth="1.8" strokeLinejoin="round" />
         )}
 
         {/* EMA 15 — pro mode only */}
-        {proMode && showEntryEmas && (
+        {showEntryEmas && (
           <polyline points={toPoints(e15)} fill="none" stroke="#84cc16" strokeWidth="1.8" strokeLinejoin="round" />
         )}
 
         {/* EMA 5 — pro mode only */}
-        {proMode && showEntryEmas && (
+        {showEntryEmas && (
           <polyline points={toPoints(e5)} fill="none" stroke="#f472b6" strokeWidth="2.2" strokeLinejoin="round" />
         )}
 
@@ -2653,7 +2702,7 @@ export default function PriceChart({
         )}
 
         {/* ── Relative Strength vs SPY (pro mode only) ── */}
-        {showRS && proMode && rsLinePoints.length > 1 && (
+        {showRS && rsLinePoints.length > 1 && (
           <g pointerEvents="none">
             <polyline points={rsLinePoints.join(' ')} fill="none"
               stroke="#a3e635" strokeWidth="1.8" strokeLinejoin="round" opacity="0.85" />
@@ -2670,7 +2719,7 @@ export default function PriceChart({
         )}
 
         {/* Volume spike callouts (pro mode only) */}
-        {proMode && volSpikes.map((sp, i) => (
+        {volSpikes.map((sp, i) => (
           <g key={`vspike-${i}`} pointerEvents="none">
             <rect x={sp.x - 10} y={sp.vy - 12} width={20} height={10} rx="2"
               fill="#0e1420" stroke="#64748b" strokeWidth="0.8" opacity="0.9" />
@@ -3029,39 +3078,6 @@ export default function PriceChart({
 
       {/* ── TF Alignment Footer ── */}
       {tfAlignment && (() => {
-        if (!proMode) {
-          const vals = ['W','D','4H','1H','15M'].map(k => tfAlignment?.[k]).filter(Boolean)
-          const avg = vals.length
-            ? vals.reduce((s, v) => s + (v.score ?? 2), 0) / vals.length
-            : 2
-          const label = avg >= 3 ? 'ALIGNED BULL' : avg <= 1 ? 'ALIGNED BEAR' : 'MIXED'
-          const col   = avg >= 3 ? '#10b981' : avg <= 1 ? '#ef4444' : '#f59e0b'
-          const total = (flowSentiment?.callPrem ?? 0) + (flowSentiment?.putPrem ?? 0)
-          const callRatio = total > 25000 ? (flowSentiment?.callPrem ?? 0) / total : null
-          return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 10px', background: '#020709', borderTop: '1px solid #081420' }}>
-              <span style={{ fontSize: 8.5, fontWeight: 800, color: col, letterSpacing: '0.3px' }}>{label}</span>
-              {verdict && (() => {
-                const regCol = verdict === 'FAVORABLE' || verdict === 'LEANING BULLISH' ? '#10b981'
-                  : verdict === 'HOSTILE' || verdict === 'BEARISH' ? '#ef4444'
-                  : verdict === 'HIGH VIX' ? '#f59e0b' : '#60a5fa'
-                return <span style={{ fontSize: 8.5, color: regCol, fontWeight: 700, opacity: 0.85 }}>{verdict}</span>
-              })()}
-              {callRatio != null && (() => {
-                const isBull = callRatio > 0.55, isBear = callRatio < 0.45
-                if (!isBull && !isBear) return null
-                const flowCol = isBull ? '#10b981' : '#ef4444'
-                const flowLbl = isBull ? `CALL ${Math.round(callRatio * 100)}%` : `PUT ${Math.round((1 - callRatio) * 100)}%`
-                return <span style={{ fontSize: 8.5, color: flowCol, fontWeight: 700, opacity: 0.85 }}>· {flowLbl}</span>
-              })()}
-              {vixData?.vix != null && (
-                <span style={{ fontSize: 8.5, fontWeight: 700, opacity: 0.7, color: vixData.vix > 25 ? '#ef4444' : vixData.vix < 18 ? '#4a7a5a' : '#8a6a30' }}>
-                  · VIX {vixData.vix.toFixed(1)}
-                </span>
-              )}
-            </div>
-          )
-        }
         return (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 6,
