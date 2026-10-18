@@ -962,7 +962,7 @@ function EarningsWarning({ earningsDate, recs }) {
   const daysAway = Math.round((earningsDate.getTime() - Date.now()) / 86400000)
   if (daysAway < 0 || daysAway > 60) return null
 
-  const recList = recs ? [recs.primary, recs.extended, recs.quickPlay].filter(Boolean) : []
+  const recList = recs ? [recs.primary, recs.extended, recs.quickPlay, recs.itm].filter(Boolean) : []
   const spansEarnings = recList.some(r => r.dte >= daysAway)
   if (!spansEarnings && daysAway > 21) return null
 
