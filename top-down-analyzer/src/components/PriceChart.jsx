@@ -206,8 +206,8 @@ export default function PriceChart({
   const [showEntryEmas, setShowEntryEmas] = useState(true)     // EMA 5, 15, 30
   const [showTrendEmas, setShowTrendEmas] = useState(true)     // EMA 65, 200
   const [showFib,       setShowFib]       = useState(true)     // Fibonacci levels
-  const [showRSI,         setShowRSI]         = useState(false)    // RSI sub-panel
-  const [showAllPatterns, setShowAllPatterns] = useState(false)    // all patterns vs. ≥75% win-rate only
+  const [showRSI,         setShowRSI]         = useState(true)     // RSI sub-panel
+  const [showAllPatterns, setShowAllPatterns] = useState(true)     // all patterns vs. ≥75% win-rate only
   const [useHA,         setUseHA]         = useState(true)
   const [anchoredVwaps, setAnchoredVwaps] = useState([])  // [{anchorIdx, color, label}]
   const [showRS,        setShowRS]        = useState(false)
@@ -307,6 +307,12 @@ export default function PriceChart({
     const h  = useHA ? Array.from(ha.haH.slice(s, endIdx)) : Array.from(highs.slice(s, endIdx))
     const l  = useHA ? Array.from(ha.haL.slice(s, endIdx)) : Array.from(lows.slice(s, endIdx))
     const o  = useHA ? Array.from(ha.haO.slice(s, endIdx)) : Array.from(opens.slice(s, endIdx))
+    // Real OHLCV — always used for pattern detection regardless of display mode.
+    // HA smoothing distorts candle bodies so classic 2/3-bar patterns become inaccurate.
+    const rc = Array.from(closes.slice(s, endIdx))
+    const rh = Array.from(highs.slice(s, endIdx))
+    const rl = Array.from(lows.slice(s, endIdx))
+    const ro = Array.from(opens.slice(s, endIdx))
     const v  = (volumes    ?? []).slice(s, endIdx)
     const ts = (timestamps ?? []).slice(s, endIdx)
 
@@ -537,14 +543,16 @@ export default function PriceChart({
       ? new Date(lastTs * 1000).toDateString() === today.toDateString()
       : false
 
-    // ── Reversal patterns ────────────────────────────────────────────────────
+    // ── Reversal patterns — always use real OHLCV (rc/rh/rl/ro) ─────────────
+    // HA-smoothed c/h/l/o distort body sizes and wick ratios, producing false
+    // pattern shapes. Real prices give accurate classic candlestick signals.
     const pxRange   = priceMax - priceMin
-    const bodyOf    = i => Math.abs(c[i] - o[i])
-    const midOf     = i => (c[i] + o[i]) / 2
-    const isBull    = i => c[i] >= o[i]
-    const upShadow  = i => isBull(i) ? h[i] - c[i] : h[i] - o[i]
-    const dnShadow  = i => isBull(i) ? o[i] - l[i] : c[i] - l[i]
-    const barRange  = i => h[i] - l[i]
+    const bodyOf    = i => Math.abs(rc[i] - ro[i])
+    const midOf     = i => (rc[i] + ro[i]) / 2
+    const isBull    = i => rc[i] >= ro[i]
+    const upShadow  = i => isBull(i) ? rh[i] - rc[i] : rh[i] - ro[i]
+    const dnShadow  = i => isBull(i) ? ro[i] - rl[i] : rc[i] - rl[i]
+    const barRange  = i => rh[i] - rl[i]
 
     const rawReversals = []
     for (let i = 1; i < nb - 1; i++) {
@@ -554,167 +562,164 @@ export default function PriceChart({
       const r0 = barRange(i), r1 = barRange(i - 1)
       const us0 = upShadow(i), ds0 = dnShadow(i)
       const lb = Math.max(0, i - 6)
-      const prevLows  = l.slice(lb, i - 1)
-      const prevHighs = h.slice(lb, i - 1)
-      const recentLow  = prevLows.length  ? Math.min(...prevLows)  : l[i - 1]
-      const recentHigh = prevHighs.length ? Math.max(...prevHighs) : h[i - 1]
+      const prevLows  = rl.slice(lb, i - 1)
+      const prevHighs = rh.slice(lb, i - 1)
+      const recentLow  = prevLows.length  ? Math.min(...prevLows)  : rl[i - 1]
+      const recentHigh = prevHighs.length ? Math.max(...prevHighs) : rh[i - 1]
 
       // ── Two-bar patterns ──────────────────────────────────────────────────
       // Bullish Engulfing
-      if (!isBull(i - 1) && isBull(i) && o[i] <= c[i - 1] && c[i] >= o[i - 1] &&
-          b0 >= b1 * 0.8 && l[i - 1] <= recentLow * 1.012) {
+      if (!isBull(i - 1) && isBull(i) && ro[i] <= rc[i - 1] && rc[i] >= ro[i - 1] &&
+          b0 >= b1 * 0.8 && rl[i - 1] <= recentLow * 1.012) {
         rawReversals.push({ kind: 'bull', label: '↑Eng', name: 'Bullish Engulfing', candles: 2, rate: 63,
           desc: 'A large green candle fully engulfs the prior red candle — sellers are exhausted and bulls seize control. Strongest near a key support level after a downtrend.',
-          x: xOf(i), yMark: yOf(Math.min(l[i], l[i - 1])) + 10 })
+          x: xOf(i), yMark: yOf(Math.min(rl[i], rl[i - 1])) + 10 })
       }
       // Bearish Engulfing
-      if (isBull(i - 1) && !isBull(i) && o[i] >= c[i - 1] && c[i] <= o[i - 1] &&
-          b0 >= b1 * 0.8 && h[i - 1] >= recentHigh * 0.988) {
+      if (isBull(i - 1) && !isBull(i) && ro[i] >= rc[i - 1] && rc[i] <= ro[i - 1] &&
+          b0 >= b1 * 0.8 && rh[i - 1] >= recentHigh * 0.988) {
         rawReversals.push({ kind: 'bear', label: '↓Eng', name: 'Bearish Engulfing', candles: 2, rate: 63,
           desc: 'A large red candle fully engulfs the prior green candle — buyers exhausted and bears take over. Most reliable near resistance after an uptrend.',
-          x: xOf(i), yMark: yOf(Math.max(h[i], h[i - 1])) - 10 })
+          x: xOf(i), yMark: yOf(Math.max(rh[i], rh[i - 1])) - 10 })
       }
       // Bullish Harami (inside bar, bull)
       if (!isBull(i - 1) && isBull(i) && b1 > 0 && b0 < b1 * 0.6 &&
-          Math.min(o[i], c[i]) > Math.min(o[i - 1], c[i - 1]) &&
-          Math.max(o[i], c[i]) < Math.max(o[i - 1], c[i - 1]) &&
-          l[i - 1] <= recentLow * 1.012) {
+          Math.min(ro[i], rc[i]) > Math.min(ro[i - 1], rc[i - 1]) &&
+          Math.max(ro[i], rc[i]) < Math.max(ro[i - 1], rc[i - 1]) &&
+          rl[i - 1] <= recentLow * 1.012) {
         rawReversals.push({ kind: 'bull', label: '↑Hrm', name: 'Bullish Harami', candles: 2, rate: 53,
           desc: 'A small bullish candle forms completely inside the body of the prior bearish candle — indecision after a downtrend. Watch for the next candle to confirm direction.',
-          x: xOf(i), yMark: yOf(Math.min(l[i], l[i - 1])) + 10 })
+          x: xOf(i), yMark: yOf(Math.min(rl[i], rl[i - 1])) + 10 })
       }
       // Bearish Harami (inside bar, bear)
       if (isBull(i - 1) && !isBull(i) && b1 > 0 && b0 < b1 * 0.6 &&
-          Math.min(o[i], c[i]) > Math.min(o[i - 1], c[i - 1]) &&
-          Math.max(o[i], c[i]) < Math.max(o[i - 1], c[i - 1]) &&
-          h[i - 1] >= recentHigh * 0.988) {
+          Math.min(ro[i], rc[i]) > Math.min(ro[i - 1], rc[i - 1]) &&
+          Math.max(ro[i], rc[i]) < Math.max(ro[i - 1], rc[i - 1]) &&
+          rh[i - 1] >= recentHigh * 0.988) {
         rawReversals.push({ kind: 'bear', label: '↓Hrm', name: 'Bearish Harami', candles: 2, rate: 53,
           desc: 'A small bearish candle forms completely inside the prior bullish candle — buyers losing momentum near resistance. Needs bearish confirmation next bar.',
-          x: xOf(i), yMark: yOf(Math.max(h[i], h[i - 1])) - 10 })
+          x: xOf(i), yMark: yOf(Math.max(rh[i], rh[i - 1])) - 10 })
       }
       // Tweezer Bottom
-      if (Math.abs(l[i] - l[i - 1]) < pxRange * 0.004 && !isBull(i - 1) && isBull(i) &&
-          l[i - 1] <= recentLow * 1.01 && r0 > 0 && r1 > 0) {
+      if (Math.abs(rl[i] - rl[i - 1]) < pxRange * 0.004 && !isBull(i - 1) && isBull(i) &&
+          rl[i - 1] <= recentLow * 1.01 && r0 > 0 && r1 > 0) {
         rawReversals.push({ kind: 'bull', label: '↑Twz', name: 'Tweezer Bottom', candles: 2, rate: 58,
           desc: 'Two candles with nearly identical lows — sellers tried twice to push lower and failed both times. Strong support signal, especially after a trend.',
-          x: xOf(i), yMark: yOf(Math.min(l[i], l[i - 1])) + 10 })
+          x: xOf(i), yMark: yOf(Math.min(rl[i], rl[i - 1])) + 10 })
       }
       // Tweezer Top
-      if (Math.abs(h[i] - h[i - 1]) < pxRange * 0.004 && isBull(i - 1) && !isBull(i) &&
-          h[i - 1] >= recentHigh * 0.99 && r0 > 0 && r1 > 0) {
+      if (Math.abs(rh[i] - rh[i - 1]) < pxRange * 0.004 && isBull(i - 1) && !isBull(i) &&
+          rh[i - 1] >= recentHigh * 0.99 && r0 > 0 && r1 > 0) {
         rawReversals.push({ kind: 'bear', label: '↓Twz', name: 'Tweezer Top', candles: 2, rate: 58,
           desc: 'Two candles with nearly identical highs — buyers tried twice to break through and failed both times. Strong resistance signal after an uptrend.',
-          x: xOf(i), yMark: yOf(Math.max(h[i], h[i - 1])) - 10 })
+          x: xOf(i), yMark: yOf(Math.max(rh[i], rh[i - 1])) - 10 })
       }
       // Dark Cloud Cover
       if (isBull(i - 1) && !isBull(i) && b1 > pxRange * 0.005 &&
-          o[i] > h[i - 1] && c[i] < midOf(i - 1) && c[i] > l[i - 1] &&
-          h[i - 1] >= recentHigh * 0.988) {
+          ro[i] > rh[i - 1] && rc[i] < midOf(i - 1) && rc[i] > rl[i - 1] &&
+          rh[i - 1] >= recentHigh * 0.988) {
         rawReversals.push({ kind: 'bear', label: '↓DC', name: 'Dark Cloud Cover', candles: 2, rate: 66,
           desc: 'Bearish candle gaps up above prior high but closes below the prior bull midpoint — bulls trapped at the top, sellers take control.',
-          x: xOf(i), yMark: yOf(Math.max(h[i], h[i - 1])) - 10 })
+          x: xOf(i), yMark: yOf(Math.max(rh[i], rh[i - 1])) - 10 })
       }
       // Piercing Line
       if (!isBull(i - 1) && isBull(i) && b1 > pxRange * 0.005 &&
-          o[i] < l[i - 1] && c[i] > midOf(i - 1) && c[i] < o[i - 1] &&
-          l[i - 1] <= recentLow * 1.012) {
+          ro[i] < rl[i - 1] && rc[i] > midOf(i - 1) && rc[i] < ro[i - 1] &&
+          rl[i - 1] <= recentLow * 1.012) {
         rawReversals.push({ kind: 'bull', label: '↑PL', name: 'Piercing Line', candles: 2, rate: 66,
           desc: 'Bullish candle gaps down below prior low but closes above the prior bear midpoint — bears trapped at the bottom, buyers take control.',
-          x: xOf(i), yMark: yOf(Math.min(l[i], l[i - 1])) + 10 })
+          x: xOf(i), yMark: yOf(Math.min(rl[i], rl[i - 1])) + 10 })
       }
 
       // ── Single-bar patterns ───────────────────────────────────────────────
       // Hammer (at lows) / Hanging Man (at highs)
       if (r0 > pxRange * 0.002 && b0 > 0 && ds0 >= 2 * b0 && us0 <= 0.5 * b0) {
-        if (l[i] <= recentLow * 1.01) {
+        if (rl[i] <= recentLow * 1.01) {
           rawReversals.push({ kind: 'bull', label: '↑Ham', name: 'Hammer', candles: 1, rate: 60,
             desc: 'Long lower wick with small body near the top — buyers pushed back strongly after sellers drove price down. A classic bullish reversal signal at support.',
-            x: xOf(i), yMark: yOf(l[i]) + 10 })
-        } else if (h[i] >= recentHigh * 0.99) {
+            x: xOf(i), yMark: yOf(rl[i]) + 10 })
+        } else if (rh[i] >= recentHigh * 0.99) {
           rawReversals.push({ kind: 'bear', label: '↓HM', name: 'Hanging Man', candles: 1, rate: 56,
             desc: 'Hammer shape at the top of an uptrend — intraday selling pressure appeared and was recovered. A warning that momentum may be weakening. Needs bearish confirmation.',
-            x: xOf(i), yMark: yOf(h[i]) - 10 })
+            x: xOf(i), yMark: yOf(rh[i]) - 10 })
         }
       }
       // Inverted Hammer (at lows) / Shooting Star (at highs)
       if (r0 > pxRange * 0.002 && b0 > 0 && us0 >= 2 * b0 && ds0 <= 0.5 * b0) {
-        if (l[i] <= recentLow * 1.01) {
+        if (rl[i] <= recentLow * 1.01) {
           rawReversals.push({ kind: 'bull', label: '↑IH', name: 'Inverted Hammer', candles: 1, rate: 55,
             desc: 'Long upper wick with small body near the bottom — buyers showed intraday strength at lows. Needs bullish confirmation next bar.',
-            x: xOf(i), yMark: yOf(l[i]) + 10 })
-        } else if (h[i] >= recentHigh * 0.99) {
+            x: xOf(i), yMark: yOf(rl[i]) + 10 })
+        } else if (rh[i] >= recentHigh * 0.99) {
           rawReversals.push({ kind: 'bear', label: '↓SS', name: 'Shooting Star', candles: 1, rate: 59,
             desc: 'Long upper wick with small body near the bottom after an uptrend — buyers pushed high but sellers dominated the close. Strong bearish reversal signal near resistance.',
-            x: xOf(i), yMark: yOf(h[i]) - 10 })
+            x: xOf(i), yMark: yOf(rh[i]) - 10 })
         }
       }
       // Doji variants
       if (r0 > pxRange * 0.002 && b0 <= r0 * 0.06) {
-        if (ds0 >= r0 * 0.6 && us0 <= r0 * 0.1 && l[i] <= recentLow * 1.01) {
-          // Dragonfly Doji — buyers recovered everything, bullish at lows
+        if (ds0 >= r0 * 0.6 && us0 <= r0 * 0.1 && rl[i] <= recentLow * 1.01) {
           rawReversals.push({ kind: 'bull', label: '↑DD', name: 'Dragonfly Doji', candles: 1, rate: 61,
             desc: 'Open, high, and close all near the top of the range — sellers drove price down hard but buyers recovered everything. Strong bullish reversal signal at support.',
-            x: xOf(i), yMark: yOf(l[i]) + 10 })
-        } else if (us0 >= r0 * 0.6 && ds0 <= r0 * 0.1 && h[i] >= recentHigh * 0.99) {
-          // Gravestone Doji — sellers recovered everything, bearish at highs
+            x: xOf(i), yMark: yOf(rl[i]) + 10 })
+        } else if (us0 >= r0 * 0.6 && ds0 <= r0 * 0.1 && rh[i] >= recentHigh * 0.99) {
           rawReversals.push({ kind: 'bear', label: '↓GD', name: 'Gravestone Doji', candles: 1, rate: 61,
             desc: 'Open, low, and close all near the bottom of the range — buyers pushed price high but sellers took back everything. Strong bearish reversal signal at resistance.',
-            x: xOf(i), yMark: yOf(h[i]) - 10 })
+            x: xOf(i), yMark: yOf(rh[i]) - 10 })
         } else if (us0 >= r0 * 0.2 && ds0 >= r0 * 0.2) {
-          // Standard Doji — indecision, only mark after a clear move
           const lb3 = Math.max(0, i - 3)
-          const prior3bull = c[i - 1] > c[Math.max(0, i - 2)] && c[i - 1] > c[lb3]
-          const prior3bear = c[i - 1] < c[Math.max(0, i - 2)] && c[i - 1] < c[lb3]
-          if (prior3bull && h[i] >= recentHigh * 0.99) {
+          const prior3bull = rc[i - 1] > rc[Math.max(0, i - 2)] && rc[i - 1] > rc[lb3]
+          const prior3bear = rc[i - 1] < rc[Math.max(0, i - 2)] && rc[i - 1] < rc[lb3]
+          if (prior3bull && rh[i] >= recentHigh * 0.99) {
             rawReversals.push({ kind: 'bear', label: '↓Doji', name: 'Doji', candles: 1, rate: 54,
               desc: 'Open and close almost equal after an uptrend — buyers and sellers are balanced. Indecision at a high is a warning sign. Watch the next candle for direction.',
-              x: xOf(i), yMark: yOf(h[i]) - 10 })
-          } else if (prior3bear && l[i] <= recentLow * 1.01) {
+              x: xOf(i), yMark: yOf(rh[i]) - 10 })
+          } else if (prior3bear && rl[i] <= recentLow * 1.01) {
             rawReversals.push({ kind: 'bull', label: '↑Doji', name: 'Doji', candles: 1, rate: 54,
               desc: 'Open and close almost equal after a downtrend — buyers stepped in to match sellers. Indecision at a low suggests the decline may be exhausting.',
-              x: xOf(i), yMark: yOf(l[i]) + 10 })
+              x: xOf(i), yMark: yOf(rl[i]) + 10 })
           }
         }
       }
 
       // ── Three-bar patterns ────────────────────────────────────────────────
       if (i >= 2) {
-        const b2 = bodyOf(i - 2), range2 = h[i - 2] - l[i - 2]
+        const b2 = bodyOf(i - 2), range2 = rh[i - 2] - rl[i - 2]
         const lb2 = Math.max(0, i - 8)
-        const farLow  = l.slice(lb2, i - 2).length ? Math.min(...l.slice(lb2, i - 2)) : l[i - 2]
-        const farHigh = h.slice(lb2, i - 2).length ? Math.max(...h.slice(lb2, i - 2)) : h[i - 2]
+        const farLow  = rl.slice(lb2, i - 2).length ? Math.min(...rl.slice(lb2, i - 2)) : rl[i - 2]
+        const farHigh = rh.slice(lb2, i - 2).length ? Math.max(...rh.slice(lb2, i - 2)) : rh[i - 2]
 
         // Morning Star
         const bigBody = b2 > range2 * 0.45
         const doji    = bodyOf(i - 1) <= b2 * 0.45
-        if (!isBull(i - 2) && bigBody && doji && isBull(i) && c[i] > midOf(i - 2) && l[i - 2] <= farLow * 1.015) {
+        if (!isBull(i - 2) && bigBody && doji && isBull(i) && rc[i] > midOf(i - 2) && rl[i - 2] <= farLow * 1.015) {
           rawReversals.push({ kind: 'bull', label: '↑Morn', name: 'Morning Star', candles: 3, rate: 78,
             desc: 'Strong bearish candle → indecision → bullish close above midpoint. A three-candle bottom: fear peaks, uncertainty appears, then buyers confirm the reversal.',
-            x: xOf(i - 1), yMark: Math.max(yOf(l[i - 2]), yOf(l[i - 1]), yOf(l[i])) + 10 })
+            x: xOf(i - 1), yMark: Math.max(yOf(rl[i - 2]), yOf(rl[i - 1]), yOf(rl[i])) + 10 })
         }
         // Evening Star
-        if (isBull(i - 2) && bigBody && doji && !isBull(i) && c[i] < midOf(i - 2) && h[i - 2] >= farHigh * 0.985) {
+        if (isBull(i - 2) && bigBody && doji && !isBull(i) && rc[i] < midOf(i - 2) && rh[i - 2] >= farHigh * 0.985) {
           rawReversals.push({ kind: 'bear', label: '↓Eve', name: 'Evening Star', candles: 3, rate: 78,
             desc: 'Strong bullish candle → indecision → bearish close below midpoint. A three-candle top: euphoria peaks, uncertainty appears, then sellers confirm the reversal.',
-            x: xOf(i - 1), yMark: Math.min(yOf(h[i - 2]), yOf(h[i - 1]), yOf(h[i])) - 10 })
+            x: xOf(i - 1), yMark: Math.min(yOf(rh[i - 2]), yOf(rh[i - 1]), yOf(rh[i])) - 10 })
         }
         // Three White Soldiers
         if (isBull(i) && isBull(i - 1) && isBull(i - 2) &&
-            c[i] > c[i - 1] && c[i - 1] > c[i - 2] &&
-            o[i] >= l[i - 1] && o[i] <= h[i - 1] &&
+            rc[i] > rc[i - 1] && rc[i - 1] > rc[i - 2] &&
+            ro[i] >= rl[i - 1] && ro[i] <= rh[i - 1] &&
             b0 > pxRange * 0.004 && b1 > pxRange * 0.004 && b2 > pxRange * 0.004) {
           rawReversals.push({ kind: 'bull', label: '↑3W', name: 'Three White Soldiers', candles: 3, rate: 83,
             desc: 'Three consecutive large bullish candles, each closing higher — a powerful show of sustained buying pressure. One of the strongest bullish momentum signals.',
-            x: xOf(i - 1), yMark: Math.max(yOf(l[i - 2]), yOf(l[i - 1]), yOf(l[i])) + 10 })
+            x: xOf(i - 1), yMark: Math.max(yOf(rl[i - 2]), yOf(rl[i - 1]), yOf(rl[i])) + 10 })
         }
         // Three Black Crows
         if (!isBull(i) && !isBull(i - 1) && !isBull(i - 2) &&
-            c[i] < c[i - 1] && c[i - 1] < c[i - 2] &&
-            o[i] <= h[i - 1] && o[i] >= l[i - 1] &&
+            rc[i] < rc[i - 1] && rc[i - 1] < rc[i - 2] &&
+            ro[i] <= rh[i - 1] && ro[i] >= rl[i - 1] &&
             b0 > pxRange * 0.004 && b1 > pxRange * 0.004 && b2 > pxRange * 0.004) {
           rawReversals.push({ kind: 'bear', label: '↓3C', name: 'Three Black Crows', candles: 3, rate: 83,
             desc: 'Three consecutive large bearish candles, each closing lower — a powerful show of sustained selling pressure. One of the strongest bearish momentum signals.',
-            x: xOf(i - 1), yMark: Math.min(yOf(h[i - 2]), yOf(h[i - 1]), yOf(h[i])) - 10 })
+            x: xOf(i - 1), yMark: Math.min(yOf(rh[i - 2]), yOf(rh[i - 1]), yOf(rh[i])) - 10 })
         }
       }
     }
