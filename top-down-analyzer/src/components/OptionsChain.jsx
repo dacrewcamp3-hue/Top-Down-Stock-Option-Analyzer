@@ -869,13 +869,17 @@ function GreeksBar({ rec, highlightGamma = false }) {
 }
 
 // ── Scale-In Plan — compact ───────────────────────────────────────────────────
-function ScaleInPlan({ qty, currentPrice, rec }) {
+function ScaleInPlan({ qty, currentPrice, rec, t1Target }) {
   if (!rec || qty < 1) return null
   const qtyN = Math.max(1, qty)
   const { premium, isCall } = rec
   const t1      = Math.ceil(qtyN / 2)
   const t2      = qtyN - t1
-  const trigger = currentPrice ? +((isCall ? currentPrice * 1.01 : currentPrice * 0.99)).toFixed(2) : null
+  // Use T1 chart target as the add-to trigger; fall back to flat 1% if no chart target
+  const trigger = t1Target != null
+    ? +t1Target.toFixed(2)
+    : currentPrice ? +((isCall ? currentPrice * 1.01 : currentPrice * 0.99)).toFixed(2) : null
+  const triggerLabel = t1Target != null ? `chart T1 $${trigger}` : `$${trigger ?? '1% move'}`
   const t2Max   = +(premium * 1.25).toFixed(2)
 
   return (
@@ -886,7 +890,7 @@ function ScaleInPlan({ qty, currentPrice, rec }) {
         : <>
             <span><strong>T1:</strong> Buy {t1} now at signal</span>
             <span className="opt-scale-sep">·</span>
-            <span><strong>T2:</strong> Add {t2} if {isCall ? 'above' : 'below'} ${trigger ?? '1% move'} and prem &lt; ${t2Max}</span>
+            <span><strong>T2:</strong> Add {t2} if {isCall ? 'above' : 'below'} {triggerLabel} and prem &lt; ${t2Max}</span>
           </>
       }
     </div>
@@ -1671,7 +1675,7 @@ function EntryChecklist({ direction, conflict, adxSignal, earningsDate, ivData, 
 }
 
 // ── Recommendation card ───────────────────────────────────────────────────────
-function RecCard({ rec, ticker, maxRisk, currentPrice, ivRank, isQuickPlay, sigma, grade, adxSignal, wyckoffData, backtestResult, onLog }) {
+function RecCard({ rec, ticker, maxRisk, currentPrice, ivRank, isQuickPlay, sigma, grade, adxSignal, wyckoffData, backtestResult, onLog, swingTargets = [], isItm = false }) {
   if (!rec) return null
   const { label, dte, expDate, strike, premium, contractCost, isCall } = rec
 
@@ -1853,9 +1857,33 @@ function RecCard({ rec, ticker, maxRisk, currentPrice, ivRank, isQuickPlay, sigm
         </div>
       )}
 
-      <ScaleInPlan qty={qty} currentPrice={currentPrice} rec={rec} />
+      <ScaleInPlan qty={qty} currentPrice={currentPrice} rec={rec} t1Target={swingTargets[0] ?? null} />
 
       <ExitPlan rec={rec} currentPrice={currentPrice} qty={qty} setupGrade={typeof grade === 'object' ? grade : null} adxSignal={adxSignal} />
+
+      {/* Chart Targets — bridge to the price-level analysis on the Chart tab */}
+      {swingTargets.length > 0 && currentPrice && (
+        <div className="opt-chart-targets">
+          <div className="opt-ct-header">CHART TARGETS · underlying price · from Chart tab T1–T4</div>
+          <div className="opt-ct-row">
+            {swingTargets.slice(0, 4).map((t, i) => {
+              if (t == null) return null
+              const movePct = ((t - currentPrice) / currentPrice * 100)
+              const isGain  = rec.isCall ? movePct > 0 : movePct < 0
+              return (
+                <div key={i} className="opt-ct-item">
+                  <span className="opt-ct-name">T{i + 1}</span>
+                  <span className="opt-ct-price">${f2(t)}</span>
+                  <span className="opt-ct-move" style={{ color: isGain ? '#10b981' : '#f59e0b' }}>
+                    {movePct > 0 ? '+' : ''}{movePct.toFixed(1)}%
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+          <div className="opt-ct-note">T1 = scale-in trigger · T2 = take partials · T3 = house money · T4 = full target</div>
+        </div>
+      )}
 
       <GreeksBar rec={rec} highlightGamma={isQuickPlay} />
 
@@ -2343,7 +2371,7 @@ export default function OptionsChain({
   ticker, currentPrice, historicalVol, swingResult, confluenceResult,
   setupGrade, patterns, hsPatterns, ivData, lastUpdated,
   earningsDate, adxSignal, optionsChain, chainFetchDone, onRetryChain,
-  backtestResult, wyckoffData, masterSignal, onLogTrade,
+  backtestResult, wyckoffData, masterSignal, onLogTrade, swingTargets = [],
 }) {
   const [conviction,    setConviction]    = useState('standard')
   const convictionLockedRef = useRef(false)  // prevents auto-set from overriding user's click
@@ -2630,6 +2658,7 @@ export default function OptionsChain({
                   wyckoffData={wyckoffData}
                   backtestResult={backtestResult}
                   onLog={onLogTrade}
+                  swingTargets={swingTargets}
                   isQuickPlay
                 />
               </div>
@@ -2646,6 +2675,7 @@ export default function OptionsChain({
               wyckoffData={wyckoffData}
               backtestResult={backtestResult}
               onLog={onLogTrade}
+              swingTargets={swingTargets}
             />
             <RecCard
               rec={recs.extended}
@@ -2659,8 +2689,33 @@ export default function OptionsChain({
               wyckoffData={wyckoffData}
               backtestResult={backtestResult}
               onLog={onLogTrade}
+              swingTargets={swingTargets}
             />
           </div>
+
+          {/* ── ITM / Stock Replacement pick ── */}
+          {recs.itm && (
+            <>
+              <div className="opt-itm-header">
+                🔒 STOCK REPLACEMENT — ITM PLAY · Δ0.75 · Moves nearly 1:1 with the stock · Lower breakeven distance · Less theta bleed
+              </div>
+              <RecCard
+                rec={recs.itm}
+                ticker={ticker}
+                maxRisk={maxRisk}
+                currentPrice={currentPrice}
+                ivRank={ivRank}
+                sigma={sigma}
+                grade={setupGrade}
+                adxSignal={adxSignal}
+                wyckoffData={wyckoffData}
+                backtestResult={backtestResult}
+                onLog={onLogTrade}
+                swingTargets={swingTargets}
+                isItm
+              />
+            </>
+          )}
         </>
       )}
 

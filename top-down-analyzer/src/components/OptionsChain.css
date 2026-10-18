@@ -2195,3 +2195,78 @@
 
 /* ── Checklist 7-item score ──────────────────────────────────────────────── */
 /* No new selectors needed — the score color is inline */
+
+/* ── Chart Targets bridge (inside RecCard) ───────────────────────────────── */
+.opt-chart-targets {
+  margin: 8px 0 4px;
+  background: #040c18;
+  border: 1px solid #0e2040;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.opt-ct-header {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #2a5080;
+  margin-bottom: 6px;
+}
+
+.opt-ct-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.opt-ct-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 54px;
+  background: #060e1c;
+  border: 1px solid #0e2040;
+  border-radius: 5px;
+  padding: 5px 8px;
+}
+
+.opt-ct-name {
+  font-size: 9px;
+  font-weight: 800;
+  color: #3a6090;
+  letter-spacing: 0.5px;
+}
+
+.opt-ct-price {
+  font-size: 12px;
+  font-weight: 700;
+  color: #a0c0dc;
+}
+
+.opt-ct-move {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.opt-ct-note {
+  font-size: 9px;
+  color: #2a4060;
+  margin-top: 5px;
+  line-height: 1.4;
+}
+
+/* ── ITM / Stock Replacement header ─────────────────────────────────────── */
+.opt-itm-header {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #4a3080;
+  background: #04010f;
+  border: 1px solid #2d1f60;
+  border-radius: 6px 6px 0 0;
+  padding: 7px 12px;
+  margin-top: 12px;
+}

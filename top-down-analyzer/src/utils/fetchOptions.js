@@ -430,6 +430,13 @@ export function generateRecommendations(currentPrice, sigma, direction, convicti
     ? makeRec('⚡ QUICK PLAY', S, vol, isCall, quickExp,  expToTs(quickExp),   0.45,   patternTarget, r, liveContracts)
     : null
 
+  // ITM "stock replacement" pick — same primary expiry, Δ0.75.
+  // High delta means the option moves nearly 1:1 with the stock.
+  // Time premium is small relative to intrinsic value, so theta bleeds slower.
+  const itm = primaryExp
+    ? makeRec('🔒 ITM PLAY', S, vol, isCall, primaryExp, expToTs(primaryExp), 0.75, patternTarget, r, liveContracts)
+    : null
+
   // GEX wall check: flag if a significant GEX concentration sits between price and primary strike
   if (primary && gexData?.length) {
     const maxAbs = gexData.reduce((m, d) => Math.max(m, Math.abs(d.gex)), 1)
@@ -446,6 +453,7 @@ export function generateRecommendations(currentPrice, sigma, direction, convicti
     primary,
     extended,
     quickPlay,
+    itm,
     direction,
     sigma:       vol,
     conviction,

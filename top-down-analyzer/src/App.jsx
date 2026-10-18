@@ -1806,6 +1806,7 @@ export default function App() {
           wyckoffData={wyckoffData}
           masterSignal={masterSignal}
           onLogTrade={logTrade}
+          swingTargets={swingTargets}
         />
       )}
 
