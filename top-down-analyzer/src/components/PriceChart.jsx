@@ -1735,20 +1735,20 @@ export default function PriceChart({
           </g>
         ))}
 
-        {/* Gap bands */}
+        {/* Gap bands — Tier 3 context: faint background only */}
         {gapBands.map((g, i) => {
           const col   = g.type === 'up' ? '#10b981' : '#ef4444'
           const bandH = Math.max(2, g.y2 - g.y1)
           return (
             <g key={`gap-${i}`}>
               <rect x={PL} y={g.y1} width={VW - PL - PR} height={bandH}
-                fill={col} opacity="0.10" />
+                fill={col} opacity="0.05" />
               <line x1={PL} y1={g.y1} x2={VW - PR} y2={g.y1}
-                stroke={col} strokeWidth="1.1" strokeDasharray="5,3" opacity="0.80" />
+                stroke={col} strokeWidth="0.7" strokeDasharray="6,4" opacity="0.38" />
               <line x1={PL} y1={g.y2} x2={VW - PR} y2={g.y2}
-                stroke={col} strokeWidth="1.1" strokeDasharray="5,3" opacity="0.80" />
+                stroke={col} strokeWidth="0.7" strokeDasharray="6,4" opacity="0.38" />
               <text x={PL + 6} y={(g.y1 + g.y2) / 2 + 3.5}
-                textAnchor="start" fontSize="7.5" fill={col} opacity="0.85" fontWeight="700">
+                textAnchor="start" fontSize="7" fill={col} opacity="0.38" fontWeight="700">
                 {`GAP${g.type === 'up' ? '↑' : '↓'} $${g.size.toFixed(2)}`}
                 {gapClass?.type ? `  · ${gapClass.type}` : ''}
               </text>
@@ -1839,14 +1839,13 @@ export default function PriceChart({
           })
         })()}
 
-        {/* Fibonacci levels — toggleable via toolbar */}
+        {/* Fibonacci levels — Tier 3 context: very thin, muted */}
         {showFib && fibLines.map(({ label, p, y }) => (
           <g key={label}>
             <line x1={PL} y1={y} x2={VW - PR} y2={y}
-              stroke="#c8a830" strokeWidth="1.1" strokeDasharray="4,3" opacity="0.85" />
-            <rect x={PL + 4} y={y - 10} width={44} height={11} rx="2" fill="#0a0900" opacity="0.82" />
-            <text x={PL + 8} y={y - 2}
-              textAnchor="start" fontSize="7.5" fill="#b09838" fontWeight="700">{label}</text>
+              stroke="#c8a830" strokeWidth="0.6" strokeDasharray="4,5" opacity="0.35" />
+            <text x={PL + 5} y={y - 2}
+              textAnchor="start" fontSize="6.5" fill="#8a6e20" fontWeight="700" opacity="0.40">{label}</text>
           </g>
         ))}
 
@@ -1857,16 +1856,16 @@ export default function PriceChart({
           {timeframe}
         </text>
 
-        {/* ── Prior Day High / Low (intraday only) ── */}
+        {/* ── Prior Day High / Low — Tier 2: reference weight, not dominant ── */}
         {prevDayH != null && (() => {
           const y = yOf(prevDayH)
           if (y < PT || y > PH) return null
           return (
             <g pointerEvents="none">
               <line x1={PL} y1={y} x2={VW - PR} y2={y}
-                stroke="#f97316" strokeWidth="1.4" strokeDasharray="6,3" opacity="0.95" />
-              <rect x={VW - PR - 62} y={y - 8} width={58} height={10} rx="2" fill="#140800" opacity="0.9" />
-              <text x={VW - PR - 33} y={y} textAnchor="middle" fontSize="7" fill="#f97316" fontWeight="700">
+                stroke="#f97316" strokeWidth="1.0" strokeDasharray="6,4" opacity="0.65" />
+              <text x={VW - PR - 33} y={y - 1} textAnchor="middle"
+                fontSize="6.5" fill="#f97316" fontWeight="700" opacity="0.65">
                 PDH {fmtPx(prevDayH)}
               </text>
             </g>
@@ -1878,16 +1877,16 @@ export default function PriceChart({
           return (
             <g pointerEvents="none">
               <line x1={PL} y1={y} x2={VW - PR} y2={y}
-                stroke="#38bdf8" strokeWidth="1.4" strokeDasharray="6,3" opacity="0.95" />
-              <rect x={VW - PR - 62} y={y - 1} width={58} height={10} rx="2" fill="#00101a" opacity="0.9" />
-              <text x={VW - PR - 33} y={y + 7} textAnchor="middle" fontSize="7" fill="#38bdf8" fontWeight="700">
+                stroke="#38bdf8" strokeWidth="1.0" strokeDasharray="6,4" opacity="0.65" />
+              <text x={VW - PR - 33} y={y + 8} textAnchor="middle"
+                fontSize="6.5" fill="#38bdf8" fontWeight="700" opacity="0.65">
                 PDL {fmtPx(prevDayL)}
               </text>
             </g>
           )
         })()}
 
-        {/* ── Opening Range price zone — highlighted band + labeled borders ── */}
+        {/* ── Opening Range — Tier 1: solid bold lines, dominant presence ── */}
         {(() => {
           const hasH = orbHigh != null && orbHigh > d.priceMin && orbHigh < d.priceMax
           const hasL = orbLow  != null && orbLow  > d.priceMin && orbLow  < d.priceMax
@@ -1899,28 +1898,30 @@ export default function PriceChart({
               {/* Amber fill between high and low */}
               {hasH && hasL && (
                 <rect x={PL} y={yH} width={VW - PR - PL} height={Math.max(1, yL - yH)}
-                  fill="#f59e0b" fillOpacity="0.07" />
+                  fill="#f59e0b" fillOpacity="0.09" />
               )}
-              {/* OR High line + pill label */}
+              {/* OR High — solid, thick, unmissable */}
               {hasH && (
                 <>
                   <line x1={PL} y1={yH} x2={VW - PR} y2={yH}
-                    stroke="#f59e0b" strokeWidth="1.2" strokeDasharray="5,3" opacity="0.9" />
-                  <rect x={VW - PR - 74} y={yH - 10} width={72} height={14} rx="2" fill="#120d00" opacity="0.92" />
-                  <text x={VW - PR - 5} y={yH - 1}
-                    textAnchor="end" fontSize="8" fill="#f59e0b" fontWeight="800" letterSpacing="0.2">
+                    stroke="#f59e0b" strokeWidth="2.2" opacity="1.0" />
+                  <rect x={VW - PR - 76} y={yH - 11} width={74} height={14} rx="2"
+                    fill="#120d00" stroke="#f59e0b" strokeWidth="0.6" opacity="0.96" />
+                  <text x={VW - PR - 6} y={yH - 1}
+                    textAnchor="end" fontSize="8.5" fill="#f59e0b" fontWeight="900" letterSpacing="0.3">
                     ORH  ${fmtPx(orbHigh)}
                   </text>
                 </>
               )}
-              {/* OR Low line + pill label */}
+              {/* OR Low — solid, thick, unmissable */}
               {hasL && (
                 <>
                   <line x1={PL} y1={yL} x2={VW - PR} y2={yL}
-                    stroke="#f59e0b" strokeWidth="1.2" strokeDasharray="5,3" opacity="0.9" />
-                  <rect x={VW - PR - 74} y={yL} width={72} height={14} rx="2" fill="#120d00" opacity="0.92" />
-                  <text x={VW - PR - 5} y={yL + 10}
-                    textAnchor="end" fontSize="8" fill="#f59e0b" fontWeight="800" letterSpacing="0.2">
+                    stroke="#f59e0b" strokeWidth="2.2" opacity="1.0" />
+                  <rect x={VW - PR - 76} y={yL} width={74} height={14} rx="2"
+                    fill="#120d00" stroke="#f59e0b" strokeWidth="0.6" opacity="0.96" />
+                  <text x={VW - PR - 6} y={yL + 10}
+                    textAnchor="end" fontSize="8.5" fill="#f59e0b" fontWeight="900" letterSpacing="0.3">
                     ORL  ${fmtPx(orbLow)}
                   </text>
                 </>
@@ -1929,7 +1930,7 @@ export default function PriceChart({
           )
         })()}
 
-        {/* ── 15M Swing Targets (T1–T5) — dashed lines above/below OR ── */}
+        {/* ── 15M Swing Targets (T1–T5) — Tier 1: bold, T1 most prominent ── */}
         {swingTargets?.length > 0 && (() => {
           const tColors = ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#86efac']
           const visible = swingTargets.slice(0, 5).filter(px => px > d.priceMin && px < d.priceMax)
@@ -1940,12 +1941,16 @@ export default function PriceChart({
                 if (tPx < d.priceMin || tPx > d.priceMax) return null
                 const y   = yOf(tPx)
                 const col = tColors[idx] || '#10b981'
+                const sw  = idx === 0 ? 2.0 : idx === 1 ? 1.6 : 1.2
+                const op  = idx === 0 ? 0.95 : idx === 1 ? 0.82 : 0.65
                 return (
                   <g key={`st-${idx}`}>
                     <line x1={PL} y1={y} x2={VW - PR} y2={y}
-                      stroke={col} strokeWidth="1" strokeDasharray="6,4" opacity="0.72" />
-                    <rect x={VW - PR - 70} y={y - 9} width={68} height={12} rx="2" fill="#020d06" opacity="0.90" />
-                    <text x={VW - PR - 5} y={y} textAnchor="end" fontSize="7.5" fill={col} fontWeight="800">
+                      stroke={col} strokeWidth={sw} strokeDasharray="6,4" opacity={op} />
+                    <rect x={VW - PR - 72} y={y - 9} width={70} height={12} rx="2"
+                      fill="#020d06" stroke={col} strokeWidth="0.5" opacity={op} />
+                    <text x={VW - PR - 6} y={y} textAnchor="end"
+                      fontSize={idx === 0 ? 8 : 7.5} fill={col} fontWeight={idx === 0 ? '900' : '800'} opacity={op}>
                       T{idx + 1}  ${fmtPx(tPx)}
                     </text>
                   </g>
@@ -1955,15 +1960,15 @@ export default function PriceChart({
           )
         })()}
 
-        {/* ── Pre-market High / Low ── */}
+        {/* ── Pre-market High / Low — Tier 2: reference, not dominant ── */}
         {showPreMarket && (pmHigh != null || pmLow != null) && (
           <g pointerEvents="none">
             {pmHigh != null && pmHigh > d.priceMin && pmHigh < d.priceMax && (
               <g>
                 <line x1={PL} y1={yOf(pmHigh)} x2={VW - PR} y2={yOf(pmHigh)}
-                  stroke="#60a5fa" strokeWidth="1" strokeDasharray="3,4" opacity="0.72" />
-                <rect x={VW - PR - 70} y={yOf(pmHigh) - 10} width={68} height={12} rx="2" fill="#030d1a" opacity="0.88" />
-                <text x={VW - PR - 5} y={yOf(pmHigh) - 1} textAnchor="end" fontSize="7.5" fill="#60a5fa" fontWeight="700">
+                  stroke="#60a5fa" strokeWidth="1.0" strokeDasharray="3,5" opacity="0.60" />
+                <text x={VW - PR - 5} y={yOf(pmHigh) - 2} textAnchor="end"
+                  fontSize="7" fill="#60a5fa" fontWeight="700" opacity="0.60">
                   PMH  ${fmtPx(pmHigh)}
                 </text>
               </g>
@@ -1971,9 +1976,9 @@ export default function PriceChart({
             {pmLow != null && pmLow > d.priceMin && pmLow < d.priceMax && (
               <g>
                 <line x1={PL} y1={yOf(pmLow)} x2={VW - PR} y2={yOf(pmLow)}
-                  stroke="#93c5fd" strokeWidth="1" strokeDasharray="3,4" opacity="0.72" />
-                <rect x={VW - PR - 70} y={yOf(pmLow)} width={68} height={12} rx="2" fill="#030d1a" opacity="0.88" />
-                <text x={VW - PR - 5} y={yOf(pmLow) + 9} textAnchor="end" fontSize="7.5" fill="#93c5fd" fontWeight="700">
+                  stroke="#93c5fd" strokeWidth="1.0" strokeDasharray="3,5" opacity="0.60" />
+                <text x={VW - PR - 5} y={yOf(pmLow) + 9} textAnchor="end"
+                  fontSize="7" fill="#93c5fd" fontWeight="700" opacity="0.60">
                   PML  ${fmtPx(pmLow)}
                 </text>
               </g>
@@ -2029,50 +2034,58 @@ export default function PriceChart({
           )
         })()}
 
-        {/* ── GEX levels — gamma flip, call wall, put wall, max pain ── */}
+        {/* ── GEX levels — Tier 1, options-derived: long dashes, left tick, ◆ label ── */}
         {[
-          { price: gammaFlip, label: 'γ FLIP', color: '#f59e0b' },
+          { price: gammaFlip, label: 'γ FLIP',    color: '#f59e0b' },
           { price: callWall,  label: 'CALL WALL', color: '#ef4444' },
           { price: putWall,   label: 'PUT WALL',  color: '#10b981' },
           { price: maxPain,   label: 'MAX PAIN',  color: '#a855f7' },
         ].map(({ price, label, color }) => {
           if (price == null) return null
-          const gy = yOf(price)
+          const gy  = yOf(price)
           if (gy < PT + 2 || gy > PH - 2) return null
+          const lblW = label.length * 5.8 + 36
           return (
             <g key={label} pointerEvents="none">
+              {/* Wide glow — options levels have a soft halo */}
               <line x1={PL} y1={gy} x2={VW - PR} y2={gy}
-                stroke={color} strokeWidth="1.1" strokeDasharray="4,3" opacity="0.75" />
-              <rect x={PL + 2} y={gy - 9} width={label.length * 5.4 + 4} height={10} rx="2"
-                fill="#050d1a" opacity="0.82" />
-              <text x={PL + 4} y={gy - 1} fontSize="7" fill={color} fontWeight="800">
-                {label}  ${fmtPx(price)}
+                stroke={color} strokeWidth="5" opacity="0.05" />
+              {/* Main line — long dashes distinguish options from price levels */}
+              <line x1={PL} y1={gy} x2={VW - PR} y2={gy}
+                stroke={color} strokeWidth="1.6" strokeDasharray="10,4" opacity="0.88" />
+              {/* Left-edge tick mark */}
+              <rect x={PL} y={gy - 3} width={3} height={7} rx="1"
+                fill={color} opacity="0.92" />
+              {/* Label badge — LEFT side (visual differentiator from price levels on right) */}
+              <rect x={PL + 6} y={gy - 10} width={lblW} height={12} rx="2"
+                fill="#050d1a" stroke={color} strokeWidth="0.6" opacity="0.94" />
+              <text x={PL + 11} y={gy} fontSize="7.5" fill={color} fontWeight="800" letterSpacing="0.2">
+                ◆ {label}  ${fmtPx(price)}
               </text>
             </g>
           )
         })}
 
-        {/* ── Major S/R Zones (4H and 1H only) — drawn below everything ── */}
+        {/* ── Major S/R Zones (4H and 1H only) — Tier 3: faint fill, thin borders ── */}
         {srZones.map((z, i) => {
           const isRes = z.kind === 'resistance'
           const col   = isRes ? '#ef4444' : '#10b981'
-          const fill  = isRes ? '#ef444418' : '#10b98118'
+          const fill  = isRes ? '#ef44440d' : '#10b9810d'
           const topY  = yOf(Math.min(z.top, d.priceMax))
           const botY  = yOf(Math.max(z.bot, d.priceMin))
           const zoneH = Math.max(2, botY - topY)
           const clampTop = Math.max(PT, topY)
           const clampH   = Math.min(zoneH, PH - clampTop)
           if (topY > PH || botY < PT || clampH <= 0) return null
-          const midY = clampTop + clampH / 2
           return (
             <g key={`sr-${i}`} pointerEvents="none">
               <rect x={PL} y={clampTop} width={VW - PL - PR} height={clampH} fill={fill} />
               <line x1={PL} y1={topY} x2={VW - PR} y2={topY}
-                stroke={col} strokeWidth="1.4" strokeDasharray="5,3" opacity="0.85" />
+                stroke={col} strokeWidth="0.8" strokeDasharray="5,4" opacity="0.45" />
               <line x1={PL} y1={botY} x2={VW - PR} y2={botY}
-                stroke={col} strokeWidth="0.8" strokeDasharray="4,3" opacity="0.45" />
-              <rect x={VW - PR - 64} y={clampTop - 1} width={60} height={10} rx="2" fill="#040b16" opacity="0.88" />
-              <text x={VW - PR - 34} y={clampTop + 7} textAnchor="middle" fontSize="7" fill={col} fontWeight="800">
+                stroke={col} strokeWidth="0.5" strokeDasharray="4,4" opacity="0.25" />
+              <text x={VW - PR - 34} y={clampTop + 7} textAnchor="middle"
+                fontSize="6.5" fill={col} fontWeight="700" opacity="0.45">
                 {isRes ? 'RES' : 'SUP'} {fmtPx(z.price)}
               </text>
             </g>
