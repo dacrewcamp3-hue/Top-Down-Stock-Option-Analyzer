@@ -1597,6 +1597,115 @@ export function calc15MSwingTargets(
   return levels.slice(0, 5)
 }
 
+// ── Timeframe-native swing targets ────────────────────────────────────────────
+// 15M/5M with ORB levels: same ORB-anchored logic as calc15MSwingTargets.
+// W/D/4H/1H: swing pivot detection native to each TF's own bar history.
+// Targets are real confirmed pivots (highs above price for bull, lows below for bear),
+// with ATR-spaced extensions filling any remaining slots.
+export function calcTimeframeTargets(
+  bars: any,
+  direction: 'bull' | 'bear',
+  currentPrice: number,
+  timeframe: string,
+  orHigh?: number,
+  orLow?: number,
+  atrFallback = 0
+): number[] {
+  if (!bars || currentPrice == null) return []
+  const { highs: h, lows: l, closes: c, timestamps: ts } = bars
+  if (!h || !l || !c || h.length < 10) return []
+
+  // ── ORB-anchored path (15M / 5M) ────────────────────────────────────────────
+  if ((timeframe === '15M' || timeframe === '5M') && orHigh != null && orLow != null && orHigh > orLow) {
+    if (!ts || ts.length < 8) return []
+    let si = 0
+    for (let i = ts.length - 1; i > 0; i--) {
+      if (ts[i] - ts[i - 1] > 14400) { si = i; break }
+    }
+    const postOrStart = si + 2
+    const win = 2
+    const levels: number[] = []
+
+    for (let i = Math.max(postOrStart + win, win); i < h.length - win; i++) {
+      if (direction === 'bull') {
+        const peak = (h as number[])[i]
+        if (peak <= orHigh) continue
+        const leftOk  = (h as number[]).slice(i - win, i).every((v: number) => v < peak)
+        const rightOk = (h as number[]).slice(i + 1, i + win + 1).every((v: number) => v < peak)
+        if (leftOk && rightOk) { const v = +peak.toFixed(2); if (!levels.includes(v)) levels.push(v) }
+      } else {
+        const trough = (l as number[])[i]
+        if (trough >= orLow) continue
+        const leftOk  = (l as number[]).slice(i - win, i).every((v: number) => v > trough)
+        const rightOk = (l as number[]).slice(i + 1, i + win + 1).every((v: number) => v > trough)
+        if (leftOk && rightOk) { const v = +trough.toFixed(2); if (!levels.includes(v)) levels.push(v) }
+      }
+    }
+
+    if (direction === 'bull') levels.sort((a, b) => a - b)
+    else                      levels.sort((a, b) => b - a)
+
+    const orRange = orHigh - orLow
+    const step    = atrFallback > 0 ? atrFallback : Math.max(orRange, 0.50)
+    while (levels.length < 5) {
+      const last = levels.length > 0 ? levels[levels.length - 1] : (direction === 'bull' ? orHigh : orLow)
+      levels.push(+(direction === 'bull' ? last + step : last - step).toFixed(2))
+    }
+    return levels.slice(0, 5)
+  }
+
+  // ── Native pivot path (W / D / 4H / 1H) ────────────────────────────────────
+  const tfCfg: Record<string, { win: number; lookback: number }> = {
+    W:    { win: 3, lookback: 52 },
+    D:    { win: 5, lookback: 60 },
+    '4H': { win: 4, lookback: 60 },
+    '1H': { win: 3, lookback: 50 },
+    '15M':{ win: 2, lookback: 40 },
+    '5M': { win: 2, lookback: 40 },
+  }
+  const cfg = tfCfg[timeframe] ?? { win: 3, lookback: 60 }
+  const n   = h.length
+  const startI = Math.max(0, n - cfg.lookback)
+
+  // ATR for this TF
+  let atr = atrFallback
+  if (atr === 0 && n >= 16) {
+    let sum = 0
+    for (let i = n - 14; i < n; i++) {
+      sum += Math.max(h[i] - l[i], Math.abs(h[i] - c[i - 1]), Math.abs(l[i] - c[i - 1]))
+    }
+    atr = sum / 14
+  }
+
+  const levels: number[] = []
+  for (let i = startI + cfg.win; i < n - cfg.win; i++) {
+    if (direction === 'bull') {
+      const peak = (h as number[])[i]
+      if (peak <= currentPrice) continue
+      const leftOk  = (h as number[]).slice(i - cfg.win, i).every((v: number) => v < peak)
+      const rightOk = (h as number[]).slice(i + 1, i + cfg.win + 1).every((v: number) => v < peak)
+      if (leftOk && rightOk) { const v = +peak.toFixed(2); if (!levels.includes(v)) levels.push(v) }
+    } else {
+      const trough = (l as number[])[i]
+      if (trough >= currentPrice) continue
+      const leftOk  = (l as number[]).slice(i - cfg.win, i).every((v: number) => v > trough)
+      const rightOk = (l as number[]).slice(i + 1, i + cfg.win + 1).every((v: number) => v > trough)
+      if (leftOk && rightOk) { const v = +trough.toFixed(2); if (!levels.includes(v)) levels.push(v) }
+    }
+  }
+
+  if (direction === 'bull') levels.sort((a, b) => a - b)
+  else                      levels.sort((a, b) => b - a)
+
+  // ATR extensions fill remaining slots (fallback: 1% of price per step)
+  const step = atr > 0 ? atr : currentPrice * 0.01
+  while (levels.length < 5) {
+    const last = levels.length > 0 ? levels[levels.length - 1] : currentPrice
+    levels.push(+(direction === 'bull' ? last + step : last - step).toFixed(2))
+  }
+  return levels.slice(0, 5)
+}
+
 // ── Day Type Classification ───────────────────────────────────────────────────
 // Uses Initial Balance (first 30 min = 6 bars on 5M) to classify the day's character.
 // TREND: IB extended one direction only — follow momentum, buy pullbacks or sell rallies.

@@ -10,7 +10,7 @@ import { fetchShortInterest } from './utils/fetchShortInterest'
 import { fetchBreadth } from './utils/fetchBreadth'
 import { calcHistoricalVol, bsPrice } from './utils/fetchOptions'
 import { deriveConfluenceSignals, derive4HSwingSignals, derive4HSwingTrendSignals, deriveMarketAndRisk } from './utils/autoSignals'
-import { calcFibonacci, calcSwingRSI, calcADX, calcMAStack, calcVWAP, detectDoublePatterns, calcRelativeStrength, calcVolumeSpike, calcORBreakRetest, calcWeeklyAlignment, detectHAndS, detectContinuationPatterns, calcVolumeProfile, calc15MSwingTargets, calcDayType } from './utils/indicators'
+import { calcFibonacci, calcSwingRSI, calcADX, calcMAStack, calcVWAP, detectDoublePatterns, calcRelativeStrength, calcVolumeSpike, calcORBreakRetest, calcWeeklyAlignment, detectHAndS, detectContinuationPatterns, calcVolumeProfile, calc15MSwingTargets, calcTimeframeTargets, calcDayType } from './utils/indicators'
 import TimeframePanel from './components/TimeframePanel'
 import EntryRecommendation from './components/EntryRecommendation'
 import SwingCategoryPanel from './components/SwingCategoryPanel'
@@ -883,10 +883,11 @@ export default function App() {
     rsiSignal, weeklyAlign, maStack, volumeSpike, shortInterest, wyckoff: wyckoffData,
   })
 
-  // ── 15M swing targets anchored to the 30-min Opening Range ─────────────────
+  // ── 15M swing targets anchored to the 30-min Opening Range (TradeBrief / StockTradePlan) ──
   const swingTargets = useMemo(() => {
     if (!orbRetest?.orHigh || !orbRetest?.orLow || !fifteenMBars) return []
-    const dir = tradeScore?.direction === 'CALL' ? 'bull' : 'bear'
+    // Use actual ORB break direction first; fall back to confluence direction
+    const dir = orbRetest?.breakDir ?? (tradeScore?.direction === 'CALL' ? 'bull' : 'bear')
     const { highs: h15, lows: l15, closes: c15 } = fifteenMBars
     let atr15 = 0
     if (h15?.length >= 15 && c15?.length >= 15) {
@@ -901,6 +902,50 @@ export default function App() {
     }
     return calc15MSwingTargets(fifteenMBars, orbRetest.orHigh, orbRetest.orLow, dir, atr15)
   }, [orbRetest, fifteenMBars, tradeScore?.direction])
+
+  // ── Timeframe-native chart targets — powers the PriceChart T1–T5 lines ──────
+  const chartTargets = useMemo(() => {
+    // Direction: intraday uses actual ORB break dir; higher TFs use confluence
+    const dir = (() => {
+      if (chartTf === '15M' || chartTf === '5M') {
+        if (orbRetest?.breakDir) return orbRetest.breakDir
+      }
+      if (tradeScore?.direction === 'CALL') return 'bull'
+      if (tradeScore?.direction === 'PUT')  return 'bear'
+      return null
+    })()
+    if (!dir) return []
+
+    // Mirror chartBarsMap: use pre-market bars when active
+    const bars = (() => {
+      const pm = showPreMarket && pmBars
+      if (chartTf === '1H'  && pm && pmBars?.['1h']?.closes?.length)  return pmBars['1h']
+      if (chartTf === '15M' && pm && pmBars?.['15m']?.closes?.length) return pmBars['15m']
+      if (chartTf === '5M'  && pm && pmBars?.['5m']?.closes?.length)  return pmBars['5m']
+      const base = {
+        W: weeklyBars, D: dailyBars, '4H': fourHBars,
+        '1H': oneHBars, '15M': fifteenMBars, '5M': fiveMBars,
+      }
+      return base[chartTf] ?? null
+    })()
+    if (!bars) return []
+
+    const { highs: hh, lows: ll, closes: cc } = bars
+    const n = hh?.length ?? 0
+    if (!n || !cc) return []
+
+    const currentPrice = cc[n - 1]
+    let atr = 0
+    if (n >= 16 && ll) {
+      for (let i = n - 14; i < n; i++) {
+        atr += Math.max(hh[i] - ll[i], Math.abs(hh[i] - cc[i - 1]), Math.abs(ll[i] - cc[i - 1]))
+      }
+      atr /= 14
+    }
+
+    return calcTimeframeTargets(bars, dir, currentPrice, chartTf, orbRetest?.orHigh, orbRetest?.orLow, atr)
+  }, [chartTf, weeklyBars, dailyBars, fourHBars, oneHBars, fifteenMBars, fiveMBars,
+      orbRetest, tradeScore?.direction, showPreMarket, pmBars])
 
   // ── Day Type from Initial Balance (5M chart first 30 min) ───────────────────
   const dayType = useMemo(() => calcDayType(fiveMBars), [fiveMBars])
@@ -1668,7 +1713,7 @@ export default function App() {
                   timeframe={chartTf}
                   showPreMarket={showPreMarket && isPmTf}
                   prevDayClose={prevDayCloseValue}
-                  swingTargets={swingTargets}
+                  swingTargets={chartTargets}
                   gammaFlip={optionsChain?.gammaFlip}
                   callWall={optionsChain?.callWall}
                   putWall={optionsChain?.putWall}
