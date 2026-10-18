@@ -275,6 +275,11 @@ export async function fetchAllTimeframes(ticker: string): Promise<AllTimeframes>
   }
 }
 
+// Light single-TF fetch used by the compare overlay in the chart tab.
+export async function fetchSingleBarset(ticker: string, interval: string, range: string): Promise<BarData | null> {
+  try { return await fetchYFChart(ticker, interval, range) } catch { return null }
+}
+
 // Fetch ATM implied volatility from Yahoo Finance's options chain.
 // Stores one IV sample per day in localStorage and computes IV Rank / IV Percentile
 // from the rolling 1-year history so traders know if options are cheap or expensive.

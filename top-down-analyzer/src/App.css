@@ -1237,6 +1237,43 @@ body {
   flex-shrink: 0;
 }
 
+/* ── Compare overlay input ─────────────────────────────────────────────────── */
+.chart-compare-wrap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.chart-compare-input {
+  width: 44px;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-align: center;
+  background: transparent;
+  border: 1px solid #1a3050;
+  border-radius: 5px;
+  color: #4a7090;
+  outline: none;
+  transition: border-color 0.12s, color 0.12s;
+}
+.chart-compare-input::placeholder { color: #2a4560; }
+.chart-compare-input:focus { border-color: #2a5080; color: #7ab0d8; }
+.chart-compare-input.has-symbol { border-color: #0e4a6a; color: #06b6d4; background: #020d14; }
+.chart-compare-clear {
+  padding: 2px 5px;
+  font-size: 11px;
+  font-weight: 700;
+  background: transparent;
+  border: 1px solid #1a3050;
+  border-radius: 4px;
+  color: #3a5060;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.1s, border-color 0.1s;
+}
+.chart-compare-clear:hover { color: #06b6d4; border-color: #0e4a6a; }
+
 /* ── Mobile notice ─────────────────────────────────────────────────────────── */
 .mobile-banner { display: none }
 @media (max-width: 768px) {

@@ -3,7 +3,7 @@ import { TIMEFRAMES } from './data/timeframes'
 import { SWING_CATEGORIES } from './data/swingCategories'
 import { analyzeEntry } from './utils/analyzeEntry'
 import { analyzeSwing } from './utils/analyzeSwing'
-import { fetchAllTimeframes, fetchIVData, fetchEarningsDate, fetchPreMarketBars } from './utils/fetchTicker'
+import { fetchAllTimeframes, fetchIVData, fetchEarningsDate, fetchPreMarketBars, fetchSingleBarset } from './utils/fetchTicker'
 import { fetchOptionsChain } from './utils/fetchOptionsChain'
 import { fetchInsiderActivity } from './utils/fetchInsider'
 import { fetchShortInterest } from './utils/fetchShortInterest'
@@ -257,6 +257,10 @@ export default function App() {
   const [breadthData,    setBreadthData]    = useState(null)
   const [breadthLoading, setBreadthLoading] = useState(false)
   const [wyckoffData,    setWyckoffData]    = useState(null)
+  const [compareInput,    setCompareInput]    = useState('')
+  const [compareSymbol,   setCompareSymbol]   = useState(null)
+  const [compareBarsByTf, setCompareBarsByTf] = useState({})
+  const [compareLoading,  setCompareLoading]  = useState(false)
 
   // ── Alerts & watchlist ───────────────────────────────────────────────────
   const [alertsOn, setAlertsOn]   = useState(isSoundEnabled)
@@ -736,6 +740,19 @@ export default function App() {
     handleFetch(sym)
   }
 
+  const CMP_CFG = { W: ['1wk','5y'], D: ['1d','1y'], '4H': ['1h','60d'], '1H': ['1h','5d'], '15M': ['15m','5d'], '5M': ['5m','5d'] }
+
+  async function handleCompare(sym) {
+    const s = sym.trim().toUpperCase()
+    if (!s) { setCompareInput(''); setCompareSymbol(null); setCompareBarsByTf({}); return }
+    setCompareLoading(true)
+    const [iv, rv] = CMP_CFG[chartTf] ?? CMP_CFG.D
+    const bars = await fetchSingleBarset(s, iv, rv)
+    if (bars) { setCompareSymbol(s); setCompareBarsByTf({ [chartTf]: bars }) }
+    else       { setCompareSymbol(null); setCompareBarsByTf({}) }
+    setCompareLoading(false)
+  }
+
   async function togglePreMarket() {
     const next = !showPreMarket
     setShowPreMarket(next)
@@ -947,8 +964,47 @@ export default function App() {
   }, [chartTf, weeklyBars, dailyBars, fourHBars, oneHBars, fifteenMBars, fiveMBars,
       orbRetest, tradeScore?.direction, showPreMarket, pmBars])
 
+  // ── Active chart bars for the current TF (mirrors chartBarsMap logic in render) ──
+  const chartBars = useMemo(() => {
+    const m = {
+      W: weeklyBars, D: dailyBars, '4H': fourHBars,
+      '1H':  (showPreMarket && pmBars?.['1h']?.closes?.length)  ? pmBars['1h']  : oneHBars,
+      '15M': (showPreMarket && pmBars?.['15m']?.closes?.length) ? pmBars['15m'] : fifteenMBars,
+      '5M':  (showPreMarket && pmBars?.['5m']?.closes?.length)  ? pmBars['5m']  : fiveMBars,
+    }
+    return m[chartTf] ?? dailyBars
+  }, [chartTf, weeklyBars, dailyBars, fourHBars, oneHBars, fifteenMBars, fiveMBars, showPreMarket, pmBars])
+
+  // Align comparison bars to the main chart's timestamp grid
+  const compareAligned = useMemo(() => {
+    const bars = compareBarsByTf[chartTf]
+    if (!bars?.timestamps?.length || !chartBars?.timestamps?.length) return null
+    const isIntraday = !['D', 'W'].includes(chartTf)
+    const fmt = new Intl.DateTimeFormat('en-US', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      ...(isIntraday ? { hour: '2-digit', minute: '2-digit', hour12: false } : {}),
+      timeZone: 'America/New_York',
+    })
+    const cmpMap = {}
+    bars.timestamps.forEach((ts, i) => {
+      if (bars.closes[i] != null) cmpMap[fmt.format(new Date(ts * 1000))] = bars.closes[i]
+    })
+    return chartBars.timestamps.map(ts => cmpMap[fmt.format(new Date(ts * 1000))] ?? null)
+  }, [compareBarsByTf, chartTf, chartBars])
+
   // ── Day Type from Initial Balance (5M chart first 30 min) ───────────────────
   const dayType = useMemo(() => calcDayType(fiveMBars), [fiveMBars])
+
+  // Re-fetch comparison bars when the chart TF switches while a compare symbol is active
+  useEffect(() => {
+    if (!compareSymbol || compareBarsByTf[chartTf]) return
+    const [iv, rv] = CMP_CFG[chartTf] ?? CMP_CFG.D
+    setCompareLoading(true)
+    fetchSingleBarset(compareSymbol, iv, rv).then(bars => {
+      if (bars) setCompareBarsByTf(prev => ({ ...prev, [chartTf]: bars }))
+      setCompareLoading(false)
+    })
+  }, [chartTf, compareSymbol]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch SPY daily closes for RS line — fires when dailyBars loads for a non-SPY ticker
   useEffect(() => {
@@ -1657,14 +1713,12 @@ export default function App() {
 
           {analyzeView === 'chart' && (() => {
             const isPmTf = ['1H', '15M', '5M'].includes(chartTf)
-            const pmKey  = chartTf === '1H' ? '1h' : chartTf === '15M' ? '15m' : '5m'
             const chartBarsMap = {
               W: weeklyBars, D: dailyBars, '4H': fourHBars,
               '1H':  (showPreMarket && pmBars?.['1h']?.closes?.length)  ? pmBars['1h']  : oneHBars,
               '15M': (showPreMarket && pmBars?.['15m']?.closes?.length) ? pmBars['15m'] : fifteenMBars,
               '5M':  (showPreMarket && pmBars?.['5m']?.closes?.length)  ? pmBars['5m']  : fiveMBars,
             }
-            const chartBars = chartBarsMap[chartTf] ?? dailyBars
             return (
               <>
                 <div className="chart-tf-row">
@@ -1697,6 +1751,25 @@ export default function App() {
                   >
                     {pmLoading ? '…' : 'PRE'}
                   </button>
+                  <span className="chart-tf-sep" />
+                  <div className="chart-compare-wrap">
+                    <input
+                      className={`chart-compare-input${compareSymbol ? ' has-symbol' : ''}`}
+                      placeholder={compareLoading ? '…' : 'VS'}
+                      value={compareInput}
+                      onChange={e => setCompareInput(e.target.value.toUpperCase())}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleCompare(compareInput)
+                        if (e.key === 'Escape') handleCompare('')
+                      }}
+                      maxLength={5}
+                      disabled={compareLoading}
+                      title="Overlay a second ticker (Enter to load, Esc to clear)"
+                    />
+                    {compareSymbol && (
+                      <button className="chart-compare-clear" onClick={() => handleCompare('')} title="Remove comparison">×</button>
+                    )}
+                  </div>
                 </div>
                 <PriceChart
                   key={`${ticker}-${chartTf}`}
@@ -1735,6 +1808,8 @@ export default function App() {
                       return spyMap[dk] ?? null
                     })
                   })()}
+                  compareCloses={compareAligned}
+                  compareLabel={compareSymbol}
                 />
                 <PriceVolumePanel
                   closes={chartBars?.closes}

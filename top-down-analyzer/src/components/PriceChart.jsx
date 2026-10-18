@@ -187,6 +187,8 @@ export default function PriceChart({
   putWall = null,
   maxPain = null,
   spyCloses = null,
+  compareCloses = null,
+  compareLabel = null,
   tfAlignment = null,
   vixData = null,
   verdict = null,
@@ -1101,6 +1103,32 @@ export default function PriceChart({
       }
     }
 
+    // ── Comparison overlay — normalized to main ticker's price scale ─────────
+    const compareLinePoints = []
+    let compareDir = null  // 'converging' | 'diverging'
+    if (compareCloses?.length) {
+      const cmpSlice = compareCloses.slice(s, endIdx)
+      const firstMain = c.find(v => v != null)
+      const firstCmp  = cmpSlice.find(v => v != null)
+      if (firstMain && firstCmp) {
+        const normPts = []
+        for (let i = 0; i < nb; i++) {
+          if (!c[i] || !cmpSlice[i]) continue
+          const normPrice = (cmpSlice[i] / firstCmp) * firstMain
+          compareLinePoints.push(`${xOf(i).toFixed(1)},${yOf(normPrice).toFixed(1)}`)
+          normPts.push({ main: c[i], cmp: normPrice })
+        }
+        if (normPts.length >= 20) {
+          const spreadOf = p => Math.abs(p.main - p.cmp)
+          const early = normPts.slice(0, 10).reduce((a, p) => a + spreadOf(p), 0) / 10
+          const late  = normPts.slice(-10).reduce((a, p) => a + spreadOf(p), 0) / 10
+          const delta = (late - early) / (early || 1)
+          if (delta < -0.08) compareDir = 'converging'
+          else if (delta > 0.08) compareDir = 'diverging'
+        }
+      }
+    }
+
     // ── Key Level Confluence Zones ────────────────────────────────────────────
     // When 3+ levels cluster within 0.3% of each other, flag the zone
     const confluenceZones = []
@@ -1185,8 +1213,9 @@ export default function PriceChart({
       goldDeathCrosses, trendState,
       vahPrice, valPrice, vaLo, vaHi, lvnThresh, profAvg,
       preMarketSet, sessionOpens, rsiArr, srZones, atr14, pmHigh, pmLow,
-      orderBlocks, rsiDivs, rsLinePoints, confluenceZones, anchoredVwapLines }
-  }, [closes, highs, lows, opens, volumes, timestamps, barCount, panOffset, timeframe, useHA, spyCloses, anchoredVwaps])
+      orderBlocks, rsiDivs, rsLinePoints, confluenceZones, anchoredVwapLines,
+      compareLinePoints, compareDir }
+  }, [closes, highs, lows, opens, volumes, timestamps, barCount, panOffset, timeframe, useHA, spyCloses, anchoredVwaps, compareCloses])
 
   // RSI auto-open: when divergences are detected and user hasn't manually closed RSI
   useEffect(() => {
@@ -1383,7 +1412,8 @@ export default function PriceChart({
     volSpikes, prevDayH, prevDayL, vwapCrosses,
     goldDeathCrosses, trendState,
     preMarketSet, sessionOpens, rsiArr, srZones, atr14, pmHigh, pmLow,
-    orderBlocks, rsiDivs, rsLinePoints, confluenceZones, anchoredVwapLines } = d
+    orderBlocks, rsiDivs, rsLinePoints, confluenceZones, anchoredVwapLines,
+    compareLinePoints, compareDir } = d
 
   // High-confidence filter: show only patterns with ≥75% win rate by default
   const displayReversals = showAllPatterns ? reversals : reversals.filter(r => r.rate >= 75)
@@ -2704,6 +2734,26 @@ export default function PriceChart({
             fill="none" stroke="#64748b" strokeWidth="1.6" opacity="0.95"
             strokeLinejoin="round"
           />
+        )}
+
+        {/* ── Comparison overlay ── */}
+        {compareLinePoints?.length > 1 && (
+          <g pointerEvents="none">
+            <polyline points={compareLinePoints.join(' ')} fill="none"
+              stroke="#06b6d4" strokeWidth="1.8" strokeDasharray="6,3"
+              strokeLinejoin="round" opacity="0.85" />
+            <text x={VW - PR - 6} y={PT + 14} textAnchor="end"
+              fontSize="8" fill="#06b6d4" fontWeight="800" opacity="0.9">
+              {compareLabel}
+            </text>
+            {compareDir && (
+              <text x={VW - PR - 6} y={PT + 25} textAnchor="end"
+                fontSize="7" fontWeight="700" opacity="0.9"
+                fill={compareDir === 'converging' ? '#10b981' : '#f59e0b'}>
+                {compareDir === 'converging' ? '↘ CONVERGING' : '↗ DIVERGING'}
+              </text>
+            )}
+          </g>
         )}
 
         {/* ── Relative Strength vs SPY (pro mode only) ── */}
