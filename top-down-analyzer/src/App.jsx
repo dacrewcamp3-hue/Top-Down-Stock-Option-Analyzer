@@ -1373,7 +1373,7 @@ export default function App() {
           ['scanner',  'Scanner',  'Find setups across the market, track overall market health, watch where big money is flowing, and run your regime playbook.'],
           ['trades',   'Trades',   'Write your trade thoughts — why you entered, what you saw, why you exited. Your personal record of reasoning.'],
           ['backtest', 'Backtest', 'See how the strategy signals performed historically on the ticker you\'ve loaded — hit rate, average gain, and more.'],
-          ['spx',      'S&P 500',  'See what any amount invested in the S&P 500 in any year since 1986 would be worth today — the wealth escalator.'],
+          ['spx',      'S&P 500',  'See what any amount invested in the S&P 500 in any year since 1993 would be worth today — the wealth escalator.'],
           ['briefing', 'AM Brief', 'Pre-market game plan — regime check, economic calendar, and your daily trade plan.'],
           ['insight',  'Insight',  'Weight of evidence, AI analysis, regime memory, outcome range, and decision audit trail.'],
         ].map(([id, label, tip]) => (

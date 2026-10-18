@@ -11,15 +11,9 @@ function Tip({ children, text, wide, up }) {
   )
 }
 
-// ── S&P 500 annual total returns (price + dividends reinvested), 1986–2026 ──
+// ── S&P 500 annual total returns (price + dividends reinvested), 1993–2026 ──
+// Starts 1993 — the year SPY (first S&P 500 ETF) launched (Jan 22, 1993)
 const SP500_ANNUAL = [
-  { year: 1986, ret: 18.67 },
-  { year: 1987, ret:  5.25 },
-  { year: 1988, ret: 16.61 },
-  { year: 1989, ret: 31.69 },
-  { year: 1990, ret: -3.10 },
-  { year: 1991, ret: 30.47 },
-  { year: 1992, ret:  7.62 },
   { year: 1993, ret: 10.08 },
   { year: 1994, ret:  1.32 },
   { year: 1995, ret: 37.58 },
@@ -56,15 +50,8 @@ const SP500_ANNUAL = [
   { year: 2026, ret:  6.00, est: true },
 ]
 
-// US CPI annual inflation rates, 1986–2026 (2025–2026 estimated)
+// US CPI annual inflation rates, 1993–2026 (2025–2026 estimated)
 const CPI_ANNUAL = [
-  { year: 1986, inf: 1.91 },
-  { year: 1987, inf: 3.66 },
-  { year: 1988, inf: 4.08 },
-  { year: 1989, inf: 4.83 },
-  { year: 1990, inf: 5.40 },
-  { year: 1991, inf: 4.21 },
-  { year: 1992, inf: 3.01 },
   { year: 1993, inf: 2.99 },
   { year: 1994, inf: 2.56 },
   { year: 1995, inf: 2.83 },
@@ -128,13 +115,13 @@ const BEAR_MARKETS = [
 ]
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-const YEAR_MIN = 1986
+const YEAR_MIN = 1993
 const YEAR_MAX = 2026
 const MIN_INVEST = 1000
 
 // Module-level derived constants (static)
 const SPX_YEARS      = SP500_ANNUAL.map(d => d.year)
-const MATRIX_BUY_YRS = SPX_YEARS.slice(0, -1)   // 1986..2025
+const MATRIX_BUY_YRS = SPX_YEARS.slice(0, -1)   // 1993..2025
 const MATRIX_SEL_YRS = SPX_YEARS.slice(1)        // 1987..2026
 
 function fmtDollar(n) {
@@ -180,7 +167,7 @@ function cagrTextColor(v) {
   return '#fca5a5'
 }
 
-const PRESET_YEARS   = [1986, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
+const PRESET_YEARS   = [1993, 1995, 2000, 2005, 2010, 2015, 2020]
 const PRESET_AMOUNTS = [1000, 5000, 10000, 25000, 50000]
 const CRASH_YEARS    = new Set(Object.keys(CRASH_NOTES).map(Number))
 const yearPct        = y => ((y - YEAR_MIN) / (YEAR_MAX - YEAR_MIN)) * 100
@@ -189,7 +176,7 @@ const yearPct        = y => ((y - YEAR_MIN) / (YEAR_MAX - YEAR_MIN)) * 100
 export default function SPXGrowth({ ticker = null, dailyBars = null, spyDailyBars = null }) {
 
   // ── Existing state ───────────────────────────────────────────────────────
-  const [startYear,  setStartYear]  = useState(1990)
+  const [startYear,  setStartYear]  = useState(1993)
   const [endYear,    setEndYear]    = useState(2026)
   const [investment, setInvestment] = useState(1000)
   const [customAmt,  setCustomAmt]  = useState('1000')
@@ -532,7 +519,7 @@ export default function SPXGrowth({ ticker = null, dailyBars = null, spyDailyBar
             <div className="spx-header-text">
               <h2 className="spx-title">S&amp;P 500 Wealth Escalator</h2>
               <p className="spx-subtitle">
-                Drag both handles to set your window — any span from <strong>1986 to August 2026</strong>.
+                Drag both handles to set your window — any span from <strong>1993 to August 2026</strong>.
                 See what a simple S&amp;P 500 index investment would have grown to over that period.
               </p>
             </div>
@@ -1010,7 +997,7 @@ export default function SPXGrowth({ ticker = null, dailyBars = null, spyDailyBar
       {activePanel === 'matrix' && (
         <div style={{ padding: '16px' }}>
           <div style={{ fontSize: 11, color: '#4a6a8a', marginBottom: 12 }}>
-            CAGR for every buy year (column) &times; sell year (row) combination, using S&amp;P 500 annual returns 1986–2026.
+            CAGR for every buy year (column) &times; sell year (row) combination, using S&amp;P 500 annual returns 1993–2026.
             Hover any cell for details. Labels shown every 5 years.
           </div>
 
