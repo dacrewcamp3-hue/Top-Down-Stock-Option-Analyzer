@@ -343,8 +343,25 @@ export default function PriceChart({
     const cyOf = y => Math.max(PT, Math.min(PH, y))
     const bw   = Math.max(1.5, pw / totalSlots * 0.60)
 
-    const toPoints = arr =>
-      arr.map((val, i) => `${xOf(i).toFixed(1)},${yOf(val).toFixed(1)}`).join(' ')
+    // Null-safe: breaks the array into continuous segments, skipping any null/NaN values.
+    // A single polyline that includes NaN coords renders them as y=0, creating spurious
+    // "shoots to bottom/top then levels out" artifacts on EMA warm-up bars.
+    const toSegments = arr => {
+      const segs = [], cur = []
+      for (let i = 0; i < arr.length; i++) {
+        const v = arr[i]
+        if (v == null || !isFinite(v)) {
+          if (cur.length > 1) segs.push(cur.join(' '))
+          cur.length = 0
+        } else {
+          cur.push(`${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`)
+        }
+      }
+      if (cur.length > 1) segs.push(cur.join(' '))
+      return segs
+    }
+    // Legacy alias — kept for any callers; same null-safe logic, returns flat string of first segment only
+    const toPoints = arr => toSegments(arr)[0] ?? ''
 
     // Y-axis ticks (8 levels for better resolution)
     const yTicks = Array.from({ length: 8 }, (_, i) => {
@@ -1104,20 +1121,32 @@ export default function PriceChart({
     }
 
     // ── Comparison overlay — normalized to main ticker's price scale ─────────
-    const compareLinePoints = []
+    // Anchor: find the first bar where BOTH series have a valid value so both
+    // lines start at the same Y position (prevents a "leaping-from-wrong-level" artifact).
+    // Draws as segments so mid-series gaps don't create diagonal bridging lines.
+    const compareSegments = []
     let compareDir = null  // 'converging' | 'diverging'
     if (compareCloses?.length) {
       const cmpSlice = compareCloses.slice(s, endIdx)
-      const firstMain = c.find(v => v != null)
-      const firstCmp  = cmpSlice.find(v => v != null)
-      if (firstMain && firstCmp) {
-        const normPts = []
+      let anchorIdx = -1
+      for (let i = 0; i < nb; i++) {
+        if (c[i] != null && cmpSlice[i] != null) { anchorIdx = i; break }
+      }
+      if (anchorIdx >= 0) {
+        const firstMain = c[anchorIdx]
+        const firstCmp  = cmpSlice[anchorIdx]
+        const normPts = [], cur = []
         for (let i = 0; i < nb; i++) {
-          if (!c[i] || !cmpSlice[i]) continue
+          if (!c[i] || !cmpSlice[i]) {
+            if (cur.length > 1) compareSegments.push(cur.join(' '))
+            cur.length = 0
+            continue
+          }
           const normPrice = (cmpSlice[i] / firstCmp) * firstMain
-          compareLinePoints.push(`${xOf(i).toFixed(1)},${yOf(normPrice).toFixed(1)}`)
+          cur.push(`${xOf(i).toFixed(1)},${yOf(normPrice).toFixed(1)}`)
           normPts.push({ main: c[i], cmp: normPrice })
         }
+        if (cur.length > 1) compareSegments.push(cur.join(' '))
         if (normPts.length >= 20) {
           const spreadOf = p => Math.abs(p.main - p.cmp)
           const early = normPts.slice(0, 10).reduce((a, p) => a + spreadOf(p), 0) / 10
@@ -1206,7 +1235,7 @@ export default function PriceChart({
     })
 
     return { c, h, l, o, v, ts, nb, s, e5, e15, e30, e65, e200, vwapArr, vwapSegments,
-      priceMin, priceMax, volMax, pw, ph, xOf, yOf, bw, toPoints,
+      priceMin, priceMax, volMax, pw, ph, xOf, yOf, bw, toPoints, toSegments,
       yTicks, xLabels, weekSeps, reversals, gapBands, smcData, isToday, totalSlots,
       profBins, profMax, pocIdx, priceRange, volAvgPoints, ema5Crosses,
       volSpikes, prevDayH, prevDayL, vwapCrosses,
@@ -1214,7 +1243,7 @@ export default function PriceChart({
       vahPrice, valPrice, vaLo, vaHi, lvnThresh, profAvg,
       preMarketSet, sessionOpens, rsiArr, srZones, atr14, pmHigh, pmLow,
       orderBlocks, rsiDivs, rsLinePoints, confluenceZones, anchoredVwapLines,
-      compareLinePoints, compareDir }
+      compareSegments, compareDir }
   }, [closes, highs, lows, opens, volumes, timestamps, barCount, panOffset, timeframe, useHA, spyCloses, anchoredVwaps, compareCloses])
 
   // RSI auto-open: when divergences are detected and user hasn't manually closed RSI
@@ -1407,13 +1436,13 @@ export default function PriceChart({
   if (!d) return <div className="pc-wrap pc-empty">Not enough price bars to render chart.</div>
 
   const { c, h, l, o, v, ts, nb, e5, e15, e30, e65, e200, vwapArr, vwapSegments,
-    xOf, yOf, bw, toPoints, yTicks, xLabels, weekSeps, reversals, gapBands, smcData, isToday,
+    xOf, yOf, bw, toPoints, toSegments, yTicks, xLabels, weekSeps, reversals, gapBands, smcData, isToday,
     profBins, profMax, pocIdx, priceRange, volAvgPoints, ema5Crosses,
     volSpikes, prevDayH, prevDayL, vwapCrosses,
     goldDeathCrosses, trendState,
     preMarketSet, sessionOpens, rsiArr, srZones, atr14, pmHigh, pmLow,
     orderBlocks, rsiDivs, rsLinePoints, confluenceZones, anchoredVwapLines,
-    compareLinePoints, compareDir } = d
+    compareSegments, compareDir } = d
 
   // High-confidence filter: show only patterns with ≥75% win rate by default
   const displayReversals = showAllPatterns ? reversals : reversals.filter(r => r.rate >= 75)
@@ -2284,10 +2313,10 @@ export default function PriceChart({
         })}
 
         {/* EMA 200 — rendered first (bottom layer); always visible in simple mode */}
-        {showTrendEmas && (
-          <polyline points={toPoints(e200)} fill="none" stroke="#eab308" strokeWidth="2.0"
-            strokeLinejoin="round" opacity="0.9" />
-        )}
+        {showTrendEmas && toSegments(e200).map((pts, i) => (
+          <polyline key={`e200-${i}`} points={pts} fill="none" stroke="#eab308"
+            strokeWidth="2.0" strokeLinejoin="round" opacity="0.9" />
+        ))}
 
         {/* VWAP — dashed white, one segment per session on intraday */}
         {vwapSegments.map((pts, si) => (
@@ -2336,24 +2365,28 @@ export default function PriceChart({
         })}
 
         {/* EMA 65 — always visible in simple mode, toggle-gated in pro mode */}
-        {showTrendEmas && (
-          <polyline points={toPoints(e65)} fill="none" stroke="#a855f7" strokeWidth="2.0" strokeLinejoin="round" />
-        )}
+        {showTrendEmas && toSegments(e65).map((pts, i) => (
+          <polyline key={`e65-${i}`} points={pts} fill="none" stroke="#a855f7"
+            strokeWidth="2.0" strokeLinejoin="round" />
+        ))}
 
         {/* EMA 30 — pro mode only */}
-        {showEntryEmas && (
-          <polyline points={toPoints(e30)} fill="none" stroke="#06b6d4" strokeWidth="1.8" strokeLinejoin="round" />
-        )}
+        {showEntryEmas && toSegments(e30).map((pts, i) => (
+          <polyline key={`e30-${i}`} points={pts} fill="none" stroke="#06b6d4"
+            strokeWidth="1.8" strokeLinejoin="round" />
+        ))}
 
         {/* EMA 15 — pro mode only */}
-        {showEntryEmas && (
-          <polyline points={toPoints(e15)} fill="none" stroke="#84cc16" strokeWidth="1.8" strokeLinejoin="round" />
-        )}
+        {showEntryEmas && toSegments(e15).map((pts, i) => (
+          <polyline key={`e15-${i}`} points={pts} fill="none" stroke="#84cc16"
+            strokeWidth="1.8" strokeLinejoin="round" />
+        ))}
 
         {/* EMA 5 — pro mode only */}
-        {showEntryEmas && (
-          <polyline points={toPoints(e5)} fill="none" stroke="#f472b6" strokeWidth="2.2" strokeLinejoin="round" />
-        )}
+        {showEntryEmas && toSegments(e5).map((pts, i) => (
+          <polyline key={`e5-${i}`} points={pts} fill="none" stroke="#f472b6"
+            strokeWidth="2.2" strokeLinejoin="round" />
+        ))}
 
         {/* ── Signal column glows (volume-confirmed reversal bars) ── */}
         {displayReversals.map((r, i) => {
@@ -2737,11 +2770,13 @@ export default function PriceChart({
         )}
 
         {/* ── Comparison overlay ── */}
-        {compareLinePoints?.length > 1 && (
+        {compareSegments?.length > 0 && (
           <g pointerEvents="none">
-            <polyline points={compareLinePoints.join(' ')} fill="none"
-              stroke="#06b6d4" strokeWidth="1.8" strokeDasharray="6,3"
-              strokeLinejoin="round" opacity="0.85" />
+            {compareSegments.map((pts, i) => (
+              <polyline key={`cmp-${i}`} points={pts} fill="none"
+                stroke="#06b6d4" strokeWidth="1.8" strokeDasharray="6,3"
+                strokeLinejoin="round" opacity="0.85" />
+            ))}
             <text x={VW - PR - 6} y={PT + 14} textAnchor="end"
               fontSize="8" fill="#06b6d4" fontWeight="800" opacity="0.9">
               {compareLabel}
