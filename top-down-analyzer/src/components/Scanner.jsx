@@ -2,9 +2,10 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { UNIVERSE, SECTOR_ETFS, SECTOR_STOCKS, runScanner } from '../utils/runScanner'
 import './Scanner.css'
 
-const SCAN_CACHE_KEY   = 'tdsa-scanner-results'
-const SIGNAL_CACHE_KEY = 'tdsa-signal-results'
-const FLOW_CACHE_KEY   = 'tdsa-flow-results'
+const SCAN_CACHE_KEY       = 'tdsa-scanner-results'
+const SIGNAL_CACHE_KEY     = 'tdsa-signal-results'
+const FLOW_CACHE_KEY       = 'tdsa-flow-results'
+const SCOREBOARD_CACHE_KEY = 'tdsa-scoreboard'
 
 function getTradeWindow() {
   const now = new Date()
@@ -43,6 +44,55 @@ function loadCache() {
   try {
     const raw = localStorage.getItem(SCAN_CACHE_KEY)
     return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+function loadScoreboard() {
+  try {
+    const raw = localStorage.getItem(SCOREBOARD_CACHE_KEY)
+    return raw ? JSON.parse(raw) : { longs: [], shorts: [] }
+  } catch { return { longs: [], shorts: [] } }
+}
+
+function buildScoreboard(allResults, prevBoard) {
+  const today = new Date().toISOString().slice(0, 10)
+
+  const top12Calls = allResults
+    .filter(r => r.ok && r.signal === 'CALL' && r.price != null)
+    .sort((a, b) => convictionRank(b) - convictionRank(a))
+    .slice(0, 12)
+
+  const top12Puts = allResults
+    .filter(r => r.ok && r.signal === 'PUT' && r.price != null)
+    .sort((a, b) => convictionRank(b) - convictionRank(a))
+    .slice(0, 12)
+
+  const prevLongMap  = new Map((prevBoard.longs  ?? []).map(e => [e.ticker, e]))
+  const prevShortMap = new Map((prevBoard.shorts ?? []).map(e => [e.ticker, e]))
+
+  const newLongs  = top12Calls.map(r => prevLongMap.has(r.ticker)
+    ? prevLongMap.get(r.ticker)
+    : { ticker: r.ticker, direction: 'LONG',  entryDate: today, entryPrice: r.price })
+  const newShorts = top12Puts.map(r => prevShortMap.has(r.ticker)
+    ? prevShortMap.get(r.ticker)
+    : { ticker: r.ticker, direction: 'SHORT', entryDate: today, entryPrice: r.price })
+
+  return { longs: newLongs, shorts: newShorts, capturedAt: new Date().toISOString() }
+}
+
+function calcReturnPct(direction, entryPrice, lastPrice) {
+  if (!entryPrice || !lastPrice) return null
+  const raw = direction === 'LONG'
+    ? (lastPrice - entryPrice) / entryPrice * 100
+    : (entryPrice - lastPrice) / entryPrice * 100
+  return Math.round(raw * 100) / 100
+}
+
+function calcAnnualizedPct(returnPct, entryDateStr) {
+  if (returnPct == null) return null
+  try {
+    const days = Math.max(1, Math.floor((Date.now() - new Date(entryDateStr).getTime()) / 86400000))
+    return Math.round(((Math.pow(1 + returnPct / 100, 365 / days) - 1) * 100) * 10) / 10
   } catch { return null }
 }
 
@@ -648,6 +698,206 @@ function TopPlays({ results, onLoadAndBrief }) {
   )
 }
 
+// ── Trade Scoreboard ─────────────────────────────────────────────────────────
+
+function TradeScoreboard({ scoreboard, results, onLoadTicker }) {
+  if (!scoreboard.longs.length && !scoreboard.shorts.length) return null
+
+  const priceMap = new Map(results.map(r => [r.ticker, r.price]))
+
+  function enrichRows(entries, direction) {
+    return entries.map(e => {
+      const last = priceMap.has(e.ticker) ? priceMap.get(e.ticker) : e.entryPrice
+      const ret  = calcReturnPct(direction, e.entryPrice, last)
+      const ann  = calcAnnualizedPct(ret, e.entryDate)
+      return { ...e, lastPrice: last, returnPct: ret, annPct: ann, stale: !priceMap.has(e.ticker) }
+    })
+  }
+
+  const longRows  = enrichRows(scoreboard.longs,  'LONG')
+  const shortRows = enrichRows(scoreboard.shorts, 'SHORT')
+
+  function avgOf(rows, key) {
+    const valid = rows.filter(r => r[key] != null)
+    if (!valid.length) return null
+    return Math.round(valid.reduce((s, r) => s + r[key], 0) / valid.length * 100) / 100
+  }
+
+  const fmtDate = d => {
+    try { return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
+    catch { return d }
+  }
+
+  const fmtPct = v => {
+    if (v == null) return <span style={{ color: '#2a4060' }}>—</span>
+    const clr = v > 0 ? '#10b981' : v < 0 ? '#ef4444' : '#6b7280'
+    return <span style={{ color: clr, fontWeight: 600 }}>{v > 0 ? '+' : ''}{v}%</span>
+  }
+
+  function SbTable({ rows, direction }) {
+    const isLong = direction === 'LONG'
+    const accent = isLong ? '#10b981' : '#ef4444'
+    const avgRet = avgOf(rows, 'returnPct')
+    const avgAnn = avgOf(rows, 'annPct')
+    return (
+      <div className="sc-sb-table">
+        <div className="sc-sb-table-head" style={{ color: accent }}>
+          {isLong ? '▲ TOP 12 LONGS' : '▼ TOP 12 SHORTS'}
+        </div>
+        <div className="sc-sb-thead">
+          <span>Date</span><span>Ticker</span><span>Entry</span><span>Last</span><span>Ret%</span><span>Ann%</span>
+        </div>
+        {rows.map(r => (
+          <div key={r.ticker} className={`sc-sb-row${r.returnPct > 0 ? ' sc-sb-pos' : r.returnPct < 0 ? ' sc-sb-neg' : ''}`}>
+            <span className="sc-sb-date">{fmtDate(r.entryDate)}</span>
+            <span className="sc-sb-ticker-cell">
+              <button className="sc-sb-ticker-btn" onClick={() => onLoadTicker?.(r.ticker)}>{r.ticker}</button>
+              {r.stale && <span className="sc-sb-stale" title="Price from entry date — no live quote yet">~</span>}
+            </span>
+            <span>${r.entryPrice?.toFixed(2)}</span>
+            <span style={{ color: r.stale ? '#3a5070' : '#a0c0dc' }}>${r.lastPrice?.toFixed(2)}</span>
+            <span>{fmtPct(r.returnPct)}</span>
+            <span>{fmtPct(r.annPct)}</span>
+          </div>
+        ))}
+        <div className="sc-sb-avg-row">
+          <span style={{ gridColumn: '1 / span 4' }} className="sc-sb-avg-lbl">AVG ({rows.length})</span>
+          <span>{fmtPct(avgRet)}</span>
+          <span>{fmtPct(avgAnn)}</span>
+        </div>
+      </div>
+    )
+  }
+
+  const captureLabel = (() => {
+    if (!scoreboard.capturedAt) return null
+    const d = new Date(scoreboard.capturedAt)
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+      ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  })()
+
+  return (
+    <div className="sc-scoreboard">
+      <div className="sc-sb-header-row">
+        <span className="sc-sb-title">POSITION SCOREBOARD</span>
+        {captureLabel && <span className="sc-sb-cap-label">captured {captureLabel}</span>}
+      </div>
+      <div className="sc-sb-tables">
+        {longRows.length  > 0 && <SbTable rows={longRows}  direction="LONG"  />}
+        {shortRows.length > 0 && <SbTable rows={shortRows} direction="SHORT" />}
+      </div>
+    </div>
+  )
+}
+
+// ── Option Ideas Panel ────────────────────────────────────────────────────────
+
+function buildConfluence(results, signalCache, flowCache) {
+  const map = new Map()
+
+  results.filter(r => r.ok && (r.signal === 'CALL' || r.signal === 'PUT')).forEach(r => {
+    const e = map.get(r.ticker) ?? { sources: [], dir: null, data: null }
+    if (!e.sources.includes('MKT')) e.sources.push('MKT')
+    e.dir = e.dir ?? r.signal
+    e.data = r
+    map.set(r.ticker, e)
+  })
+
+  if (signalCache?.results) {
+    signalCache.results.forEach(r => {
+      const isCall = r.signal === 'CALL' || r.orb?.signal === 'ENTER' || r.orb?.signal === 'RETEST'
+      const dir = isCall ? 'CALL' : r.signal === 'PUT' ? 'PUT' : null
+      if (!dir) return
+      const e = map.get(r.ticker) ?? { sources: [], dir: null, data: null }
+      if (!e.sources.includes('ORB')) e.sources.push('ORB')
+      e.dir = e.dir ?? dir
+      map.set(r.ticker, e)
+    })
+  }
+
+  if (flowCache?.sentiment) {
+    Object.entries(flowCache.sentiment).forEach(([ticker, s]) => {
+      const total = (s.callVol ?? 0) + (s.putVol ?? 0)
+      if (!total) return
+      const cp  = s.callVol / total
+      const dir = cp >= 0.65 ? 'CALL' : cp <= 0.35 ? 'PUT' : null
+      if (!dir) return
+      const e = map.get(ticker) ?? { sources: [], dir: null, data: null }
+      if (!e.sources.includes('FLOW')) e.sources.push('FLOW')
+      e.dir = e.dir ?? dir
+      map.set(ticker, e)
+    })
+  }
+
+  return Array.from(map.entries())
+    .filter(([, e]) => e.sources.length >= 2 && e.data)
+    .sort((a, b) => {
+      if (b[1].sources.length !== a[1].sources.length) return b[1].sources.length - a[1].sources.length
+      return convictionRank(b[1].data) - convictionRank(a[1].data)
+    })
+}
+
+function OptionIdeasPanel({ results, onLoadAndBrief }) {
+  const signalCache = (() => { try { return JSON.parse(localStorage.getItem(SIGNAL_CACHE_KEY) ?? 'null') } catch { return null } })()
+  const flowCache   = (() => { try { return JSON.parse(localStorage.getItem(FLOW_CACHE_KEY)   ?? 'null') } catch { return null } })()
+
+  if (!results?.length) return null
+  const ideas = buildConfluence(results, signalCache, flowCache)
+  if (!ideas.length) return null
+
+  const gradeClr    = g => ({ 'A+': '#10b981', A: '#34d399', B: '#f59e0b', C: '#6b7280' }[g] ?? '#6b7280')
+  const sourceColor = { MKT: '#60a5fa', ORB: '#f59e0b', FLOW: '#a855f7' }
+
+  return (
+    <div className="sc-ideas-panel">
+      <div className="sc-ideas-header">
+        <span className="sc-ideas-title">⚡ NEW OPTION IDEAS</span>
+        <span className="sc-ideas-sub">Multi-scanner confluence · 2+ signals agree · ranked by conviction</span>
+      </div>
+      <div className="sc-ideas-grid">
+        {ideas.map(([ticker, e]) => {
+          const r      = e.data
+          const isCall = e.dir === 'CALL'
+          return (
+            <button
+              key={ticker}
+              className="sc-idea-card"
+              style={{ borderColor: isCall ? '#065f46' : '#7f1d1d', background: isCall ? '#010f07' : '#0e0101' }}
+              onClick={() => onLoadAndBrief?.(ticker)}
+            >
+              <div className="sc-idea-head">
+                <span className="sc-idea-ticker">{ticker}</span>
+                {r.grade && (
+                  <span className="sc-idea-grade" style={{ color: gradeClr(r.grade), borderColor: gradeClr(r.grade) + '55' }}>
+                    {r.grade}
+                  </span>
+                )}
+                <span className="sc-idea-dir" style={{ color: isCall ? '#10b981' : '#ef4444' }}>
+                  {isCall ? '▲ CALL' : '▼ PUT'}
+                </span>
+              </div>
+              <div className="sc-idea-sources">
+                {e.sources.map(s => (
+                  <span key={s} className="sc-idea-src" style={{ color: sourceColor[s] ?? '#6b7280', borderColor: (sourceColor[s] ?? '#6b7280') + '44' }}>
+                    {s}
+                  </span>
+                ))}
+              </div>
+              <div className="sc-idea-stats">
+                {r.price    != null && <span>${r.price}</span>}
+                {r.rsi      != null && <span>RSI {r.rsi}</span>}
+                {r.volSpike > 1.4   && <span style={{ color: '#f59e0b' }}>{r.volSpike}× vol</span>}
+                {r.adx      != null && <span>ADX {r.adx}</span>}
+              </div>
+              <div className="sc-idea-cta">ANALYZE IN BRIEF →</div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
 const GRADE_RANK = { 'A+': 4, A: 3, B: 2, C: 1 }
@@ -665,6 +915,7 @@ export default function Scanner({ onLoadTicker, onLoadAndBrief }) {
   const [autoRefresh,   setAutoRefresh]   = useState(0)
   const [lastScanAt,    setLastScanAt]    = useState(() => initCache.current?.at ? new Date(initCache.current.at) : null)
   const [changedSet,    setChangedSet]    = useState(new Set())
+  const [scoreboard,    setScoreboard]    = useState(loadScoreboard)
 
   // Filters
   const [filterGrade,     setFilterGrade]     = useState('ALL')
@@ -745,6 +996,12 @@ export default function Scanner({ onLoadTicker, onLoadAndBrief }) {
     const at = new Date()
     setLastScanAt(at)
     freshScanRef.current = true
+
+    // Auto-capture scoreboard: top 12 CALL → longs, top 12 PUT → shorts
+    const newBoard = buildScoreboard(allResults, loadScoreboard())
+    setScoreboard(newBoard)
+    try { localStorage.setItem(SCOREBOARD_CACHE_KEY, JSON.stringify(newBoard)) } catch {}
+
     setStatus('done')
 
     try {
@@ -891,6 +1148,16 @@ export default function Scanner({ onLoadTicker, onLoadAndBrief }) {
       {/* ── Sector leaders ── */}
       {status === 'done' && (
         <SectorLeaders sectorData={sectorResults} results={results} onLoadTicker={onLoadTicker} />
+      )}
+
+      {/* ── Position Scoreboard ── */}
+      {(scoreboard.longs.length > 0 || scoreboard.shorts.length > 0) && (
+        <TradeScoreboard scoreboard={scoreboard} results={results} onLoadTicker={onLoadTicker} />
+      )}
+
+      {/* ── Option Ideas (multi-scanner confluence) ── */}
+      {status === 'done' && results.length > 0 && (
+        <OptionIdeasPanel results={results} onLoadAndBrief={onLoadAndBrief} />
       )}
 
       {/* ── Live results during scan ── */}
