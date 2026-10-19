@@ -210,7 +210,7 @@ export default function PriceChart({
   const [showFib,       setShowFib]       = useState(true)     // Fibonacci levels
   const [showRSI,         setShowRSI]         = useState(true)     // RSI sub-panel
   const [showAllPatterns, setShowAllPatterns] = useState(true)     // all patterns vs. ≥75% win-rate only
-  const [useHA,         setUseHA]         = useState(true)
+  const [useHA,         setUseHA]         = useState(false)
   const [anchoredVwaps, setAnchoredVwaps] = useState([])  // [{anchorIdx, color, label}]
   const [showRS,        setShowRS]        = useState(false)
   const [showSweeps,    setShowSweeps]    = useState(false)
