@@ -2633,7 +2633,7 @@ export default function OptionsChain({
       )}
 
       {/* ── PICKS ───────────────────────────────────────────────────────────── */}
-      {recs && (
+      {recs && !masterSignal?.blocked && (
         <>
           <SeverityDivider emoji="🎯" label="Picks" color="#6366f1" borderColor="#312e81" />
           <GEXStructureRec
