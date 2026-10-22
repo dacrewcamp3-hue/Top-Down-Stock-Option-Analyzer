@@ -92,7 +92,9 @@ function calcAnnualizedPct(returnPct, entryDateStr) {
   if (returnPct == null) return null
   try {
     const days = Math.max(1, Math.floor((Date.now() - new Date(entryDateStr).getTime()) / 86400000))
-    return Math.round(((Math.pow(1 + returnPct / 100, 365 / days) - 1) * 100) * 10) / 10
+    if (days < 14) return null  // less than 2 weeks is too short to annualize meaningfully
+    const ann = Math.round(((Math.pow(1 + returnPct / 100, 365 / days) - 1) * 100) * 10) / 10
+    return Math.max(-9999, Math.min(9999, ann))
   } catch { return null }
 }
 

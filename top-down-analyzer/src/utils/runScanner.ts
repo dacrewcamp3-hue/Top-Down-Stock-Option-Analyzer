@@ -58,6 +58,9 @@ export const SECTOR_ETFS = [
   { ticker: 'XLC',  label: 'Comm Svc' },
 ]
 
+// Sector ETFs are always scanned regardless of daily volume (some trade < 10M shares/day)
+const SECTOR_ETF_SET = new Set(SECTOR_ETFS.map(s => s.ticker))
+
 // Maps each sector ETF to the UNIVERSE stocks that primarily belong to that sector.
 // Used by the Scanner to surface leading individual names within each leading sector.
 export const SECTOR_STOCKS = {
@@ -233,9 +236,10 @@ export async function scanTicker(symbol: string, spyReturn: number | null = null
     const n = closes.length
 
     // Gate: require ≥10M average daily volume — filters illiquid names before any computation
+    // Sector ETFs are exempt: some (XLI, XLC, XLY) trade < 10M shares/day but must always scan
     const _slice = volumes.slice(-21, -1)
     const _avg   = _slice.length ? _slice.reduce((a, b) => a + b, 0) / _slice.length : 0
-    if (_avg < 10_000_000) return { ticker: symbol, ok: false, error: 'avg vol < 10M' }
+    if (!SECTOR_ETF_SET.has(symbol) && _avg < 10_000_000) return { ticker: symbol, ok: false, error: 'avg vol < 10M' }
 
     const dySig   = tfSignal(closes, highs, lows)
     const dyTotal = dySig.bull + dySig.bear
