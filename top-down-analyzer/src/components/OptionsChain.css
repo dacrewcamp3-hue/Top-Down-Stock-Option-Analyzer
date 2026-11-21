@@ -2312,3 +2312,47 @@
   background: var(--clr-bull);
   box-shadow: 0 0 5px var(--clr-bull);
 }
+
+/* ── Strike rationale + fill grade (why this strike, can you fill it) ──────── */
+.opt-rationale {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 9px;
+  margin: 2px 0 8px;
+  padding: 6px 8px;
+  background: var(--surface-deep);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-sm);
+  font-size: 10.5px;
+}
+.opt-rat-fill {
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  border: 1px solid;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.opt-rat-detail { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.opt-rat-note { font-weight: 600; flex-basis: 100%; }
+.opt-rat-overpay { flex-basis: 100%; color: var(--clr-warn); font-weight: 700; }
+
+/* ── THE PLAY emphasis on the primary pick ────────────────────────────────── */
+.opt-play-card {
+  position: relative;
+  box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.25), 0 2px 14px rgba(42, 74, 112, 0.30);
+}
+.opt-play-ribbon {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  color: #04121f;
+  background: var(--accent-dim);
+  padding: 2px 8px;
+  border-radius: 0 var(--radius-sm) 0 var(--radius-sm);
+  z-index: 2;
+}

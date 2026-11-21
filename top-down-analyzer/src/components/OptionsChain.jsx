@@ -1652,7 +1652,19 @@ function EntryChecklist({ direction, conflict, adxSignal, earningsDate, ivData, 
 }
 
 // ── Recommendation card ───────────────────────────────────────────────────────
-function RecCard({ rec, ticker, maxRisk, currentPrice, ivRank, isQuickPlay, sigma, grade, adxSignal, wyckoffData, backtestResult, onLog, swingTargets = [], isItm = false }) {
+// Fill grade (Tuckman: a strike you can't fill cleanly isn't a trade).
+// Graded from real OI + bid/ask spread when a live contract was found.
+function computeFillGrade(rec) {
+  if (!rec.isLive || rec.oi == null) {
+    return { g: 'N/A', c: 'var(--clr-neutral)', note: 'estimated — no live chain to grade fillability' }
+  }
+  const oi = rec.oi, sp = rec.spreadPct ?? 999
+  if (oi >= 500 && sp <= 5)  return { g: 'A', c: 'var(--clr-bull)',    note: 'deep liquidity, tight spread — fills clean at the mid' }
+  if (oi >= 100 && sp <= 12) return { g: 'B', c: 'var(--clr-bull-dim)', note: 'tradeable — use a limit order at the mid, not market' }
+  return { g: 'C', c: 'var(--clr-warn)', note: 'thin OI or wide spread — expect slippage; size down or skip' }
+}
+
+function RecCard({ rec, ticker, maxRisk, currentPrice, ivRank, isQuickPlay, sigma, grade, adxSignal, wyckoffData, backtestResult, onLog, swingTargets = [], isItm = false, isPrimary = false }) {
   if (!rec) return null
   const { label, dte, expDate, strike, premium, contractCost, isCall } = rec
 
@@ -1701,9 +1713,10 @@ function RecCard({ rec, ticker, maxRisk, currentPrice, ivRank, isQuickPlay, sigm
 
   return (
     <div
-      className={`opt-pick-card${isQuickPlay ? ' opt-quick-card' : ''}`}
+      className={`opt-pick-card${isQuickPlay ? ' opt-quick-card' : ''}${isPrimary ? ' opt-play-card' : ''}`}
       style={{ background: bg, borderColor: isQuickPlay ? '#92400e' : bord }}
     >
+      {isPrimary && <div className="opt-play-ribbon">★ THE PLAY</div>}
       <div className="opt-pick-head">
         <span
           className="opt-pick-badge"
@@ -1747,6 +1760,27 @@ function RecCard({ rec, ticker, maxRisk, currentPrice, ivRank, isQuickPlay, sigm
           <span className="opt-pick-dte">{dte} days</span>
         </div>
       </div>
+
+      {/* ── Strike rationale + fill grade (why this strike, and can you fill it) ── */}
+      {(() => {
+        const fg = computeFillGrade(rec)
+        return (
+          <div className="opt-rationale">
+            <span className="opt-rat-fill" style={{ color: fg.c, borderColor: fg.c }}>FILL {fg.g}</span>
+            <span className="opt-rat-detail">
+              Δ{rec.delta != null ? Math.abs(rec.delta).toFixed(2) : '—'}
+              {rec.targetDelta != null ? ` (target ${(+rec.targetDelta).toFixed(2)})` : ''}
+              {rec.isLive && rec.oi != null ? ` · OI ${rec.oi.toLocaleString()}` : ''}
+              {rec.isLive && rec.spreadPct != null ? ` · spread ${rec.spreadPct}%` : ''}
+              {rec.ivEdge ? ` · IV ${rec.ivEdge}` : ''}
+            </span>
+            <span className="opt-rat-note" style={{ color: fg.c }}>{fg.note}</span>
+            {rec.ivEdge === 'RICH' && (
+              <span className="opt-rat-overpay">⚠ paying up for premium — prefer the defined-risk spread below</span>
+            )}
+          </div>
+        )
+      })()}
 
       <div className="opt-pick-grid">
         <Metric
@@ -2655,6 +2689,7 @@ export default function OptionsChain({
               backtestResult={backtestResult}
               onLog={onLogTrade}
               swingTargets={swingTargets}
+              isPrimary
             />
             <RecCard
               rec={recs.extended}
