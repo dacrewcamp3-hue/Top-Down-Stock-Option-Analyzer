@@ -176,6 +176,109 @@ const PAT_DESC = {
 
 const TF_DEFAULT_BARS = { W: 52, D: 80, '4H': 60, '1H': 30, '15M': 40, '5M': 48 }
 
+// ── Chart Playbook — your top-down routine, per timeframe, auto-filled ────────
+// Weekly: reversal levels + HTF trend · Daily: price vs 200/65 MA ·
+// 4H: trend + structure (BOS/CHoCH tops & bottoms) · 15M: momentum + rejection
+// candles · 5M: entry. Reads only data the chart already computes.
+function PBStat({ label, value, color }) {
+  return (
+    <span className="pc-pb-stat">
+      <span className="pc-pb-stat-lbl">{label}</span>
+      <span className="pc-pb-stat-val" style={color ? { color } : undefined}>{value}</span>
+    </span>
+  )
+}
+
+function ChartPlaybook({ timeframe, closes, highs, lows, bos, choch, reversals }) {
+  if (!closes || closes.length < 30) return null
+  const n   = closes.length
+  const px  = closes[n - 1]
+  const pf  = v => v != null && isFinite(v) ? (+v).toFixed(2) : '—'
+  const e5  = calcEMA(closes, 5)[n - 1]
+  const e15 = calcEMA(closes, 15)[n - 1]
+  const e30 = calcEMA(closes, 30)[n - 1]
+  const e65 = calcEMA(closes, 65)[n - 1]
+  const e200 = calcEMA(closes, 200)[n - 1]
+  const rsiArr = calcRSI(closes)
+  const rsi     = rsiArr[rsiArr.length - 1]
+  const rsiPrev = rsiArr[rsiArr.length - 4]
+
+  const stackBull = e5 > e15 && e15 > e30 && px > e30
+  const stackBear = e5 < e15 && e15 < e30 && px < e30
+  const trend = stackBull ? { t: 'UPTREND', c: 'var(--clr-bull)' }
+    : stackBear ? { t: 'DOWNTREND', c: 'var(--clr-bear)' }
+    : { t: 'RANGE / MIXED', c: 'var(--clr-warn)' }
+
+  const evts = [
+    ...(bos ?? []).map(b => ({ ...b, type: 'BOS' })),
+    ...(choch ?? []).map(c => ({ ...c, type: 'CHoCH' })),
+  ].sort((a, b) => b.i - a.i)
+  const lastEvt = evts[0] ?? null
+  const evtArrow = e => e.kind === 'bull' ? '↑' : '↓'
+
+  const title = { W: 'WEEKLY', D: 'DAILY', '4H': '4-HOUR', '1H': '1-HOUR', '15M': '15-MIN', '5M': '5-MIN' }[timeframe] ?? timeframe
+
+  let look, body
+  if (timeframe === 'W') {
+    look = 'reversal levels + the high-timeframe trend'
+    const hi = Math.max(...highs.slice(-30))
+    const lo = Math.min(...lows.slice(-30))
+    body = <>
+      <PBStat label="HTF TREND" value={trend.t} color={trend.c} />
+      {lastEvt && <PBStat label="LAST STRUCTURE" value={`${lastEvt.type} ${evtArrow(lastEvt)} $${pf(lastEvt.level)}`} color={lastEvt.type === 'CHoCH' ? 'var(--clr-warn)' : trend.c} />}
+      <PBStat label="REVERSAL ZONE" value={`$${pf(lo)} – $${pf(hi)}`} />
+    </>
+  } else if (timeframe === 'D') {
+    look = 'price above or below the 200-day & 65-day MAs'
+    const a200 = px > e200, a65 = px > e65
+    body = <>
+      <PBStat label="200 MA" value={`$${pf(e200)} · ${a200 ? 'ABOVE ✓' : 'BELOW ✗'}`} color={a200 ? 'var(--clr-bull)' : 'var(--clr-bear)'} />
+      <PBStat label="65 MA" value={`$${pf(e65)} · ${a65 ? 'ABOVE ✓' : 'BELOW ✗'}`} color={a65 ? 'var(--clr-bull)' : 'var(--clr-bear)'} />
+    </>
+  } else if (timeframe === '4H') {
+    look = 'current trend + market structure (tops & bottoms)'
+    const intact = lastEvt ? lastEvt.type === 'BOS' : null
+    body = <>
+      <PBStat label="TREND" value={trend.t} color={trend.c} />
+      {lastEvt
+        ? <PBStat label="STRUCTURE" value={`last break ${lastEvt.type} ${evtArrow(lastEvt)} $${pf(lastEvt.level)} — ${intact ? 'trend intact ✓' : 'trend flipped ⚠'}`} color={intact ? 'var(--clr-bull)' : 'var(--clr-warn)'} />
+        : <PBStat label="STRUCTURE" value="no break yet — ranging" color="var(--clr-warn)" />}
+      <span className="pc-pb-hint">tops &amp; bottoms marked on the chart below</span>
+    </>
+  } else if (timeframe === '15M') {
+    look = 'momentum + rejection candles'
+    const mo = rsi != null && rsiPrev != null ? (rsi > rsiPrev ? 'RISING' : rsi < rsiPrev ? 'FALLING' : 'FLAT') : '—'
+    const rej = (reversals ?? []).filter(r => r.candles === 1).slice(-3)
+    body = <>
+      <PBStat label="MOMENTUM" value={`RSI ${rsi != null ? Math.round(rsi) : '—'} · ${mo}`} color={mo === 'RISING' ? 'var(--clr-bull)' : mo === 'FALLING' ? 'var(--clr-bear)' : 'var(--clr-warn)'} />
+      <PBStat label="REJECTIONS" value={rej.length ? rej.map(r => r.label).join('  ') : 'none in view'} color={rej.length ? 'var(--accent)' : 'var(--text-muted)'} />
+    </>
+  } else if (timeframe === '5M') {
+    look = 'your entry trigger'
+    const aboveE5 = px > e5
+    body = <>
+      <PBStat label="ENTRY BIAS" value={aboveE5 ? 'above EMA5 — long side' : 'below EMA5 — short side'} color={aboveE5 ? 'var(--clr-bull)' : 'var(--clr-bear)'} />
+      <PBStat label="TRIGGER" value={`watch a 5M rejection ${aboveE5 ? 'off support' : 'off resistance'} to pull the trigger`} />
+    </>
+  } else {
+    look = 'trend + structure'
+    body = <>
+      <PBStat label="TREND" value={trend.t} color={trend.c} />
+      {lastEvt && <PBStat label="STRUCTURE" value={`${lastEvt.type} ${evtArrow(lastEvt)} $${pf(lastEvt.level)}`} color={lastEvt.type === 'CHoCH' ? 'var(--clr-warn)' : trend.c} />}
+    </>
+  }
+
+  return (
+    <div className="pc-playbook">
+      <div className="pc-pb-head">
+        <span className="pc-pb-tf">{title}</span>
+        <span className="pc-pb-look">you look for: {look}</span>
+      </div>
+      <div className="pc-pb-body">{body}</div>
+    </div>
+  )
+}
+
 export default function PriceChart({
   closes, highs, lows, opens, volumes, timestamps,
   orbHigh, orbLow, fibLevels, title, timeframe = 'D',
@@ -1550,6 +1653,17 @@ export default function PriceChart({
 
   return (
     <div className="pc-wrap" style={{ position: 'relative' }}>
+
+      {/* ── Chart Playbook — your top-down routine for this timeframe ── */}
+      <ChartPlaybook
+        timeframe={timeframe}
+        closes={closes}
+        highs={highs}
+        lows={lows}
+        bos={bos}
+        choch={choch}
+        reversals={reversals}
+      />
 
       {/* ── Command Bar ── single row replacing topbar + OHLCV */}
       <div className="pc-topbar" style={{ padding: '6px 12px', minHeight: 38, gap: 6, flexWrap: 'nowrap' }}>
