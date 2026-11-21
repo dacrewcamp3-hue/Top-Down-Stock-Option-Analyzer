@@ -14,7 +14,7 @@ import { calcFibonacci, calcSwingRSI, calcADX, calcMAStack, calcVWAP, detectDoub
 import TimeframePanel from './components/TimeframePanel'
 import EntryRecommendation from './components/EntryRecommendation'
 import SwingCategoryPanel from './components/SwingCategoryPanel'
-import SwingResult from './components/SwingResult'
+import SwingResult, { TimingVerdict } from './components/SwingResult'
 import TradeJournal from './components/TradeJournal'
 const OptionsChain = lazy(() => import('./components/OptionsChain'))
 const Scanner = lazy(() => import('./components/Scanner'))
@@ -1838,7 +1838,14 @@ export default function App() {
           })()}
 
           {analyzeView === 'swing' && (
-            <div className="swing-layout">
+            <>
+              <TimingVerdict
+                fourHBars={fourHBars}
+                orbRetest={orbRetest}
+                vwapSignal={vwapSignal}
+                lastUpdated={lastUpdated}
+              />
+              <div className="swing-layout">
               <div className="swing-config-col">
                 {SWING_CATEGORIES.map(cat => (
                   <SwingCategoryPanel
@@ -1864,6 +1871,7 @@ export default function App() {
                 />
               </div>
             </div>
+            </>
           )}
         </>
       )}

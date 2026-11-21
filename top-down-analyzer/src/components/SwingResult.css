@@ -2556,3 +2556,63 @@
 .pos-health-warn-medium   { color: #f97316; background: rgba(26,8,0,0.7); }
 .pos-health-warn-high     { color: var(--clr-bear); background: rgba(28,1,1,0.7); }
 
+
+/* ── Timing Verdict strip — forming-bar-aware 4H read ─────────────────────── */
+.sr-tv {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  padding: 9px 13px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.sr-tv-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.sr-tv-lock { font-size: 13px; font-weight: 900; letter-spacing: 0.5px; }
+.sr-tv-chip {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-sub);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+.sr-tv-chip.sr-tv-orb { color: var(--clr-bull); border-color: var(--clr-bull-bdr); }
+.sr-tv-fresh {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.sr-tv-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--clr-bull);
+  box-shadow: 0 0 5px var(--clr-bull);
+}
+.sr-tv-dot.live { animation: sr-tv-pulse 1.4s ease-in-out infinite; }
+@keyframes sr-tv-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.sr-tv-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.sr-tv-forming { color: var(--clr-warn); }
+.sr-tv-locked { color: var(--clr-bull); }
+.sr-tv-forming b, .sr-tv-locked b { color: var(--text-primary); }
+.sr-tv-level { color: var(--text-secondary); }
+.sr-tv-level b { color: var(--text-primary); font-variant-numeric: tabular-nums; }

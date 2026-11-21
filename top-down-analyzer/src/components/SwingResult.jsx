@@ -1,5 +1,102 @@
+import { useState, useEffect } from 'react'
 import RiskPanel from './RiskPanel'
 import './SwingResult.css'
+
+// ── Timing Verdict — forming-bar-aware 4H entry read (Timing tab, local) ──────
+// Accuracy layer: a 4H bar is "forming" exactly while the market is open (the
+// aggregator's last daily chunk is the in-progress bucket), so the locked 2-bar
+// read uses only CLOSED bars and can't flip on an intrabar wick. Computes
+// locally from fourHBars — the shared signal pipeline (gates/Brief) is untouched.
+function tvEma5(closes) {
+  const k = 2 / 6, out = []
+  let prev
+  for (let i = 0; i < closes.length; i++) {
+    prev = i === 0 ? closes[i] : closes[i] * k + prev * (1 - k)
+    out.push(prev)
+  }
+  return out
+}
+function tvIsRTH() {
+  const now = new Date()
+  const d = now.getDay()
+  if (d === 0 || d === 6) return false
+  const et = now.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour12: false, hour: '2-digit', minute: '2-digit' })
+  const [h, m] = et.split(':').map(Number)
+  const mins = h * 60 + m
+  return mins >= 570 && mins < 960   // 9:30–16:00 ET
+}
+function tvNextClose() {
+  const now = new Date()
+  const et = now.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour12: false, hour: '2-digit', minute: '2-digit' })
+  const [h, m] = et.split(':').map(Number)
+  const mins = h * 60 + m
+  const target = mins < 810 ? 810 : mins < 960 ? 960 : null   // 4H buckets close ~13:30 & 16:00 ET
+  if (target == null) return null
+  const diff = target - mins
+  const hh = Math.floor(diff / 60), mm = diff % 60
+  return hh > 0 ? `${hh}h ${mm}m` : `${mm}m`
+}
+
+export function TimingVerdict({ fourHBars, orbRetest, vwapSignal, lastUpdated }) {
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 30000)
+    return () => clearInterval(id)
+  }, [])
+
+  const closes = fourHBars?.closes
+  if (!closes || closes.length < 4) return null
+  const ema = tvEma5(closes)
+  const n = closes.length
+  const forming = tvIsRTH()
+  const li = forming ? n - 2 : n - 1   // last CLOSED bar index
+  const pi = li - 1                     // prior closed bar
+  if (pi < 0) return null
+
+  const lockLastAbove = closes[li] > ema[li]
+  const lockPrevAbove = closes[pi] > ema[pi]
+  let lock, lockColor
+  if (lockLastAbove && lockPrevAbove)        { lock = 'CONFIRMED LONG';  lockColor = 'var(--clr-bull)' }
+  else if (!lockLastAbove && !lockPrevAbove) { lock = 'CONFIRMED SHORT'; lockColor = 'var(--clr-bear)' }
+  else                                       { lock = '1 OF 2 BARS';     lockColor = 'var(--clr-warn)' }
+
+  const emaLevel  = ema[n - 1]
+  const lastClose = closes[n - 1]
+  const formAbove = lastClose > emaLevel
+  const distPct   = emaLevel ? ((lastClose - emaLevel) / emaLevel) * 100 : null
+  const orb       = ['ENTER', 'RECAPTURED'].includes(orbRetest?.signal) ? orbRetest.signal : null
+  const vwap      = vwapSignal ? (vwapSignal.aboveVwap ? 'above' : 'below') : null
+  const timeStr   = lastUpdated?.toLocaleTimeString ? lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : null
+  const countdown = forming ? tvNextClose() : null
+
+  return (
+    <div className="sr-tv" style={{ borderLeftColor: lockColor }}>
+      <div className="sr-tv-top">
+        <span className="sr-tv-lock" style={{ color: lockColor }}>4H 2-BAR · {lock}</span>
+        {orb && <span className="sr-tv-chip sr-tv-orb">ORB {orb}</span>}
+        {vwap && <span className="sr-tv-chip">VWAP {vwap}</span>}
+        <span className="sr-tv-fresh">
+          <span className={`sr-tv-dot${forming ? ' live' : ''}`} />
+          {timeStr ? `as of ${timeStr}` : 'live'}
+        </span>
+      </div>
+      <div className="sr-tv-detail">
+        {forming ? (
+          <span className="sr-tv-forming">
+            ⏳ Current 4H bar is still forming{countdown ? ` · closes in ~${countdown}` : ''} — it is <b>provisional</b>, {formAbove ? 'above' : 'below'} EMA5{distPct != null ? ` (${distPct > 0 ? '+' : ''}${distPct.toFixed(2)}%)` : ''}. The locked read above uses only closed bars, so it won't flip on an intrabar wick.
+          </span>
+        ) : (
+          <span className="sr-tv-locked">
+            ✓ The last 4H bar has closed — this read is <b>locked</b>{distPct != null ? ` · last close ${distPct > 0 ? '+' : ''}${distPct.toFixed(2)}% vs EMA5` : ''}.
+          </span>
+        )}
+        {emaLevel != null && (
+          <span className="sr-tv-level">EMA5 trigger line <b>${emaLevel.toFixed(2)}</b> — two consecutive 4H closes on the same side confirm the entry.</span>
+        )}
+      </div>
+    </div>
+  )
+}
 
 const SIGNAL_CFG = {
   LONG:  { color: '#10b981', bg: '#011c10', border: '#064d2a', label: 'LONG ENTRY' },
