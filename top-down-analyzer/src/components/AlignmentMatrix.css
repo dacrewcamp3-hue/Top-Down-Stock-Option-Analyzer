@@ -276,3 +276,81 @@
   color: #6888a8;
   line-height: 1.6;
 }
+
+/* ── Confluence Verdict strip — reads the matrix for you ──────────────────── */
+.mx-verdict {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  padding: 9px 13px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.mx-verdict-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.mx-verdict-dir { font-size: 14px; font-weight: 900; letter-spacing: 0.3px; }
+.mx-verdict-conf { font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+.mx-verdict-tally { font-size: 11px; font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.mx-verdict-fresh {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.mx-verdict-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--clr-bull);
+  box-shadow: 0 0 5px var(--clr-bull);
+}
+.mx-verdict-dot.live { animation: mx-verdict-pulse 1.4s ease-in-out infinite; }
+@keyframes mx-verdict-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.mx-verdict-gates { display: flex; gap: 6px; flex-wrap: wrap; }
+.mx-vgate {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  padding: 3px 9px;
+  border-radius: 5px;
+  border: 1px solid;
+}
+.mx-vgate.ok { color: var(--clr-bull); background: var(--clr-bull-bg); border-color: var(--clr-bull-bdr); }
+.mx-vgate.no { color: var(--text-muted); background: var(--surface-deep); border-color: var(--border); }
+.mx-vgate-icon { font-size: 11px; }
+
+/* ── Per-row bull/bear tally bar ──────────────────────────────────────────── */
+.mx-tally {
+  display: flex;
+  width: 46px;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--border-dim);
+  margin-top: 3px;
+}
+.mx-tally-bull { background: var(--clr-bull); height: 100%; }
+.mx-tally-bear { background: var(--clr-bear); height: 100%; }
+
+/* ── Sticky header row + sticky timeframe column ──────────────────────────── */
+.mx-th { position: sticky; top: 0; z-index: 2; }
+.mx-th-tf { left: 0; z-index: 3; }
+.mx-td-tf {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+.mx-row:hover .mx-td-tf { background: #0c1520; }

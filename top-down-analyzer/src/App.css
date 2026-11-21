@@ -137,6 +137,21 @@ body {
   min-width: 0;
 }
 
+/* Keep the recommendation visible while scrolling the timeframe panels (wide screens only) */
+@media (min-width: 901px) {
+  .rec-aside {
+    position: sticky;
+    top: 12px;
+    align-self: start;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #182438 transparent;
+  }
+  .rec-aside::-webkit-scrollbar { width: 4px; }
+  .rec-aside::-webkit-scrollbar-thumb { background: #182438; border-radius: 2px; }
+}
+
 /* ── Swing tab: side-by-side split with independent scroll ── */
 .swing-layout {
   display: grid;

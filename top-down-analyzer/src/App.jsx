@@ -23,7 +23,7 @@ import MethodGuide from './components/MethodGuide'
 const FlowScanner = lazy(() => import('./components/FlowScanner'))
 import MarketPulse from './components/MarketPulse'
 const FlowTape = lazy(() => import('./components/FlowTape'))
-import AlignmentMatrix from './components/AlignmentMatrix'
+import AlignmentMatrix, { ConfluenceVerdict } from './components/AlignmentMatrix'
 import InsiderActivity from './components/InsiderActivity'
 import RiskGuard from './components/RiskGuard'
 import CyclePanel from './components/CyclePanel'
@@ -1609,6 +1609,13 @@ export default function App() {
 
           {analyzeView === 'confluence' && (
             <>
+              <ConfluenceVerdict
+                confluenceResult={confluenceResult}
+                swingResult={swingResult}
+                orbRetest={orbRetest}
+                lastUpdated={lastUpdated}
+                isEnriching={isEnriching}
+              />
               <AlignmentMatrix
                 tfStates={tfStates}
                 timeframes={TIMEFRAMES}
