@@ -2411,6 +2411,114 @@ function NextTriggerCountdown({ swingResult, orbRetest, direction }) {
   )
 }
 
+// ── Decision Stack: the synthesized go/no-go header ──────────────────────────
+// Answers the four decision questions above the fold: is there a trade, which
+// way + how sure, what exactly to do, and what invalidates it. Pure synthesis
+// of values already computed below — adds no new data source.
+function DecisionStack({
+  direction, isCall, tradeScore, gateCount, allGatesOpen,
+  blocked, blockReason, timeStr, isEnriching,
+  rec, qty, currentPrice, atr, fibLevels, swingTargets,
+}) {
+  const noTrade = !direction || direction === 'NO TRADE'
+  const score   = tradeScore?.score ?? null
+  const bd      = tradeScore?.breakdown ?? []
+
+  let verdict, verdictColor, verdictSub
+  if (blocked) {
+    verdict = 'NO TRADE'; verdictColor = '#ef4444'
+    verdictSub = blockReason || 'Regime blocked — stand aside'
+  } else if (noTrade) {
+    verdict = 'NO TRADE'; verdictColor = '#6b7280'
+    verdictSub = 'No qualified signal — stand aside'
+  } else {
+    verdict = direction
+    verdictColor = isCall ? '#10b981' : '#ef4444'
+    verdictSub = allGatesOpen
+      ? 'all gates open — cleared to enter'
+      : `${gateCount}/3 gates open — wait for the rest`
+  }
+
+  // Strongest factor for / biggest factor against — reuse the score breakdown
+  const topFor = bd.filter(b => b.score > 0)
+    .sort((a, b) => (b.score / b.max) - (a.score / a.max))[0] ?? null
+  let topAgainst = bd.filter(b => b.score < 0).sort((a, b) => a.score - b.score)[0] ?? null
+  if (!topAgainst) {
+    topAgainst = bd.filter(b => b.max > 0 && b.score < b.max)
+      .sort((a, b) => ((b.max - b.score) / b.max) - ((a.max - a.score) / a.max))[0] ?? null
+  }
+
+  const tradeable = !blocked && !noTrade
+  const entry = currentPrice
+  const stop = atr
+    ? (isCall ? entry - atr * 1.5 : entry + atr * 1.5)
+    : (isCall ? (fibLevels?.support ?? fibLevels?.fib61) : (fibLevels?.resistance ?? fibLevels?.fib38)) ?? null
+  const t1 = swingTargets?.t1 ?? fibLevels?.r1 ?? null
+  const invalidation = isCall
+    ? (fibLevels?.support ?? fibLevels?.fib61)
+    : (fibLevels?.resistance ?? fibLevels?.fib38)
+
+  return (
+    <div className="tb-decision" style={{ borderColor: `${verdictColor}44` }}>
+      <div className="tb-dec-verdict">
+        <span className="tb-dec-dir" style={{ color: verdictColor }}>
+          {tradeable ? (isCall ? '▲ ' : '▼ ') : ''}{verdict}
+        </span>
+        {score != null && !blocked && (
+          <span className="tb-dec-score" style={{ color: tradeScore.color, borderColor: `${tradeScore.color}55` }}>
+            {score}<span className="tb-dec-score-max">/100</span>
+            {tradeScore.label ? <span className="tb-dec-score-tag"> {tradeScore.label}</span> : null}
+          </span>
+        )}
+        <span className="tb-dec-sub" style={{ color: verdictColor }}>{verdictSub}</span>
+        <span className="tb-dec-fresh">
+          <span className={`tb-dec-dot${isEnriching ? ' tb-dec-dot-live' : ''}`} />
+          {isEnriching ? 'updating…' : timeStr ? `as of ${timeStr}` : 'live'}
+        </span>
+      </div>
+
+      {(topFor || topAgainst) && (
+        <div className="tb-dec-weigh">
+          <div className="tb-dec-for">
+            <span className="tb-dec-weigh-lbl">FOR</span>
+            <span className="tb-dec-weigh-txt">
+              {topFor ? `${topFor.label} — ${topFor.note}` : 'no strong positive yet'}
+            </span>
+          </div>
+          <div className="tb-dec-against">
+            <span className="tb-dec-weigh-lbl">AGAINST</span>
+            <span className="tb-dec-weigh-txt">
+              {topAgainst ? `${topAgainst.label} — ${topAgainst.note}` : 'no major risk flagged'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {tradeable && rec && (
+        <div className="tb-dec-play">
+          <span className="tb-dec-play-lbl">PLAY</span>
+          <span className="tb-dec-play-contract" style={{ color: verdictColor }}>
+            ${f2(rec.strike)}{isCall ? 'C' : 'P'}
+            {rec.dte != null ? ` · ${rec.dte}DTE` : ''}
+            {rec.delta != null ? ` · Δ${(+rec.delta).toFixed(2)}` : ''}
+          </span>
+          <span className="tb-dec-play-levels">
+            entry <b>${f2(entry)}</b> · stop <b className="tb-dec-stop">${f2(stop)}</b> · T1 <b className="tb-dec-t1">${f2(t1)}</b>
+            {qty > 0 ? <> · <b>{qty} ct{qty > 1 ? 's' : ''}</b></> : null}
+          </span>
+        </div>
+      )}
+
+      {tradeable && invalidation != null && (
+        <div className="tb-dec-invalid">
+          <span className="tb-dec-invalid-icon">⛔</span>
+          wrong {isCall ? 'below' : 'above'} <b>${f2(invalidation)}</b> on a daily close
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function TradeBrief({
   ticker,
   currentPrice,
@@ -2533,6 +2641,14 @@ export default function TradeBrief({
     return wOk && dailyOk && g3Full
   }, [direction, isCall, weeklyAlign, confluenceResult, swingResult, orbRetest])
 
+  const gateCount = useMemo(() => {
+    if (!direction || direction === 'NO TRADE') return 0
+    const wOk     = isCall ? weeklyAlign?.signal === 'BULLISH' : weeklyAlign?.signal === 'BEARISH'
+    const dailyOk = confluenceResult?.dailyGate === 'pass'
+    const g3Full  = ((isCall ? swingResult?.signal === 'LONG' : swingResult?.signal === 'EXIT') && swingResult?.confirmed === true) || ['ENTER', 'RECAPTURED'].includes(orbRetest?.signal)
+    return (wOk ? 1 : 0) + (dailyOk ? 1 : 0) + (g3Full ? 1 : 0)
+  }, [direction, isCall, weeklyAlign, confluenceResult, swingResult, orbRetest])
+
   if (!ticker) {
     return (
       <div className="tb-empty">
@@ -2566,6 +2682,25 @@ export default function TradeBrief({
           confluenceResult={confluenceResult}
         />
       )}
+
+      {/* ── Decision Stack: synthesized go/no-go, above the fold ── */}
+      <DecisionStack
+        direction={direction}
+        isCall={isCall}
+        tradeScore={tradeScore}
+        gateCount={gateCount}
+        allGatesOpen={allGatesOpen}
+        blocked={regimeBlocked || masterSignal?.blocked}
+        blockReason={masterSignal?.blockReason || (regimeBlocked ? `VIX ${vixData?.current?.toFixed?.(0) ?? 'elevated'} — market risk too high to enter` : null)}
+        timeStr={timeStr}
+        isEnriching={isEnriching}
+        rec={rec}
+        qty={qty}
+        currentPrice={currentPrice}
+        atr={atr}
+        fibLevels={fibLevels}
+        swingTargets={swingTargets}
+      />
 
       {/* ── Verdict Panel: GO / WAIT / NO ── */}
       <VerdictPanel
