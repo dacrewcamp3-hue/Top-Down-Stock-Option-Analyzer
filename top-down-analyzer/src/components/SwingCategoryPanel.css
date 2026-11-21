@@ -63,7 +63,7 @@
 .swing-panel-4h .swing-badge {
   background: rgba(59,130,246,0.2);
   border: 1px solid rgba(59,130,246,0.5);
-  color: #60a5fa;
+  color: var(--clr-info);
 }
 
 .swing-panel-trend .swing-badge {
@@ -99,13 +99,13 @@
 .swing-progress-badge.complete {
   background: rgba(16,185,129,0.12);
   border: 1px solid rgba(16,185,129,0.35);
-  color: #10b981;
+  color: var(--clr-bull);
 }
 
 .swing-progress-badge.partial {
   background: rgba(245,158,11,0.10);
   border: 1px solid rgba(245,158,11,0.28);
-  color: #f59e0b;
+  color: var(--clr-warn);
 }
 
 .swing-progress-badge.empty {
@@ -198,8 +198,8 @@
 /* Active states */
 .swing-btn.active-bull {
   background: linear-gradient(160deg, #021c12 0%, #042e1c 100%);
-  border-color: #10b981;
-  color: #34d399;
+  border-color: var(--clr-bull);
+  color: var(--clr-bull-dim);
   box-shadow: 0 0 0 1px rgba(16,185,129,0.12), 0 2px 8px rgba(16,185,129,0.08);
 }
 
@@ -207,14 +207,14 @@
 
 .swing-btn.active-bear {
   background: linear-gradient(160deg, #1e0303 0%, #2e0505 100%);
-  border-color: #ef4444;
+  border-color: var(--clr-bear);
   color: #f87171;
   box-shadow: 0 0 0 1px rgba(239,68,68,0.12), 0 2px 8px rgba(239,68,68,0.08);
 }
 
 .swing-btn.active-neutral {
   background: linear-gradient(160deg, #1c1104 0%, #2a1a06 100%);
-  border-color: #f59e0b;
+  border-color: var(--clr-warn);
   color: #fbbf24;
   box-shadow: 0 0 0 1px rgba(245,158,11,0.12), 0 2px 8px rgba(245,158,11,0.08);
 }

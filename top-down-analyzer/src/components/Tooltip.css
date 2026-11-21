@@ -9,7 +9,7 @@
   content: '?';
   font-size: 11px;
   color: #3a5070;
-  border: 1px solid #1e2d45;
+  border: 1px solid var(--border);
   border-radius: 50%;
   width: 13px;
   height: 13px;
@@ -24,7 +24,7 @@
 /* Fixed positioning escapes all parent overflow:hidden clipping */
 .tt-bubble {
   position: fixed;
-  background: #0a1628;
+  background: var(--surface-elevated);
   border: 1px solid #2a4060;
   border-radius: 6px;
   padding: 8px 12px;

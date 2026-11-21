@@ -37,13 +37,13 @@
 
 .gs-progress-wrap {
   height: 3px;
-  background: #0a1628;
+  background: var(--surface-elevated);
   border-radius: 2px;
   overflow: hidden;
 }
 .gs-progress-fill {
   height: 100%;
-  background: #10b981;
+  background: var(--clr-bull);
   border-radius: 2px;
   transition: width 0.3s ease;
 }
@@ -96,9 +96,9 @@
   cursor: pointer;
   transition: all 0.1s;
 }
-.gs-filter.active { background: #0a1628; color: #a0c0dc; border-color: #2a4060; }
-.gs-f-bull.active { color: #10b981; border-color: #4a7a3a; background: #08150a; }
-.gs-f-bear.active { color: #ef4444; border-color: #7f1d1d; background: #140508; }
+.gs-filter.active { background: var(--surface-elevated); color: #a0c0dc; border-color: #2a4060; }
+.gs-f-bull.active { color: var(--clr-bull); border-color: #4a7a3a; background: #08150a; }
+.gs-f-bear.active { color: var(--clr-bear); border-color: #7f1d1d; background: #140508; }
 
 /* Results */
 .gs-results {
@@ -143,7 +143,7 @@
 .gs-ticker {
   font-size: 13px;
   font-weight: 800;
-  color: #8aacc8;
+  color: var(--text-secondary);
   font-family: monospace;
 }
 
@@ -242,7 +242,7 @@
 .gs-intel-fill {
   font-size: 10px;
   font-weight: 600;
-  color: #f59e0b;
+  color: var(--clr-warn);
   font-family: monospace;
 }
 

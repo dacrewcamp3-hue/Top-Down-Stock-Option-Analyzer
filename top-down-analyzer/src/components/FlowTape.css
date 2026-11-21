@@ -33,14 +33,14 @@
   letter-spacing: 0.5px;
 }
 
-.ft-scanning { color: #f59e0b; }
-.ft-live     { color: #10b981; }
+.ft-scanning { color: var(--clr-warn); }
+.ft-live     { color: var(--clr-bull); }
 
 .ft-scan-spinner {
   width: 8px;
   height: 8px;
   border: 1.5px solid #f59e0b44;
-  border-top-color: #f59e0b;
+  border-top-color: var(--clr-warn);
   border-radius: 50%;
   animation: ft-spin 0.7s linear infinite;
   flex-shrink: 0;
@@ -49,7 +49,7 @@
 .ft-live-dot {
   width: 6px;
   height: 6px;
-  background: #10b981;
+  background: var(--clr-bull);
   border-radius: 50%;
   animation: ft-pulse 2s ease-in-out infinite;
   flex-shrink: 0;
@@ -100,11 +100,11 @@
 /* ── Progress bar ── */
 .ft-progress-wrap {
   height: 2px;
-  background: #0a1628;
+  background: var(--surface-elevated);
 }
 .ft-progress-fill {
   height: 100%;
-  background: #10b981;
+  background: var(--clr-bull);
   transition: width 0.3s ease;
 }
 
@@ -157,19 +157,19 @@
   border-radius: 3px;
   overflow: hidden;
   display: flex;
-  background: #0a1628;
+  background: var(--surface-elevated);
   cursor: help;
 }
 
 .ft-sent-call {
   height: 100%;
-  background: #10b981;
+  background: var(--clr-bull);
   transition: width 0.4s ease;
 }
 
 .ft-sent-put {
   height: 100%;
-  background: #ef4444;
+  background: var(--clr-bear);
   transition: width 0.4s ease;
 }
 
@@ -254,7 +254,7 @@
 }
 
 .ft-time    { width: 56px;  color: #2a4060; font-size: 10px; }
-.ft-ticker  { width: 62px;  color: #c4daf0; font-weight: 800; font-size: 11px; display: flex; align-items: center; gap: 3px; }
+.ft-ticker  { width: 62px;  color: var(--text-primary); font-weight: 800; font-size: 11px; display: flex; align-items: center; gap: 3px; }
 .ft-type    { width: 44px;  font-weight: 800; font-size: 11px; }
 .ft-strike  { width: 60px;  color: #7a9ab8; }
 .ft-dte     { width: 40px;  font-size: 10.5px; font-weight: 700; cursor: help; }

@@ -27,7 +27,7 @@
   background: transparent;
   border: 1px solid #3b82f6;
   border-radius: 6px;
-  color: #60a5fa;
+  color: var(--clr-info);
   font-size: 12px;
   font-family: monospace;
   cursor: pointer;
@@ -131,7 +131,7 @@
   padding: 2px 4px 6px;
 }
 .gex-term-inverted {
-  color: #f59e0b;
+  color: var(--clr-warn);
   font-weight: 600;
 }
 
@@ -228,8 +228,8 @@
   background: #060c18;
 }
 .gex-pc-leg { color: var(--text-muted); }
-.gex-leg-bull { color: #10b981; }
-.gex-leg-bear { color: #ef4444; }
+.gex-leg-bull { color: var(--clr-bull); }
+.gex-leg-bear { color: var(--clr-bear); }
 
 /* ── Disclaimer ── */
 .gex-disclaimer {

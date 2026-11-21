@@ -22,7 +22,7 @@
 .wb-header-title {
   font-size: 15px;
   font-weight: 800;
-  color: #10b981;
+  color: var(--clr-bull);
   letter-spacing: -0.2px;
 }
 
@@ -178,7 +178,7 @@
 
 .wb-slider {
   width: 100%;
-  accent-color: #10b981;
+  accent-color: var(--clr-bull);
   cursor: pointer;
   height: 4px;
   margin-top: 2px;
@@ -245,8 +245,8 @@
   font-weight: 700;
 }
 
-.wb-val-red    { color: #ef4444; }
-.wb-val-green  { color: #10b981; }
+.wb-val-red    { color: var(--clr-bear); }
+.wb-val-green  { color: var(--clr-bull); }
 .wb-val-dim    { color: #4a6888; }
 
 /* ── Compound growth table ───────────────────────────────────────────────── */
@@ -300,7 +300,7 @@
 .wb-growth-main .wb-growth-yr {
   font-size: 13px;
   font-weight: 700;
-  color: #10b981;
+  color: var(--clr-bull);
 }
 
 /* ── Age bar chart ───────────────────────────────────────────────────────── */
@@ -339,7 +339,7 @@
 .wb-age-label {
   font-size: 12.5px;
   font-weight: 700;
-  color: #8aacc8;
+  color: var(--text-secondary);
 }
 
 .wb-age-sub {
@@ -349,7 +349,7 @@
 
 .wb-age-bar-wrap {
   height: 6px;
-  background: #0a1628;
+  background: var(--surface-elevated);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -367,7 +367,7 @@
   text-align: right;
 }
 
-.wb-age-val-best { color: #10b981; }
+.wb-age-val-best { color: var(--clr-bull); }
 
 /* ── Career comparison ───────────────────────────────────────────────────── */
 .wb-career-grid {
@@ -423,8 +423,8 @@
   border-bottom: none !important;
 }
 
-.wb-stat-green   { color: #10b981; font-weight: 700; }
-.wb-stat-red     { color: #ef4444; font-weight: 700; }
+.wb-stat-green   { color: var(--clr-bull); font-weight: 700; }
+.wb-stat-red     { color: var(--clr-bear); font-weight: 700; }
 .wb-stat-lg      { font-size: 14px; }
 .wb-stat-xl      { font-size: 16px; }
 
@@ -432,7 +432,7 @@
 .wb-punch {
   background: #050a12;
   border: 1px solid #182840;
-  border-top: 2px solid #10b981;
+  border-top: 2px solid var(--clr-bull);
   border-radius: 8px;
   padding: 20px 22px;
   display: flex;
@@ -456,8 +456,8 @@
   line-height: 1;
 }
 
-.wb-punch-green { color: #10b981; }
-.wb-punch-red   { color: #ef4444; }
+.wb-punch-green { color: var(--clr-bull); }
+.wb-punch-red   { color: var(--clr-bear); }
 
 .wb-punch-sub {
   font-size: 12.5px;
@@ -500,7 +500,7 @@
   font-size: 22px;
   font-weight: 900;
   font-family: monospace;
-  color: #10b981;
+  color: var(--clr-bull);
   line-height: 1;
 }
 

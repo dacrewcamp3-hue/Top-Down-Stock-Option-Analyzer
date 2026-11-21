@@ -1,6 +1,6 @@
 ﻿.tf-panel {
-  background: #0f1623;
-  border: 1px solid #1e2d45;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
   transition: border-color 0.15s;
@@ -30,8 +30,8 @@
 }
 
 .tf-badge {
-  background: #090d18;
-  border: 1px solid #1e2d45;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 5px;
   color: #6b8099;
   font-size: 12px;
@@ -65,13 +65,13 @@
   font-weight: 700;
 }
 
-.tf-mini-count.bull { color: #10b981; }
-.tf-mini-count.bear { color: #ef4444; }
+.tf-mini-count.bull { color: var(--clr-bull); }
+.tf-mini-count.bear { color: var(--clr-bear); }
 
 .tf-score-bar {
   width: 52px;
   height: 5px;
-  background: #090d18;
+  background: var(--surface);
   border-radius: 3px;
   overflow: hidden;
   position: relative;
@@ -85,12 +85,12 @@
 }
 
 .bull-fill {
-  background: #10b981;
+  background: var(--clr-bull);
   right: 0;
 }
 
 .bear-fill {
-  background: #ef4444;
+  background: var(--clr-bear);
   left: 0;
 }
 
@@ -100,7 +100,7 @@
 }
 
 .tf-panel-body {
-  border-top: 1px solid #1e2d45;
+  border-top: 1px solid var(--border);
   padding: 16px;
 }
 
@@ -131,8 +131,8 @@
 }
 
 .field-btn {
-  background: #090d18;
-  border: 1px solid #1e2d45;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 5px;
   color: #6b8099;
   cursor: pointer;
@@ -151,18 +151,18 @@
 
 .field-btn.active-bull {
   background: #022c1e;
-  border-color: #10b981;
-  color: #10b981;
+  border-color: var(--clr-bull);
+  color: var(--clr-bull);
 }
 
 .field-btn.active-bear {
   background: #2c0202;
-  border-color: #ef4444;
-  color: #ef4444;
+  border-color: var(--clr-bear);
+  color: var(--clr-bear);
 }
 
 .field-btn.active-neutral {
   background: #2c1a02;
-  border-color: #f59e0b;
-  color: #f59e0b;
+  border-color: var(--clr-warn);
+  color: var(--clr-warn);
 }

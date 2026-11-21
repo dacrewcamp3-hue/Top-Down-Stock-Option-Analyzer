@@ -43,8 +43,8 @@
   border-radius: 2px;
   margin-right: 3px;
 }
-.sr-leg-bull { background: #10b981; opacity: 0.75; }
-.sr-leg-bear { background: #ef4444; opacity: 0.55; }
+.sr-leg-bull { background: var(--clr-bull); opacity: 0.75; }
+.sr-leg-bear { background: var(--clr-bear); opacity: 0.55; }
 
 .sr-loading {
   font-size: 12px;
@@ -89,7 +89,7 @@
 .sr-etf {
   font-size: 12px;
   font-weight: 800;
-  color: #8aacc8;
+  color: var(--text-secondary);
   font-family: monospace;
 }
 
@@ -100,7 +100,7 @@
 
 .sr-bar-wrap {
   height: 7px;
-  background: #0a1628;
+  background: var(--surface-elevated);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -135,7 +135,7 @@
 .sr-rank {
   font-size: 9px;
   font-weight: 700;
-  color: #10b981;
+  color: var(--clr-bull);
   text-align: right;
 }
 

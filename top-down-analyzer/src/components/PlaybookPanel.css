@@ -75,7 +75,7 @@
 .pp-chip-val {
   font-size: 16px;
   font-weight: 800;
-  color: #8aacc8;
+  color: var(--text-secondary);
   font-family: monospace;
   line-height: 1;
 }
@@ -105,8 +105,8 @@
   justify-content: center;
   cursor: default;
 }
-.pp-ema-pip.bull { background: #011c10; color: #10b981; border: 1px solid #065f46; }
-.pp-ema-pip.bear { background: #1a0505; color: #ef4444; border: 1px solid #7f1d1d; }
+.pp-ema-pip.bull { background: #011c10; color: var(--clr-bull); border: 1px solid #065f46; }
+.pp-ema-pip.bear { background: #1a0505; color: var(--clr-bear); border: 1px solid #7f1d1d; }
 
 /* ── Shared Section ──────────────────────────────────────────────────────────── */
 .pp-section {
@@ -130,7 +130,7 @@
 .pp-section-title {
   font-size: 13px;
   font-weight: 800;
-  color: #8aacc8;
+  color: var(--text-secondary);
   letter-spacing: 0.3px;
 }
 
@@ -217,7 +217,7 @@
   border: 1px solid #7f1d1d;
   border-radius: 4px;
   padding: 2px 6px;
-  color: #ef4444;
+  color: var(--clr-bear);
 }
 
 .pp-play-arrow {
@@ -253,8 +253,8 @@
   margin-top: 1px;
 }
 
-.pp-entry-lbl { background: #011c10; border: 1px solid #065f46; color: #10b981; }
-.pp-exit-lbl  { background: #1a0505; border: 1px solid #7f1d1d; color: #ef4444; }
+.pp-entry-lbl { background: #011c10; border: 1px solid #065f46; color: var(--clr-bull); }
+.pp-exit-lbl  { background: #1a0505; border: 1px solid #7f1d1d; color: var(--clr-bear); }
 
 .pp-play-txt {
   font-size: 12px;
@@ -303,7 +303,7 @@
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.6px;
-  color: #ef4444;
+  color: var(--clr-bear);
   text-transform: uppercase;
   padding-top: 3px;
   flex-shrink: 0;
@@ -382,7 +382,7 @@
   white-space: nowrap;
   font-family: inherit;
 }
-.pp-refresh-btn:hover:not(:disabled) { border-color: #2a5080; color: #8aacc8; }
+.pp-refresh-btn:hover:not(:disabled) { border-color: #2a5080; color: var(--text-secondary); }
 .pp-refresh-btn:disabled { opacity: 0.5; cursor: default; }
 
 .pp-mover-toggle {
@@ -402,8 +402,8 @@
   transition: all 0.15s;
   font-family: inherit;
 }
-.pp-mv-btn:hover { border-color: #2a5080; color: #8aacc8; }
-.pp-mv-btn.active { background: #051828; border-color: #2a6090; color: #60a5fa; }
+.pp-mv-btn:hover { border-color: #2a5080; color: var(--text-secondary); }
+.pp-mv-btn.active { background: #051828; border-color: #2a6090; color: var(--clr-info); }
 
 .pp-movers-loading {
   font-size: 12px;
@@ -444,7 +444,7 @@
   font-size: 13px;
   font-weight: 800;
   font-family: monospace;
-  color: #8aacc8;
+  color: var(--text-secondary);
   letter-spacing: 0.4px;
 }
 
@@ -549,7 +549,7 @@
 }
 .pp-sector-chip:hover { background: #07101e; }
 
-.pp-sc-ticker { font-size: 11px; font-weight: 800; color: #8aacc8; font-family: monospace; }
+.pp-sc-ticker { font-size: 11px; font-weight: 800; color: var(--text-secondary); font-family: monospace; }
 .pp-sc-name   { font-size: 8.5px; color: #3a5070; text-align: center; }
 .pp-sc-rs     { font-size: 11.5px; font-weight: 800; font-family: monospace; }
 .pp-sc-chg    { font-size: 9.5px; font-weight: 600; font-family: monospace; }
@@ -654,7 +654,7 @@
   font-weight: 900;
   letter-spacing: 0.6px;
   text-transform: uppercase;
-  color: #60a5fa;
+  color: var(--clr-info);
   flex-shrink: 0;
   padding-top: 2px;
 }
@@ -674,7 +674,7 @@
   border-radius: 4px;
   background: #011c10;
   border: 1px solid #065f46;
-  color: #10b981;
+  color: var(--clr-bull);
 }
 .pp-entry-wait {
   font-size: 9px;
@@ -684,7 +684,7 @@
   border-radius: 4px;
   background: #1a0505;
   border: 1px solid #7f1d1d;
-  color: #ef4444;
+  color: var(--clr-bear);
 }
 
 /* ── Live price on card ──────────────────────────────────────────────────────── */
@@ -737,7 +737,7 @@
 .pp-opt-val {
   font-size: 12px;
   font-weight: 800;
-  color: #8aacc8;
+  color: var(--text-secondary);
   font-family: monospace;
 }
 .pp-opt-note {

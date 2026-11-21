@@ -414,7 +414,7 @@
 
 .spx-est-tag {
   font-size: 0.65rem;
-  color: #f59e0b;
+  color: var(--clr-warn);
   margin-left: 4px;
   vertical-align: middle;
 }
@@ -430,7 +430,7 @@
 
 /* CPI column in real mode */
 .spx-cpi-col {
-  color: #f59e0b;
+  color: var(--clr-warn);
   font-variant-numeric: tabular-nums;
 }
 
@@ -442,7 +442,7 @@
   border-radius: 4px;
   background: rgba(239,68,68,0.15);
   border: 1px solid rgba(239,68,68,0.3);
-  color: #ef4444;
+  color: var(--clr-bear);
   font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -532,7 +532,7 @@
 
 /* Utility */
 .pos { color: #22c55e !important; }
-.neg { color: #ef4444 !important; }
+.neg { color: var(--clr-bear) !important; }
 
 /* ── Multi-panel container ─────────────────────────────────────────────────── */
 .spx-container {
@@ -570,8 +570,8 @@
 }
 
 .spx-panel-tab.active {
-  color: #60a5fa;
+  color: var(--clr-info);
   border-color: #60a5fa44;
   background: rgba(96, 165, 250, 0.08);
-  border-bottom: 2px solid #60a5fa;
+  border-bottom: 2px solid var(--clr-info);
 }

@@ -1,6 +1,6 @@
 .vpc-root {
-  background: #090d18;
-  border: 1px solid #1e2d45;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -144,9 +144,9 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.vpc-level-vah .vpc-level-dist { color: #10b981; }
+.vpc-level-vah .vpc-level-dist { color: var(--clr-bull); }
 .vpc-level-poc .vpc-level-dist { color: #ca8a04; }
-.vpc-level-val .vpc-level-dist { color: #ef4444; }
+.vpc-level-val .vpc-level-dist { color: var(--clr-bear); }
 
 .vpc-levels-note {
   font-size: 10.5px;

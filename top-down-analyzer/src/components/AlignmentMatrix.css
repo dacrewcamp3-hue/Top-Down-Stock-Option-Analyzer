@@ -1,6 +1,6 @@
 ﻿.mx-root {
-  background: #090d18;
-  border: 1px solid #1e2d45;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
   margin: 0 0 0;
@@ -13,7 +13,7 @@
   gap: 8px;
   padding: 7px 14px;
   background: #0c1220;
-  border-bottom: 1px solid #1e2d45;
+  border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
 }
 
@@ -59,7 +59,7 @@
 .mx-gate-block-warn {
   font-size: 11px;
   font-weight: 700;
-  color: #ef4444;
+  color: var(--clr-bear);
   letter-spacing: 0.3px;
   margin-left: 4px;
 }
@@ -151,8 +151,8 @@
   display: inline-block;
 }
 
-.mx-bull    { color: #10b981; }
-.mx-bear    { color: #ef4444; }
+.mx-bull    { color: var(--clr-bull); }
+.mx-bear    { color: var(--clr-bear); }
 .mx-neutral { color: #2a3d59; }
 .mx-na      { color: #1a2a38; font-size: 12px; }
 
@@ -173,7 +173,7 @@
 
 .mx-no-data {
   font-size: 12px;
-  color: #1e2d45;
+  color: var(--border);
 }
 
 /* ── Legend ────────────────────────────────────────────────────────────────── */
@@ -186,10 +186,10 @@
   flex-wrap: wrap;
 }
 
-.mx-leg-bull    { font-size: 11px; color: #10b981; }
-.mx-leg-bear    { font-size: 11px; color: #ef4444; }
+.mx-leg-bull    { font-size: 11px; color: var(--clr-bull); }
+.mx-leg-bear    { font-size: 11px; color: var(--clr-bear); }
 .mx-leg-neutral { font-size: 11px; color: #2a3d59; }
-.mx-leg-na      { font-size: 11px; color: #1e2d45; }
+.mx-leg-na      { font-size: 11px; color: var(--border); }
 
 .mx-leg-note {
   font-size: 11px;
@@ -218,13 +218,13 @@
 
 .mx-sig-call {
   background: #03230f;
-  color: #10b981;
+  color: var(--clr-bull);
   border: 1px solid #065f3680;
 }
 
 .mx-sig-put {
   background: #220306;
-  color: #ef4444;
+  color: var(--clr-bear);
   border: 1px solid #7f1d1d80;
 }
 

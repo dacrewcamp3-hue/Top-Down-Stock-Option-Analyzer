@@ -99,7 +99,7 @@
 
 .pvp-quad {
   background: #070d1c;
-  border: 1px solid #1a2e48;
+  border: 1px solid var(--border-sub);
   border-radius: 7px;
   padding: 12px 14px;
   display: flex;
@@ -190,7 +190,7 @@
 
 .pvp-stat {
   background: #070d1c;
-  border: 1px solid #1a2e48;
+  border: 1px solid var(--border-sub);
   border-radius: 6px;
   padding: 10px 12px;
   display: flex;

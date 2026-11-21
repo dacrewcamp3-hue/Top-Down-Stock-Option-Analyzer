@@ -46,7 +46,7 @@
   cursor: pointer;
 }
 .ss-notif-btn:hover { background: #0d1e30; }
-.ss-notif-on { font-size: 11px; color: #10b981; }
+.ss-notif-on { font-size: 11px; color: var(--clr-bull); }
 
 .ss-refresh-toggle {
   padding: 6px 12px;
@@ -65,7 +65,7 @@
 .ss-refresh-toggle.ss-refresh-on {
   background: #051810;
   border-color: #1a6040;
-  color: #34d399;
+  color: var(--clr-bull-dim);
 }
 
 .ss-scan-btn {
@@ -96,7 +96,7 @@
   align-items: center;
   gap: 4px;
   padding: 3px 7px;
-  background: #0a1628;
+  background: var(--surface-elevated);
   border: 1px solid #1e3050;
   border-radius: 4px;
   font-size: 11px;
@@ -113,7 +113,7 @@
   padding: 0 1px;
   line-height: 1;
 }
-.ss-chip-rm:hover { color: #ef4444; }
+.ss-chip-rm:hover { color: var(--clr-bear); }
 
 /* ── Controls ── */
 .ss-controls {
@@ -151,13 +151,13 @@
 /* ── Progress ── */
 .ss-progress-wrap {
   height: 3px;
-  background: #0a1628;
+  background: var(--surface-elevated);
   border-radius: 2px;
   overflow: hidden;
 }
 .ss-progress-fill {
   height: 100%;
-  background: #10b981;
+  background: var(--clr-bull);
   border-radius: 2px;
   transition: width 0.3s ease;
 }
@@ -180,9 +180,9 @@
   cursor: pointer;
   transition: all 0.1s;
 }
-.ss-filter-btn.active    { background: #0a1628; color: #a0c0dc; border-color: #2a4060; }
-.ss-filter-call.active   { color: #10b981; border-color: #4a7a3a; background: #08150a; }
-.ss-filter-put.active    { color: #ef4444; border-color: #7f1d1d; background: #140508; }
+.ss-filter-btn.active    { background: var(--surface-elevated); color: #a0c0dc; border-color: #2a4060; }
+.ss-filter-call.active   { color: var(--clr-bull); border-color: #4a7a3a; background: #08150a; }
+.ss-filter-put.active    { color: var(--clr-bear); border-color: #7f1d1d; background: #140508; }
 .ss-filter-orb           { border-color: #2a3a18; }
 .ss-filter-orb.active    { color: #a3e635; border-color: #5a7a20; background: #0a1402; }
 
@@ -243,7 +243,7 @@
 .ss-ticker {
   font-size: 13px;
   font-weight: 800;
-  color: #8aacc8;
+  color: var(--text-secondary);
 }
 
 .ss-sig-badge {
@@ -264,7 +264,7 @@
 .ss-bar-wrap {
   flex: 1;
   height: 5px;
-  background: #0a1628;
+  background: var(--surface-elevated);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -302,8 +302,8 @@
   font-weight: 700;
   color: #5a7a90;
 }
-.ss-green    { color: #10b981 !important; }
-.ss-red      { color: #ef4444 !important; }
+.ss-green    { color: var(--clr-bull) !important; }
+.ss-red      { color: var(--clr-bear) !important; }
 .ss-vol-low  { color: #5a3030 !important; }
 
 .ss-cycle {

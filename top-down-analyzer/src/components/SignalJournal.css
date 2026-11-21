@@ -75,8 +75,8 @@
   transition: color 0.15s, border-color 0.15s;
   font-family: inherit;
 }
-.sj-filter-btn:hover { color: #60a5fa; border-color: #1a3050; }
-.sj-filter-active { color: #60a5fa !important; border-color: #1a3050 !important; background: #060f1c !important; }
+.sj-filter-btn:hover { color: var(--clr-info); border-color: #1a3050; }
+.sj-filter-active { color: var(--clr-info) !important; border-color: #1a3050 !important; background: #060f1c !important; }
 
 .sj-refresh-btn {
   background: transparent;
@@ -90,7 +90,7 @@
   transition: color 0.15s;
   font-family: inherit;
 }
-.sj-refresh-btn:hover { color: #60a5fa; }
+.sj-refresh-btn:hover { color: var(--clr-info); }
 
 /* ── Table header ── */
 .sj-table-hdr {
@@ -280,9 +280,9 @@
 }
 .sj-mark-btn:hover { opacity: 0.7; }
 
-.sj-win    { border-color: #065f46; color: #10b981; }
-.sj-loss   { border-color: #7f1d1d; color: #ef4444; }
-.sj-reopen { border-color: #1e3050; color: #60a5fa; }
+.sj-win    { border-color: #065f46; color: var(--clr-bull); }
+.sj-loss   { border-color: #7f1d1d; color: var(--clr-bear); }
+.sj-reopen { border-color: #1e3050; color: var(--clr-info); }
 
 /* ── Delete ── */
 .sj-delete-btn {
@@ -296,7 +296,7 @@
   font-family: inherit;
   transition: color 0.15s;
 }
-.sj-delete-btn:hover { color: #ef4444; }
+.sj-delete-btn:hover { color: var(--clr-bear); }
 
 /* ── Empty state ── */
 .sj-empty {

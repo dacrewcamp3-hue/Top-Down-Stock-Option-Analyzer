@@ -53,7 +53,7 @@
 }
 .tp-log-btn:hover { opacity: 0.75; }
 .tp-log-btn:disabled { cursor: default; opacity: 1; }
-.tp-log-done { background: #01150a !important; border-color: #10b981 !important; }
+.tp-log-done { background: #01150a !important; border-color: var(--clr-bull) !important; }
 
 /* ── Entry trigger ── */
 .tp-trigger {
@@ -203,7 +203,7 @@
 }
 
 .tp-vw-text strong {
-  color: #f59e0b;
+  color: var(--clr-warn);
 }
 
 /* ── Exit rules ── */

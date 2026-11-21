@@ -4,7 +4,7 @@
 
 .ep-root {
   background: #070d1c;
-  border: 1px solid #1e2d45;
+  border: 1px solid var(--border);
   border-radius: 11px;
   padding: 16px 18px;
   display: flex;
@@ -41,7 +41,7 @@
   color: #5a8ab0;
   letter-spacing: 0.5px;
   padding: 3px 10px;
-  background: #0a1628;
+  background: var(--surface-elevated);
   border: 1px solid #1e3050;
   border-radius: 999px;
 }
@@ -81,7 +81,7 @@
 /* Entry row */
 .ep-entry-row {
   background: #0a1220;
-  border-color: #1e2d45;
+  border-color: var(--border);
 }
 
 /* Stop row */
@@ -115,7 +115,7 @@
 }
 
 .ep-badge-entry {
-  background: #0a1628;
+  background: var(--surface-elevated);
   border-color: #1e3050;
   color: #4a7098;
 }
@@ -123,7 +123,7 @@
 .ep-badge-stop {
   background: rgba(239,68,68,0.10);
   border-color: rgba(239,68,68,0.30);
-  color: #ef4444;
+  color: var(--clr-bear);
 }
 
 /* T1 + T2 styled dynamically via style prop */
@@ -144,7 +144,7 @@
 }
 
 .ep-price-entry { color: #7a9ab8; }
-.ep-price-stop  { color: #ef4444; }
+.ep-price-stop  { color: var(--clr-bear); }
 
 .ep-pct {
   font-size: 12px;
@@ -155,7 +155,7 @@
 .ep-pct-stop {
   font-size: 12px;
   font-weight: 700;
-  color: #ef4444;
+  color: var(--clr-bear);
 }
 
 .ep-shares {

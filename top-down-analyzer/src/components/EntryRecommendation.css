@@ -1,6 +1,6 @@
 ﻿.rec-card {
-  background: #0f1623;
-  border: 1px solid #1e2d45;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
   border-radius: 10px;
   position: sticky;
   top: 16px;
@@ -10,7 +10,7 @@
 
 .rec-header {
   padding: 14px 20px 14px;
-  border-bottom: 1px solid #1e2d45;
+  border-bottom: 1px solid var(--border);
 }
 
 /* ── Odometer ── */
@@ -95,27 +95,27 @@
 }
 
 .rec-signal.call {
-  color: #10b981;
+  color: var(--clr-bull);
   background: #022c1e;
   border: 1px solid #065f46;
 }
 
 .rec-signal.put {
-  color: #ef4444;
+  color: var(--clr-bear);
   background: #2c0202;
   border: 1px solid #7f1d1d;
 }
 
 .rec-signal.no-trade {
-  color: #6b7280;
-  background: #0f1623;
-  border: 1px solid #1e2d45;
+  color: var(--clr-neutral);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
 }
 
 .rec-signal-gated {
   opacity: 0.55;
   text-decoration: line-through;
-  text-decoration-color: #ef4444;
+  text-decoration-color: var(--clr-bear);
 }
 
 /* ── Gate row ──────────────────────────────────────────────────────────────── */
@@ -125,8 +125,8 @@
   gap: 8px;
   margin-top: 8px;
   padding: 5px 10px;
-  background: #090d18;
-  border: 1px solid #1e2d45;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 5px;
   font-size: 12px;
   flex-wrap: wrap;
@@ -156,15 +156,15 @@
 
 .rec-gate-warn-text {
   font-size: 11px;
-  color: #ef4444;
+  color: var(--clr-bear);
   font-weight: 700;
   margin-left: 2px;
 }
 
 /* ── Blocker / "what to watch" section ────────────────────────────────────── */
 .rec-blockers {
-  background: #090d18;
-  border: 1px solid #1e2d45;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px 12px;
   margin-bottom: 12px;
@@ -213,12 +213,12 @@
 
 .rec-blocker-dir {
   font-size: 12px;
-  color: #ef4444;
+  color: var(--clr-bear);
   font-weight: 800;
 }
 
 .rec-blocker-against .rec-blocker-dir {
-  color: #ef4444;
+  color: var(--clr-bear);
 }
 
 .rec-blockers-sub {
@@ -263,7 +263,7 @@
 .meter-track {
   position: relative;
   height: 10px;
-  background: #090d18;
+  background: var(--surface);
   border-radius: 5px;
   overflow: visible;
   margin-bottom: 4px;
@@ -296,8 +296,8 @@
   transition: all 0.35s ease;
 }
 
-.meter-fill.bull { background: linear-gradient(90deg, #065f46, #10b981); }
-.meter-fill.bear { background: linear-gradient(90deg, #ef4444, #7f1d1d); }
+.meter-fill.bull { background: linear-gradient(90deg, #065f46, var(--clr-bull)); }
+.meter-fill.bear { background: linear-gradient(90deg, var(--clr-bear), #7f1d1d); }
 
 .meter-thumb {
   position: absolute;
@@ -309,8 +309,8 @@
   transition: left 0.35s ease;
 }
 
-.meter-thumb.bull { background: #10b981; }
-.meter-thumb.bear { background: #ef4444; }
+.meter-thumb.bull { background: var(--clr-bull); }
+.meter-thumb.bear { background: var(--clr-bear); }
 
 .meter-pct-row {
   display: flex;
@@ -323,8 +323,8 @@
   font-weight: 700;
 }
 
-.meter-pct.bear { color: #ef4444; }
-.meter-pct.bull { color: #10b981; }
+.meter-pct.bear { color: var(--clr-bear); }
+.meter-pct.bull { color: var(--clr-bull); }
 
 /* Breakdown */
 .breakdown {
@@ -378,7 +378,7 @@
 .breakdown-bar-track {
   flex: 1;
   height: 6px;
-  background: #090d18;
+  background: var(--surface);
   border-radius: 3px;
   position: relative;
   overflow: visible;
@@ -390,7 +390,7 @@
   top: -2px;
   bottom: -2px;
   width: 1px;
-  background: #1e2d45;
+  background: var(--border);
 }
 
 .breakdown-bar {
@@ -401,8 +401,8 @@
   transition: all 0.3s;
 }
 
-.breakdown-bar.bull-fill { background: #10b981; }
-.breakdown-bar.bear-fill { background: #ef4444; }
+.breakdown-bar.bull-fill { background: var(--clr-bull); }
+.breakdown-bar.bear-fill { background: var(--clr-bear); }
 
 .breakdown-score {
   font-size: 11px;
@@ -416,12 +416,12 @@
   min-width: 12px;
   text-align: center;
 }
-.breakdown-net.bull    { color: #10b981; }
-.breakdown-net.bear    { color: #ef4444; }
+.breakdown-net.bull    { color: var(--clr-bull); }
+.breakdown-net.bear    { color: var(--clr-bear); }
 .breakdown-net.neutral { color: #2a3d59; }
 
-.bull-text { color: #10b981; }
-.bear-text { color: #ef4444; }
+.bull-text { color: var(--clr-bull); }
+.bear-text { color: var(--clr-bear); }
 .sep { color: #2a3d59; }
 
 /* Empty / hint states */
@@ -436,7 +436,7 @@
 .rec-hint {
   margin-top: 14px;
   padding: 10px 12px;
-  background: #090d18;
+  background: var(--surface);
   border: 1px solid #1a2535;
   border-radius: 6px;
   font-size: 11px;
@@ -448,8 +448,8 @@
 .rec-explainer {
   margin-top: 10px;
   padding: 10px 12px;
-  background: #090d18;
-  border: 1px solid #1e2d45;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   display: flex;
   flex-direction: column;
@@ -478,7 +478,7 @@
   line-height: 1.55;
 }
 
-.rec-explainer-bull .rec-explainer-body { color: #34d399; }
+.rec-explainer-bull .rec-explainer-body { color: var(--clr-bull-dim); }
 .rec-explainer-bear .rec-explainer-body { color: #fca5a5; }
 .rec-explainer-blocked .rec-explainer-body { color: #fcd34d; }
 
@@ -556,8 +556,8 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  background: #090d18;
-  border: 1px solid #1e2d45;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 6px 10px;
 }
@@ -596,9 +596,9 @@
   border-radius: 3px;
   white-space: nowrap;
 }
-.orb-level-tag.bull    { color: #10b981; background: #011c10; border: 1px solid #065f46; }
-.orb-level-tag.bear    { color: #ef4444; background: #1c0101; border: 1px solid #7f1d1d; }
-.orb-level-tag.neutral { color: #4a6380; background: #090d18; border: 1px solid #1e2d45; }
+.orb-level-tag.bull    { color: var(--clr-bull); background: #011c10; border: 1px solid #065f46; }
+.orb-level-tag.bear    { color: var(--clr-bear); background: #1c0101; border: 1px solid #7f1d1d; }
+.orb-level-tag.neutral { color: #4a6380; background: var(--surface); border: 1px solid var(--border); }
 
 .orb-signal {
   display: flex;
@@ -646,7 +646,7 @@
 
 /* ── Implied Volatility panel ──────────────────────────────────────────── */
 .iv-panel {
-  border-top: 1px solid #1e2d45;
+  border-top: 1px solid var(--border);
   padding: 10px 0 4px;
 }
 
@@ -685,7 +685,7 @@
 .iv-bar-wrap {
   flex: 1;
   height: 4px;
-  background: #1e2d45;
+  background: var(--border);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -723,7 +723,7 @@
   font-size: 12px;
   color: #2a3d59;
   padding: 10px 12px;
-  background: #090d18;
+  background: var(--surface);
   border: 1px solid #1a2535;
   border-radius: 6px;
   line-height: 1.5;
@@ -759,7 +759,7 @@
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.4px;
-  color: #ef4444;
+  color: var(--clr-bear);
   text-transform: uppercase;
 }
 

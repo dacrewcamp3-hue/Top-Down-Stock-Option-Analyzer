@@ -176,14 +176,14 @@
 .vp-opt-live-badge {
   font-size: 9px;
   font-weight: 700;
-  color: #10b981;
+  color: var(--clr-bull);
   letter-spacing: 0.5px;
 }
 
 .vp-opt-est-badge {
   font-size: 9px;
   font-weight: 700;
-  color: #f59e0b;
+  color: var(--clr-warn);
   letter-spacing: 0.5px;
 }
 
@@ -294,7 +294,7 @@
 }
 
 .vp-blocker-icon {
-  color: #f59e0b;
+  color: var(--clr-warn);
   font-weight: 900;
   font-size: 13px;
   flex-shrink: 0;

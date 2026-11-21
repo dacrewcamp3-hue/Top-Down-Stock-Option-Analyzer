@@ -64,7 +64,7 @@
 
 .sim-clear-btn {
   background: none;
-  border: 1px solid #1e2d45;
+  border: 1px solid var(--border);
   border-radius: 5px;
   color: #4a6380;
   font-size: 11px;
@@ -74,15 +74,15 @@
   margin-top: 4px;
 }
 
-.sim-clear-btn:hover { border-color: #ef4444; color: #ef4444; }
+.sim-clear-btn:hover { border-color: var(--clr-bear); color: var(--clr-bear); }
 
 /* ── Summary strip ── */
 .sim-summary {
   display: flex;
   align-items: center;
   gap: 0;
-  background: #090d18;
-  border: 1px solid #1e2d45;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px 0;
   margin-bottom: 20px;
@@ -113,7 +113,7 @@
 .sim-stat-div {
   width: 1px;
   height: 32px;
-  background: #1e2d45;
+  background: var(--border);
   flex-shrink: 0;
 }
 
@@ -132,12 +132,12 @@
   color: #3a5070;
   text-transform: uppercase;
   padding-bottom: 2px;
-  border-bottom: 1px solid #1e2d45;
+  border-bottom: 1px solid var(--border);
 }
 
 /* ── Position card ── */
 .sim-card {
-  border: 1px solid #1e2d45;
+  border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -171,7 +171,7 @@
 .sim-card-grade {
   font-size: 11px;
   font-weight: 700;
-  color: #f59e0b;
+  color: var(--clr-warn);
   background: #1a1000;
   border: 1px solid #4d3000;
   border-radius: 3px;
@@ -181,8 +181,8 @@
 .sim-card-label {
   font-size: 11px;
   color: #3a5070;
-  background: #090d18;
-  border: 1px solid #1e2d45;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 3px;
   padding: 1px 5px;
 }
@@ -192,8 +192,8 @@
   font-weight: 800;
   letter-spacing: 0.8px;
   color: #6b8099;
-  background: #0f1623;
-  border: 1px solid #1e2d45;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
   border-radius: 3px;
   padding: 2px 6px;
   margin-left: auto;
@@ -245,7 +245,7 @@
 
 .sim-close-btn {
   background: none;
-  border: 1px solid #1e2d45;
+  border: 1px solid var(--border);
   border-radius: 5px;
   color: #6b8099;
   font-size: 11px;
@@ -256,21 +256,21 @@
 }
 
 .sim-close-btn:hover {
-  border-color: #10b981;
-  color: #10b981;
+  border-color: var(--clr-bull);
+  color: var(--clr-bull);
 }
 
 .sim-close-btn-urgent {
   background: #3d0808;
-  border-color: #ef4444;
-  color: #ef4444;
+  border-color: var(--clr-bear);
+  color: var(--clr-bear);
   font-weight: 800;
   animation: sim-pulse 1.4s ease-in-out infinite;
 }
 
 .sim-close-btn-urgent:hover {
   background: #5a0f0f;
-  border-color: #ef4444;
+  border-color: var(--clr-bear);
   color: #fff;
 }
 
@@ -323,9 +323,9 @@
   letter-spacing: 0.3px;
 }
 
-.sim-alert-stop       .sim-alert-title { color: #ef4444; }
+.sim-alert-stop       .sim-alert-title { color: var(--clr-bear); }
 .sim-alert-breakeven  .sim-alert-title { color: #38bdf8; }
-.sim-alert-house      .sim-alert-title { color: #f59e0b; }
+.sim-alert-house      .sim-alert-title { color: var(--clr-warn); }
 .sim-alert-autoclosed .sim-alert-title { color: #b45309; }
 
 .sim-alert-detail {
@@ -351,7 +351,7 @@
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.5px;
-  color: #10b981;
+  color: var(--clr-bull);
   background: #001a0d;
   border: 1px solid #065f46;
   border-radius: 3px;

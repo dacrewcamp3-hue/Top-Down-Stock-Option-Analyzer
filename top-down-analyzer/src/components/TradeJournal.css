@@ -41,7 +41,7 @@
 .tj-add-btn {
   flex-shrink: 0;
   padding: 8px 16px;
-  background: #0a1628;
+  background: var(--surface-elevated);
   border: 1px solid #1e3a5f;
   border-radius: 6px;
   font-size: 12px;
@@ -70,7 +70,7 @@
 .tj-ticker-input {
   width: 180px;
   padding: 8px 12px;
-  background: #0a1628;
+  background: var(--surface-elevated);
   border: 1px solid #1e3a5f;
   border-radius: 6px;
   font-size: 12px;
@@ -99,7 +99,7 @@
   width: 100%;
   box-sizing: border-box;
   padding: 12px 46px 12px 14px; /* right padding reserves space for mic button */
-  background: #0a1628;
+  background: var(--surface-elevated);
   border: 1px solid #1e3a5f;
   border-radius: 7px;
   font-size: 13px;
@@ -117,7 +117,7 @@
 }
 
 .tj-textarea.tj-textarea-listening {
-  border-color: #ef4444;
+  border-color: var(--clr-bear);
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.12);
 }
 
@@ -135,7 +135,7 @@
   height: 30px;
   border-radius: 50%;
   border: 1px solid #1e3a5f;
-  background: #0a1628;
+  background: var(--surface-elevated);
   color: #4a7aa8;
   display: flex;
   align-items: center;
@@ -152,8 +152,8 @@
 
 .tj-mic-btn.tj-mic-listening {
   background: #2a0505;
-  border-color: #ef4444;
-  color: #ef4444;
+  border-color: var(--clr-bear);
+  color: var(--clr-bear);
   animation: tj-mic-pulse 1.4s ease-in-out infinite;
 }
 
@@ -168,7 +168,7 @@
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  color: #ef4444;
+  color: var(--clr-bear);
   font-weight: 600;
   letter-spacing: 0.3px;
 }
@@ -177,7 +177,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #ef4444;
+  background: var(--clr-bear);
   flex-shrink: 0;
   animation: tj-dot-blink 1s step-start infinite;
 }
@@ -189,7 +189,7 @@
 
 .tj-mic-error {
   font-size: 11px;
-  color: #ef4444;
+  color: var(--clr-bear);
   background: #1a0505;
   border: 1px solid #5f1a1a;
   border-radius: 6px;
@@ -201,7 +201,7 @@
   font-size: 11px;
   color: #3a5878;
   background: #060c18;
-  border: 1px solid #1a2e48;
+  border: 1px solid var(--border-sub);
   border-radius: 6px;
   padding: 8px 12px;
   line-height: 1.5;
@@ -243,7 +243,7 @@
   font-size: 13px;
   color: #3a5878;
   background: #060c18;
-  border: 1px solid #1a2e48;
+  border: 1px solid var(--border-sub);
   border-radius: 10px;
   line-height: 1.8;
 }
@@ -316,7 +316,7 @@
 
 .tj-del-btn:hover {
   border-color: #5f1a1a;
-  color: #ef4444;
+  color: var(--clr-bear);
   background: #1a0505;
 }
 

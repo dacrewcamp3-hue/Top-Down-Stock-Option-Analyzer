@@ -118,7 +118,7 @@
   padding: 0 2px;
   transition: color 0.15s;
 }
-.sat-close:hover { color: #6b7280; }
+.sat-close:hover { color: var(--clr-neutral); }
 
 /* ── Main row: ticker + direction + score ── */
 .sat-main-row {

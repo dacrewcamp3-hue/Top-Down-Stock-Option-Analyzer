@@ -100,11 +100,11 @@
 }
 
 .mp-ema-pip.bull {
-  color: #10b981;
+  color: var(--clr-bull);
   background: #011c10;
 }
 
 .mp-ema-pip.bear {
-  color: #ef4444;
+  color: var(--clr-bear);
   background: #1a0505;
 }
