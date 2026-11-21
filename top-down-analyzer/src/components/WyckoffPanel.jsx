@@ -2,11 +2,11 @@ import './WyckoffPanel.css'
 
 /* ─── Color helpers ──────────────────────────────────────────────────────── */
 function signalColor(signal, phase) {
-  if (phase === 'SPRING') return '#f59e0b'
-  if (phase === 'UTAD')   return '#ef4444'
-  if (signal === 'BULLISH') return '#10b981'
-  if (signal === 'BEARISH') return '#ef4444'
-  return '#6b7280'
+  if (phase === 'SPRING') return 'var(--clr-warn)'
+  if (phase === 'UTAD')   return 'var(--clr-bear)'
+  if (signal === 'BULLISH') return 'var(--clr-bull)'
+  if (signal === 'BEARISH') return 'var(--clr-bear)'
+  return 'var(--clr-neutral)'
 }
 
 function confidenceLabel(confidence) {
@@ -62,7 +62,7 @@ function RangeBar({ rangeHigh, rangeLow, currentClose }) {
 /* ─── Buying-pressure bar ─────────────────────────────────────────────────── */
 function PressureBar({ buyingPressure }) {
   const pct   = Math.max(0, Math.min(100, buyingPressure * 100))
-  const color = pct > 55 ? '#10b981' : pct < 45 ? '#ef4444' : '#6b7280'
+  const color = pct > 55 ? 'var(--clr-bull)' : pct < 45 ? 'var(--clr-bear)' : 'var(--clr-neutral)'
 
   return (
     <div className="wy-pbar-wrap">
@@ -71,9 +71,9 @@ function PressureBar({ buyingPressure }) {
         <div className="wy-pbar-midline" />
       </div>
       <div className="wy-pbar-labels">
-        <span style={{ color: '#ef4444', fontWeight: 700 }}>All Selling</span>
+        <span style={{ color: 'var(--clr-bear)', fontWeight: 700 }}>All Selling</span>
         <span style={{ color }}>{pct.toFixed(1)}% buying pressure</span>
-        <span style={{ color: '#10b981', fontWeight: 700 }}>All Buying</span>
+        <span style={{ color: 'var(--clr-bull)', fontWeight: 700 }}>All Buying</span>
       </div>
     </div>
   )
@@ -146,31 +146,31 @@ function PhaseMap({ phase, signal }) {
 /* ─── Trading rules per phase ─────────────────────────────────────────────── */
 const TRADING_RULES = {
   MARKUP: {
-    color: '#10b981',
+    color: 'var(--clr-bull)',
     rule: 'Breakout confirmed above the trading range. Trend-following entries are valid. Buy calls or long debit spreads. Use the former range high as your support reference. Trail stops as price extends.',
   },
   MARKDOWN: {
-    color: '#ef4444',
+    color: 'var(--clr-bear)',
     rule: 'Breakdown confirmed below the trading range. Do not buy calls. Trade puts, bear call spreads, or go to cash. The path of least resistance is lower until a new accumulation range forms.',
   },
   SPRING: {
-    color: '#f59e0b',
+    color: 'var(--clr-warn)',
     rule: 'Spring confirmed — this is the entry. Buy at the close of the spring bar or on the first pullback to range low. Stop below the spring low. Target: range high and beyond.',
   },
   UTAD: {
-    color: '#ef4444',
+    color: 'var(--clr-bear)',
     rule: 'UTAD confirmed — this is the short entry. Sell at the close of the UTAD bar or on the first rally back to range high. Stop above the UTAD high. Target: range low and below.',
   },
   ACCUMULATION: {
-    color: '#10b981',
+    color: 'var(--clr-bull)',
     rule: 'Accumulation in progress. Stage in cautiously — small call positions or long stock near range low with stops below. Wait for a Spring or a breakout above range high before adding full size.',
   },
   DISTRIBUTION: {
-    color: '#ef4444',
+    color: 'var(--clr-bear)',
     rule: 'Distribution in progress. Reduce or eliminate long exposure. Avoid new call positions. Stage small put positions near range high. Wait for a UTAD or breakdown below range low to go full size.',
   },
   RANGING: {
-    color: '#6b7280',
+    color: 'var(--clr-neutral)',
     rule: 'No clear phase yet. The market is balanced. Preserve capital and wait for a Spring, UTAD, or confirmed directional break before initiating a trade. Patience is the edge here.',
   },
 }
@@ -178,9 +178,9 @@ const TRADING_RULES = {
 /* ─── Trend Context Pill ─────────────────────────────────────────────────── */
 function TrendPill({ trendContext }) {
   const cfg = {
-    UPTREND:   { color: '#10b981', bg: '#00150a', border: '#064e2e', label: '↑ UPTREND' },
-    DOWNTREND: { color: '#ef4444', bg: '#150000', border: '#6b0000', label: '↓ DOWNTREND' },
-    NEUTRAL:   { color: '#6b7280', bg: '#0f1623', border: '#1e2d45', label: '→ NEUTRAL' },
+    UPTREND:   { color: 'var(--clr-bull)', bg: '#00150a', border: 'var(--clr-bull-bdr)', label: '↑ UPTREND' },
+    DOWNTREND: { color: 'var(--clr-bear)', bg: '#150000', border: 'var(--clr-bear-bdr)', label: '↓ DOWNTREND' },
+    NEUTRAL:   { color: 'var(--clr-neutral)', bg: 'var(--surface-card)', border: 'var(--border)', label: '→ NEUTRAL' },
   }
   const { color, bg, border, label } = cfg[trendContext] ?? cfg.NEUTRAL
   return (
@@ -197,7 +197,29 @@ function TrendPill({ trendContext }) {
 /* ═══════════════════════════════════════════════════════════════════════════
    Main component
    ═══════════════════════════════════════════════════════════════════════════ */
-export default function WyckoffPanel({ wyckoff, ticker }) {
+// Honest, phase-dependent reliability of the Wyckoff read. Event-based phases
+// (Spring/UTAD/Markup/Markdown) are volume-confirmed and dependable; range
+// phases without a confirmed event are developing context, not triggers.
+function readReliability(phase, confidence) {
+  if (['SPRING', 'UTAD', 'MARKUP', 'MARKDOWN'].includes(phase)) {
+    return {
+      tier: 'HIGH', color: 'var(--clr-bull)',
+      note: 'A specific, volume-confirmed Wyckoff event — the most dependable read this model produces. Trade it as confluence with your gates.',
+    }
+  }
+  if (phase === 'ACCUMULATION' || phase === 'DISTRIBUTION') {
+    return {
+      tier: confidence === 'medium' ? 'MODERATE' : 'DEVELOPING', color: 'var(--clr-warn)',
+      note: 'A structural setup, not a trigger — no Spring or UTAD yet. Use it as context and wait for a confirmed event or breakout before committing size.',
+    }
+  }
+  return {
+    tier: 'LOW — WAIT', color: 'var(--clr-neutral)',
+    note: 'No dominant phase. Wyckoff has no edge here until a range forms and a Spring, UTAD, or decisive breakout resolves it.',
+  }
+}
+
+export default function WyckoffPanel({ wyckoff, ticker, lastUpdated }) {
   if (!wyckoff) {
     return (
       <div className="wy-empty">
@@ -226,12 +248,26 @@ export default function WyckoffPanel({ wyckoff, ticker }) {
 
   const color = signalColor(signal, phase)
   const rule  = TRADING_RULES[phase] ?? TRADING_RULES.RANGING
+  const rel     = readReliability(phase, confidence)
+  const timeStr = lastUpdated?.toLocaleTimeString ? lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : null
 
   const upPct   = pctChange(currentClose, potentialMoveUp)
   const downPct = pctChange(currentClose, potentialMoveDown)
 
   return (
     <div className="wy-root">
+
+      {/* ── Read reliability strip (honest, phase-dependent trust) ── */}
+      <div className="wy-reliability" style={{ borderLeftColor: rel.color }}>
+        <div className="wy-rel-top">
+          <span className="wy-rel-tier" style={{ color: rel.color }}>READ RELIABILITY · {rel.tier}</span>
+          <span className="wy-rel-fresh">
+            <span className="wy-rel-dot" />
+            {timeStr ? `as of ${timeStr}` : 'live'}
+          </span>
+        </div>
+        <span className="wy-rel-note">{rel.note}</span>
+      </div>
 
       {/* ── Header ── */}
       <div className="wy-header">
@@ -291,7 +327,7 @@ export default function WyckoffPanel({ wyckoff, ticker }) {
           </div>
           <div className="wy-rs">
             <span className="wy-rs-label">Range Quality</span>
-            <span className="wy-rs-val" style={{ color: rangeQuality > 0.6 ? '#10b981' : rangeQuality > 0.3 ? '#f59e0b' : '#ef4444' }}>
+            <span className="wy-rs-val" style={{ color: rangeQuality > 0.6 ? 'var(--clr-bull)' : rangeQuality > 0.3 ? 'var(--clr-warn)' : 'var(--clr-bear)' }}>
               {(rangeQuality * 100).toFixed(0)}%
             </span>
           </div>

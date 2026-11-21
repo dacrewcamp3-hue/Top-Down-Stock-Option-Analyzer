@@ -1707,7 +1707,7 @@ export default function App() {
           )}
 
           {analyzeView === 'wyckoff' && (
-            <WyckoffPanel wyckoff={wyckoffData} ticker={ticker} />
+            <WyckoffPanel wyckoff={wyckoffData} ticker={ticker} lastUpdated={lastUpdated} />
           )}
 
           {analyzeView === 'earnings' && (
