@@ -2519,6 +2519,104 @@ function DecisionStack({
   )
 }
 
+// ── The Discipline Check: timeless principles of great investors & traders ───
+// Runs the CURRENT setup through durable decision principles associated with
+// Warren Buffett (margin of safety, don't overpay, be fearful when others are
+// greedy, never lose money, patience) and floor-trader discipline associated
+// with Peter Tuckman (respect the tape, protect capital). Every line is a real
+// check against data already computed — no fabricated quotes or opinions.
+function DisciplineCheck({
+  direction, isCall, blocked, noTrade,
+  rr, ivRank, fgScore, fgZone, gateCount, allGatesOpen, grade, stopDefined, qtyOk,
+}) {
+  if (blocked || noTrade) {
+    return (
+      <div className="tb-disc tb-disc-aside">
+        <div className="tb-disc-head">
+          <span className="tb-disc-title">THE DISCIPLINE CHECK</span>
+          <span className="tb-disc-verdict" style={{ color: '#6b7280' }}>STAND ASIDE</span>
+        </div>
+        <div className="tb-disc-asidetxt">
+          No qualified trade right now. The great investors win by waiting — the market transfers
+          money from the impatient to the patient. Preserve capital and let the setup come to you.
+        </div>
+      </div>
+    )
+  }
+
+  const checks = []
+
+  checks.push(rr == null
+    ? { k: 'Margin of Safety', who: 'Buffett', s: 'na', d: 'reward-to-risk not available yet' }
+    : rr >= 2   ? { k: 'Margin of Safety', who: 'Buffett', s: 'pass', d: `${rr}:1 reward-to-risk — real cushion before you're wrong` }
+    : rr >= 1.5 ? { k: 'Margin of Safety', who: 'Buffett', s: 'warn', d: `${rr}:1 — thin cushion, demand a better entry` }
+    :             { k: 'Margin of Safety', who: 'Buffett', s: 'fail', d: `${rr}:1 — no margin of safety` })
+
+  checks.push(ivRank == null
+    ? { k: 'Don’t Overpay', who: 'Buffett', s: 'na', d: 'IV rank pending' }
+    : ivRank < 40  ? { k: 'Don’t Overpay', who: 'Buffett', s: 'pass', d: `IV rank ${ivRank} — premium is cheap, you're not paying up` }
+    : ivRank <= 60 ? { k: 'Don’t Overpay', who: 'Buffett', s: 'warn', d: `IV rank ${ivRank} — fair price, size normally` }
+    :                { k: 'Don’t Overpay', who: 'Buffett', s: 'fail', d: `IV rank ${ivRank} — rich premium, prefer a spread` })
+
+  if (fgScore == null) {
+    checks.push({ k: 'Mind the Crowd', who: 'Buffett', s: 'na', d: 'sentiment data pending' })
+  } else {
+    const greedy = fgScore <= 25, fearful = fgScore >= 65   // this app's scale: high = fear
+    const z = fgZone ? `${fgZone} (${fgScore})` : `(${fgScore})`
+    if (isCall && greedy)        checks.push({ k: 'Mind the Crowd', who: 'Buffett', s: 'warn', d: `${z} — be fearful when others are greedy` })
+    else if (isCall && fearful)  checks.push({ k: 'Mind the Crowd', who: 'Buffett', s: 'pass', d: `${z} — fear is your edge on the long side` })
+    else if (!isCall && fearful) checks.push({ k: 'Mind the Crowd', who: 'Buffett', s: 'warn', d: `${z} — crowd already fearful, shorts are crowded` })
+    else if (!isCall && greedy)  checks.push({ k: 'Mind the Crowd', who: 'Buffett', s: 'pass', d: `${z} — greed to fade on the short side` })
+    else                         checks.push({ k: 'Mind the Crowd', who: 'Buffett', s: 'pass', d: `${z} — sentiment not stretched either way` })
+  }
+
+  checks.push(allGatesOpen
+    ? { k: 'Respect the Tape', who: 'Tuckman', s: 'pass', d: 'aligned with the dominant trend — not fighting the market' }
+    : gateCount >= 2 ? { k: 'Respect the Tape', who: 'Tuckman', s: 'warn', d: `${gateCount}/3 timeframes aligned — don't front-run the trend` }
+    :                  { k: 'Respect the Tape', who: 'Tuckman', s: 'fail', d: `${gateCount}/3 aligned — this fights the tape` })
+
+  checks.push(!grade
+    ? { k: 'Patience & Quality', who: 'Both', s: 'na', d: 'setup grade pending' }
+    : (grade === 'A+' || grade === 'A') ? { k: 'Patience & Quality', who: 'Both', s: 'pass', d: `${grade} setup — the kind worth committing capital to` }
+    : grade === 'B' ? { k: 'Patience & Quality', who: 'Both', s: 'warn', d: 'B setup — marginal, size down or wait for better' }
+    :                 { k: 'Patience & Quality', who: 'Both', s: 'fail', d: `${grade} setup — don't force it` })
+
+  checks.push((stopDefined && qtyOk)
+    ? { k: 'Protect Capital', who: 'Tuckman', s: 'pass', d: 'stop defined, size within your risk limit' }
+    : { k: 'Protect Capital', who: 'Tuckman', s: 'warn', d: !stopDefined ? 'define your stop before you enter' : 'set account size & risk % in the Risk Panel' })
+
+  const scored = checks.filter(c => c.s !== 'na').length
+  const passes = checks.filter(c => c.s === 'pass').length
+  const fails  = checks.filter(c => c.s === 'fail').length
+  const verdict = fails >= 2            ? { t: 'STAND DOWN',         c: '#ef4444' }
+                : fails === 1           ? { t: 'TIGHTEN UP',         c: '#f59e0b' }
+                : passes >= scored - 1  ? { t: 'DISCIPLINED GO',     c: '#10b981' }
+                :                         { t: 'PROCEED WITH CARE',  c: '#f59e0b' }
+
+  const icon = s => s === 'pass' ? '✓' : s === 'warn' ? '!' : s === 'fail' ? '✗' : '·'
+  const col  = s => s === 'pass' ? '#10b981' : s === 'warn' ? '#f59e0b' : s === 'fail' ? '#ef4444' : '#4e6a88'
+
+  return (
+    <div className="tb-disc">
+      <div className="tb-disc-head">
+        <span className="tb-disc-title">THE DISCIPLINE CHECK</span>
+        <span className="tb-disc-sub">how the great minds would weigh this</span>
+        <span className="tb-disc-verdict" style={{ color: verdict.c }}>{passes}/{scored} · {verdict.t}</span>
+      </div>
+      <div className="tb-disc-list">
+        {checks.map((c, i) => (
+          <div key={i} className="tb-disc-row">
+            <span className="tb-disc-icon" style={{ color: col(c.s) }}>{icon(c.s)}</span>
+            <span className="tb-disc-k">{c.k}</span>
+            <span className="tb-disc-who">{c.who}</span>
+            <span className="tb-disc-d">{c.d}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function TradeBrief({
   ticker,
   currentPrice,
@@ -2649,6 +2747,23 @@ export default function TradeBrief({
     return (wOk ? 1 : 0) + (dailyOk ? 1 : 0) + (g3Full ? 1 : 0)
   }, [direction, isCall, weeklyAlign, confluenceResult, swingResult, orbRetest])
 
+  // Discipline Check inputs — reward:risk and crowd sentiment
+  const discRR = useMemo(() => {
+    if (!currentPrice || !direction || direction === 'NO TRADE') return null
+    const entry = currentPrice
+    const stop = atr
+      ? (isCall ? entry - atr * 1.5 : entry + atr * 1.5)
+      : (isCall ? (fibLevels?.support ?? fibLevels?.fib61) : (fibLevels?.resistance ?? fibLevels?.fib38)) ?? null
+    const t1 = swingTargets?.t1 ?? fibLevels?.r1 ?? null
+    if (stop == null || t1 == null) return null
+    const risk = Math.abs(entry - stop), reward = Math.abs(t1 - entry)
+    return risk > 0 ? +(reward / risk).toFixed(1) : null
+  }, [currentPrice, direction, isCall, atr, fibLevels, swingTargets])
+
+  const fearGreed = useMemo(() => {
+    try { return computeFearGreed({ breadthData, ivData, cycleData }) } catch { return null }
+  }, [breadthData, ivData, cycleData])
+
   if (!ticker) {
     return (
       <div className="tb-empty">
@@ -2700,6 +2815,23 @@ export default function TradeBrief({
         atr={atr}
         fibLevels={fibLevels}
         swingTargets={swingTargets}
+      />
+
+      {/* ── The Discipline Check: great-investor principles applied ── */}
+      <DisciplineCheck
+        direction={direction}
+        isCall={isCall}
+        blocked={regimeBlocked || masterSignal?.blocked}
+        noTrade={!direction || direction === 'NO TRADE'}
+        rr={discRR}
+        ivRank={ivData?.ivRank ?? null}
+        fgScore={fearGreed?.score ?? null}
+        fgZone={fearGreed?.zone ?? null}
+        gateCount={gateCount}
+        allGatesOpen={allGatesOpen}
+        grade={setupGrade?.grade ?? null}
+        stopDefined={atr != null || fibLevels?.support != null || fibLevels?.resistance != null}
+        qtyOk={qty > 0}
       />
 
       {/* ── Verdict Panel: GO / WAIT / NO ── */}
