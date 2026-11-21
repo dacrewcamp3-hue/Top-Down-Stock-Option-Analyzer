@@ -1,29 +1,43 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-/* ── Design Tokens ─────────────────────────────────────────────────────────── */
-/* Single source of truth for all recurring colors and surfaces.               */
-/* Use var(--token) in new CSS; existing hex values are unchanged for compat.  */
+/* ── Design Tokens — SINGLE SOURCE OF TRUTH ──────────────────────────────────── */
+/* All recurring colors, surfaces, borders, radii and shadows live here.         */
+/* Previously split across index.css and App.css with 3 conflicting text values; */
+/* merged here to the readable (winning) values so there is one place to edit.   */
+/* Use var(--token) in all new CSS.                                              */
 :root {
+  /* Base typography */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #d4e0ed;
+
   /* Directional signals */
   --clr-bull:      #10b981;   /* bullish / green */
+  --green:         #10b981;   /* alias */
   --clr-bull-dim:  #34d399;   /* lighter green */
   --clr-bull-bg:   #001a0d;   /* bull card background */
   --clr-bull-bdr:  #064e2e;   /* bull card border */
   --clr-bear:      #ef4444;   /* bearish / red */
+  --red:           #ef4444;   /* alias */
   --clr-bear-bg:   #1a0000;   /* bear card background */
   --clr-bear-bdr:  #6b0000;   /* bear card border */
   --clr-neutral:   #6b7280;   /* neutral / no trade */
   --clr-warn:      #f59e0b;   /* caution / warning amber */
+  --amber:         #f59e0b;   /* alias */
   --clr-info:      #60a5fa;   /* informational blue */
+  --accent:        #60a5fa;   /* primary accent */
+  --accent-dim:    #93c5fd;   /* accent, lighter */
 
-  /* Text */
+  /* Text ramp — brightest → faintest */
+  --text:           #d4e0ed;  /* body default */
   --text-primary:   #c4daf0;  /* headings, prices, key labels */
   --text-secondary: #8aacc8;  /* secondary values */
-  --text-muted:     #4a6380;  /* subtitles, metadata */
-  --text-dim:       #3a5070;  /* placeholder, disabled */
-  --text-faint:     #2a4060;  /* hairline details */
+  --text-dim:       #8aacc8;  /* unified to the readable value (was #3a5070 in one file, #8aacc8 in the other) */
+  --text-muted:     #4e6a88;  /* subtitles, metadata */
+  --text-faint:     #344e68;  /* hairline / least-important details */
 
-  /* Surfaces */
+  /* Surfaces — page → deepest well */
   --surface:          #090d18;   /* page background */
   --surface-card:     #0f1623;   /* default card */
   --surface-elevated: #0a1628;   /* slightly elevated card */
@@ -32,9 +46,16 @@
   --surface-inset:    #030c18;   /* inset / well */
 
   /* Borders */
-  --border:     #1e2d45;   /* standard border */
-  --border-dim: #0e1e32;   /* lighter border inside cards */
-  --border-sub: #1a2e48;   /* mid-level border */
+  --border:        #1e2d45;   /* standard border */
+  --border-accent: #2a4a70;   /* accented / focus border */
+  --border-sub:    #1a2e48;   /* mid-level border */
+  --border-dim:    #0e1e32;   /* lighter border inside cards */
+
+  /* Radii & elevation — canonical scale for consistent corners/shadows */
+  --radius-sm: 5px;
+  --radius:    8px;
+  --radius-lg: 10px;
+  --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.5);
 }
 
 *, *::before, *::after {
