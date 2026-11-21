@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import { TIMEFRAMES } from './data/timeframes'
 import { SWING_CATEGORIES } from './data/swingCategories'
 import { analyzeEntry } from './utils/analyzeEntry'
@@ -16,13 +16,13 @@ import EntryRecommendation from './components/EntryRecommendation'
 import SwingCategoryPanel from './components/SwingCategoryPanel'
 import SwingResult from './components/SwingResult'
 import TradeJournal from './components/TradeJournal'
-import OptionsChain from './components/OptionsChain'
-import Scanner from './components/Scanner'
-import Backtest from './components/Backtest'
+const OptionsChain = lazy(() => import('./components/OptionsChain'))
+const Scanner = lazy(() => import('./components/Scanner'))
+const Backtest = lazy(() => import('./components/Backtest'))
 import MethodGuide from './components/MethodGuide'
-import FlowScanner from './components/FlowScanner'
+const FlowScanner = lazy(() => import('./components/FlowScanner'))
 import MarketPulse from './components/MarketPulse'
-import FlowTape from './components/FlowTape'
+const FlowTape = lazy(() => import('./components/FlowTape'))
 import AlignmentMatrix from './components/AlignmentMatrix'
 import InsiderActivity from './components/InsiderActivity'
 import RiskGuard from './components/RiskGuard'
@@ -30,11 +30,11 @@ import CyclePanel from './components/CyclePanel'
 import VolumeProfileCard from './components/VolumeProfileCard'
 import PriceChart from './components/PriceChart'
 import PriceVolumePanel from './components/PriceVolumePanel'
-import SignalScanner from './components/SignalScanner'
-import GapScanner from './components/GapScanner'
+const SignalScanner = lazy(() => import('./components/SignalScanner'))
+const GapScanner = lazy(() => import('./components/GapScanner'))
 import SectorRotation from './components/SectorRotation'
 import PriceLevelAlerts from './components/PriceLevelAlerts'
-import PlaybookPanel from './components/PlaybookPanel'
+const PlaybookPanel = lazy(() => import('./components/PlaybookPanel'))
 import EarningsMode from './components/EarningsMode'
 import AlertCenter from './components/AlertCenter'
 import LastAlertBanner from './components/LastAlertBanner'
@@ -54,13 +54,13 @@ import { fireNotification, requestNotifPermission } from './utils/browserAlerts'
 import SignalHistory from './components/SignalHistory'
 import WyckoffPanel from './components/WyckoffPanel'
 import { detectWyckoff } from './utils/wyckoff'
-import SPXGrowth from './components/SPXGrowth'
+const SPXGrowth = lazy(() => import('./components/SPXGrowth'))
 import SmartAlertToast from './components/SmartAlertToast'
 import { pushAlert } from './components/AlertCenter'
 import StandDownBanner, { DailyLossGuard } from './components/StandDownBanner'
-import MorningBriefing from './components/MorningBriefing'
+const MorningBriefing = lazy(() => import('./components/MorningBriefing'))
 import RRPlanner from './components/RRPlanner'
-import InsightCenter from './components/InsightCenter'
+const InsightCenter = lazy(() => import('./components/InsightCenter'))
 import './App.css'
 
 // ── Market session detection ──────────────────────────────────────────────────
@@ -1449,6 +1449,8 @@ export default function App() {
       <LastAlertBanner onLoadTicker={t => { setTicker(t); handleFetch(t); setActiveTab('analyze'); setAnalyzeView('brief') }} />
       <RiskGuard />
 
+      <Suspense fallback={<div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, letterSpacing: 0.5 }}>Loading…</div>}>
+
       {/* ── Analyze tab: Confluence + Swing Score via sub-toggle ── */}
       {activeTab === 'analyze' && (
         <>
@@ -2056,6 +2058,8 @@ export default function App() {
           masterSignal={masterSignal}
         />
       )}
+
+      </Suspense>
 
       {/* ── Persistent verdict bar (fixed bottom) ── */}
       {liveLoaded && (
