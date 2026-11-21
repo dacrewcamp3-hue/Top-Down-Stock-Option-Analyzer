@@ -758,5 +758,12 @@ export async function runBacktest(ticker, lookforward = 10, withCommission = fal
     withCommission,
     earningsSkipped,
     lowSampleWarning: trades.length < 20,
+    // Tested data window — lets the UI show exactly what period was covered and that it is current
+    coverage: {
+      fromDate: n ? new Date(timestamps[0] * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null,
+      toDate:   n ? new Date(timestamps[n - 1] * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null,
+      bars:     n,
+      asOf:     new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    },
   }
 }

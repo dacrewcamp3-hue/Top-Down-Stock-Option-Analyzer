@@ -1233,6 +1233,15 @@ export default function Backtest({ ticker, onResult }) {
             {result?.withCommission && ' · Commissions & slippage applied.'}
           </div>
 
+          {result.coverage && (
+            <div className="bt-coverage">
+              <span className="bt-cov-item">Tested window <b>{result.coverage.fromDate} → {result.coverage.toDate}</b></span>
+              <span className="bt-cov-item">{result.coverage.bars} daily bars</span>
+              <span className="bt-cov-item">{result.totalTrades} trades</span>
+              <span className="bt-cov-fresh"><span className="bt-cov-dot" />data as of {result.coverage.asOf}</span>
+            </div>
+          )}
+
           <div className="bt-view-toggle">
             {[
               { id: 'stock',   label: 'Stock Returns' },

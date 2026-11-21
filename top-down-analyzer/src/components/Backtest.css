@@ -1506,3 +1506,34 @@
   .bt-stats { flex-wrap: wrap; }
   .bt-stat  { min-width: calc(50% - 4px); }
 }
+
+/* ── Backtest coverage / freshness strip ──────────────────────────────────── */
+.bt-coverage {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 7px 12px;
+  margin-bottom: 8px;
+  background: var(--surface-deep);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.bt-cov-item { font-variant-numeric: tabular-nums; }
+.bt-cov-item b { color: var(--text-secondary); font-weight: 700; }
+.bt-cov-fresh {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.bt-cov-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--clr-bull);
+  box-shadow: 0 0 5px var(--clr-bull);
+}
