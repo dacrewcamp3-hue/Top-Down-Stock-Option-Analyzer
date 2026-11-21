@@ -646,55 +646,32 @@ function SeverityDivider({ emoji, label, color, borderColor }) {
   )
 }
 
-function SignalSummaryBar({ masterSignal, direction, conflict, sigmaLabel }) {
+function SignalSummaryBar({ masterSignal, direction, conflict, sigmaLabel, ivRank, lastUpdated }) {
   if (!masterSignal && !direction && !conflict) return null
   const blocked  = masterSignal?.blocked || conflict
   const dir      = masterSignal?.direction ?? direction
   const conf     = masterSignal?.confidence
   const tfScore  = masterSignal?.tfScore
   const reason   = masterSignal?.blockReason
-
-  const dirColor  = blocked ? '#ef4444' : dir === 'CALL' ? '#10b981' : dir === 'PUT' ? '#ef4444' : '#64748b'
-  const dirBg     = blocked ? '#1a0000' : dir === 'CALL' ? '#001a0d' : dir === 'PUT' ? '#1a0000' : '#0a0f1a'
-  const dirBorder = blocked ? '#7f1d1d' : dir === 'CALL' ? '#065f46' : dir === 'PUT' ? '#7f1d1d' : '#1e2d45'
+  const dirColor = blocked ? 'var(--clr-bear)' : dir === 'CALL' ? 'var(--clr-bull)' : dir === 'PUT' ? 'var(--clr-bear)' : 'var(--clr-neutral)'
+  const timeStr  = lastUpdated?.toLocaleTimeString ? lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : null
+  const ivTxt    = ivRank == null ? null : ivRank < 40 ? `IV ${ivRank} cheap` : ivRank <= 60 ? `IV ${ivRank} fair` : `IV ${ivRank} rich`
+  const ivColor  = ivRank == null ? null : ivRank < 40 ? 'var(--clr-bull)' : ivRank <= 60 ? 'var(--clr-warn)' : 'var(--clr-bear)'
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10,
-      padding: '7px 12px', margin: '6px 0 4px',
-      background: dirBg, border: `1px solid ${dirBorder}`, borderRadius: 6,
-      fontSize: 11,
-    }}>
-      <span style={{
-        fontWeight: 800, fontSize: 12, letterSpacing: 1.2, color: dirColor,
-        padding: '2px 10px', background: 'rgba(0,0,0,0.35)', borderRadius: 4,
-        border: `1px solid ${dirBorder}`,
-      }}>
-        {blocked ? 'BLOCKED' : dir ?? 'NO TRADE'}
-      </span>
+    <div className="opt-verdict" style={{ borderLeftColor: dirColor }}>
+      <span className="opt-verdict-dir" style={{ color: dirColor }}>{blocked ? 'BLOCKED' : dir ?? 'NO TRADE'}</span>
       {conf != null && (
-        <span style={{ color: conf >= 70 ? '#10b981' : conf >= 45 ? '#f59e0b' : '#ef4444' }}>
-          {conf}/100 confidence
-        </span>
+        <span className="opt-verdict-chip" style={{ color: conf >= 70 ? 'var(--clr-bull)' : conf >= 45 ? 'var(--clr-warn)' : 'var(--clr-bear)' }}>{conf}/100</span>
       )}
-      {tfScore != null && dir && (
-        <>
-          <span style={{ color: '#334155' }}>·</span>
-          <span style={{ color: '#64748b' }}>{tfScore}/4 TFs aligned</span>
-        </>
-      )}
-      {sigmaLabel && (
-        <>
-          <span style={{ color: '#334155' }}>·</span>
-          <span style={{ color: '#475569' }}>{sigmaLabel}</span>
-        </>
-      )}
-      {reason && (
-        <>
-          <span style={{ color: '#334155' }}>·</span>
-          <span style={{ color: '#ef4444', fontSize: 10, fontWeight: 700 }}>{reason}</span>
-        </>
-      )}
+      {tfScore != null && dir && <span className="opt-verdict-meta">{tfScore}/4 TFs</span>}
+      {ivTxt && <span className="opt-verdict-meta" style={{ color: ivColor }}>{ivTxt}</span>}
+      {sigmaLabel && <span className="opt-verdict-meta">{sigmaLabel}</span>}
+      {reason && <span className="opt-verdict-reason">{reason}</span>}
+      <span className="opt-verdict-fresh">
+        <span className="opt-verdict-dot" />
+        {timeStr ? `as of ${timeStr}` : 'live'}
+      </span>
     </div>
   )
 }
@@ -2592,6 +2569,8 @@ export default function OptionsChain({
         direction={conflict ? null : direction}
         conflict={conflict}
         sigmaLabel={sigmaLabel}
+        ivRank={ivRank}
+        lastUpdated={lastUpdated}
       />
 
       <SignalHint direction={conflict ? null : direction} conflict={conflict} />

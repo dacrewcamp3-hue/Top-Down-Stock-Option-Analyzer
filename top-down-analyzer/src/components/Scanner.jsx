@@ -904,6 +904,28 @@ function OptionIdeasPanel({ results, onLoadAndBrief }) {
 
 const GRADE_RANK = { 'A+': 4, A: 3, B: 2, C: 1 }
 
+// ── Scan Verdict strip — synthesized market read (consistent with the Brief) ──
+function ScanVerdict({ calls, puts, lastScanAt }) {
+  const c = calls.length, p = puts.length
+  if (c + p === 0) return null
+  const lean = c >= p * 1.5 ? { t: 'LEANING BULLISH', col: 'var(--clr-bull)' }
+    : p >= c * 1.5          ? { t: 'LEANING BEARISH', col: 'var(--clr-bear)' }
+    :                         { t: 'BALANCED',        col: 'var(--clr-warn)' }
+  const timeStr = lastScanAt?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return (
+    <div className="sc-verdict" style={{ borderLeftColor: lean.col }}>
+      <span className="sc-verdict-lean" style={{ color: lean.col }}>MARKET SCAN · {lean.t}</span>
+      <span className="sc-verdict-tally">
+        <b style={{ color: 'var(--clr-bull)' }}>{c} CALL</b> / <b style={{ color: 'var(--clr-bear)' }}>{p} PUT</b> setups
+      </span>
+      <span className="sc-verdict-fresh">
+        <span className="sc-verdict-dot" />
+        {timeStr ? `as of ${timeStr}` : 'live'}
+      </span>
+    </div>
+  )
+}
+
 export default function Scanner({ onLoadTicker, onLoadAndBrief }) {
   const initCache = useRef(loadCache())
 
@@ -1135,6 +1157,11 @@ export default function Scanner({ onLoadTicker, onLoadAndBrief }) {
             {progress.done} / {progress.total} checked · {results.length} setup{results.length !== 1 ? 's' : ''} found
           </span>
         </div>
+      )}
+
+      {/* ── Scan verdict strip (synthesized market read) ── */}
+      {(status === 'done' || (status === 'running' && results.length > 0)) && (calls.length + puts.length) > 0 && (
+        <ScanVerdict calls={calls} puts={puts} lastScanAt={lastScanAt} />
       )}
 
       {/* ── Sector heatmap ── */}

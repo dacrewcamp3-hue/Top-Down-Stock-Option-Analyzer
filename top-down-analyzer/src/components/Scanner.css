@@ -1287,3 +1287,34 @@
   color: #2a4060;
   margin-top: 2px;
 }
+
+/* ── Scan verdict strip — consistent with Brief Decision Stack ────────────── */
+.sc-verdict {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 13px;
+  margin-bottom: 10px;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+}
+.sc-verdict-lean { font-size: 13px; font-weight: 900; letter-spacing: 0.5px; }
+.sc-verdict-tally { font-size: 12px; font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.sc-verdict-fresh {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.sc-verdict-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--clr-bull);
+  box-shadow: 0 0 5px var(--clr-bull);
+}

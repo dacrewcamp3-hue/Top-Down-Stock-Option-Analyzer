@@ -2270,3 +2270,45 @@
   padding: 7px 12px;
   margin-top: 12px;
 }
+
+/* ── Options verdict strip — consistent with Brief Decision Stack ─────────── */
+.opt-verdict {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 7px 12px;
+  margin: 6px 0 4px;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  font-size: 11px;
+}
+.opt-verdict-dir {
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.8px;
+}
+.opt-verdict-chip {
+  font-weight: 800;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.opt-verdict-meta { color: var(--text-secondary); font-weight: 600; }
+.opt-verdict-reason { color: var(--clr-bear); font-size: 10px; font-weight: 700; }
+.opt-verdict-fresh {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.opt-verdict-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--clr-bull);
+  box-shadow: 0 0 5px var(--clr-bull);
+}
