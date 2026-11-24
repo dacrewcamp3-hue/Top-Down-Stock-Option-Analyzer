@@ -295,10 +295,12 @@ function IVPanel({ data }) {
 
 // ── Gate status pill ──────────────────────────────────────────────────────────
 function GateRow({ weeklyGate, dailyGate, signal, swingResult, orbRetest, vwapSignal }) {
+  // Hooks must run on every render, before any early return (rules-of-hooks).
+  const emaNames = useEmaNames()
+
   if (signal === 'NO TRADE') return null
   if (!weeklyGate && !dailyGate) return null
 
-  const emaNames = useEmaNames()
   const e8n      = emaNames[5]   // e.g. "Sister"
   const isCall   = signal === 'CALL'
 

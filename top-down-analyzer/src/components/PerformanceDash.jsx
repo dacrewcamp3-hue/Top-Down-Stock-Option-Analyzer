@@ -383,6 +383,9 @@ export default function PerformanceDash({ journal }) {
     }
   }, [journal])
 
+  // Hook must run on every render, before the early return below (rules-of-hooks).
+  const [copied, setCopied] = useState(false)
+
   if (!stats) return (
     <div className="pd-root">
       <div className="pd-empty">
@@ -395,7 +398,6 @@ export default function PerformanceDash({ journal }) {
     </div>
   )
 
-  const [copied, setCopied] = useState(false)
   const plColor = v => v >= 0 ? '#10b981' : '#ef4444'
 
   function handleCopyStats() {

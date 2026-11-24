@@ -583,9 +583,11 @@ function FearGreedMeter({ breadthData, ivData, cycleData }) {
 
 // ── Unlock Gate — 3-stage gamified trade unlock ──────────────────────────────
 function GateLock({ direction, confluenceResult, weeklyAlign, swingResult, orbRetest, adxSignal, vwapSignal }) {
+  // Hooks must run on every render, before any early return (rules-of-hooks).
+  const emaNames = useEmaNames()
+
   if (!direction || direction === 'NO TRADE') return null
 
-  const emaNames = useEmaNames()
   const e8n      = emaNames[5]
   const e15n     = emaNames[15]
   const isCall   = direction === 'CALL'
