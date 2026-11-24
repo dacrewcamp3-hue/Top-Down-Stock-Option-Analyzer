@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { scanUnusualFlow } from '../utils/runFlowScanner'
+import { FlowVerdict } from './FlowVerdict'
 import './FlowTape.css'
 
 // ── Formatters ────────────────────────────────────────────────────────────────
@@ -182,6 +183,7 @@ export default function FlowTape({ watchlist, vixData, verdict, onSentimentUpdat
   const [sentiment, setSentiment] = useState({})
   const [status,    setStatus]    = useState('idle')
   const [progress,  setProgress]  = useState({ done: 0, total: 0 })
+  const [lastPoll,  setLastPoll]  = useState(null)
   const seenRef = useRef(new Set())
   const initRef = useRef(false)
 
@@ -200,6 +202,7 @@ export default function FlowTape({ watchlist, vixData, verdict, onSentimentUpdat
       onSentimentUpdate?.(sent ?? {})
 
       const now     = Date.now()
+      setLastPoll(now)
       const isFirst = !initRef.current
 
       if (isFirst) {
@@ -268,6 +271,11 @@ export default function FlowTape({ watchlist, vixData, verdict, onSentimentUpdat
         <span className="ft-ticker-count">{tickers.length} tickers</span>
       </div>
 
+      {/* Net directional verdict + freshness */}
+      {Object.keys(sentiment).length > 0 && (
+        <FlowVerdict sentiment={sentiment} contractCount={tape.length} updatedAt={lastPoll} live />
+      )}
+
       {/* Regime banner */}
       <FlowRegimeBanner vixData={vixData} verdict={verdict} />
 
@@ -285,7 +293,7 @@ export default function FlowTape({ watchlist, vixData, verdict, onSentimentUpdat
 
       {/* Column headers */}
       <div className="ft-col-hdr">
-        <span className="ft-h-time">TIME</span>
+        <span className="ft-h-time" title="When this scan first detected the print — not the exchange trade timestamp. Data is a delayed (~15 min) Yahoo snapshot refreshed every 45s.">SEEN</span>
         <span className="ft-h-ticker">TICKER</span>
         <span className="ft-h-type">TYPE</span>
         <span className="ft-h-strike">STRIKE</span>
@@ -364,7 +372,7 @@ export default function FlowTape({ watchlist, vixData, verdict, onSentimentUpdat
           return (
             <div key={`${f._key}-${i}`} className={`ft-row${f._isNew ? ' ft-new' : ''}`}>
 
-              <span className="ft-cell ft-time">{fmtTime(f._ts)}</span>
+              <span className="ft-cell ft-time" title="Detection time (when this scan first saw the print), not the exchange trade timestamp">{fmtTime(f._ts)}</span>
 
               <span className="ft-cell ft-ticker">
                 {f.ticker}

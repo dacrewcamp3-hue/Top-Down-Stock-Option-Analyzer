@@ -28,7 +28,9 @@ import InsiderActivity from './components/InsiderActivity'
 import RiskGuard from './components/RiskGuard'
 import CyclePanel from './components/CyclePanel'
 import VolumeProfileCard from './components/VolumeProfileCard'
-import PriceChart from './components/PriceChart'
+// Lazy-loaded: PriceChart (~3.4k lines) and TradeBrief (~3.3k lines) are the two
+// heaviest components and are tab-gated, so they no longer weigh down the initial bundle.
+const PriceChart = lazy(() => import('./components/PriceChart'))
 import PriceVolumePanel from './components/PriceVolumePanel'
 const SignalScanner = lazy(() => import('./components/SignalScanner'))
 const GapScanner = lazy(() => import('./components/GapScanner'))
@@ -38,7 +40,7 @@ const PlaybookPanel = lazy(() => import('./components/PlaybookPanel'))
 import EarningsMode from './components/EarningsMode'
 import AlertCenter from './components/AlertCenter'
 import LastAlertBanner from './components/LastAlertBanner'
-import TradeBrief from './components/TradeBrief'
+const TradeBrief = lazy(() => import('./components/TradeBrief'))
 import StockTradePlan from './components/StockTradePlan'
 import MarketBreadth from './components/MarketBreadth'
 import BestTradeNow from './components/BestTradeNow'
@@ -1934,12 +1936,12 @@ export default function App() {
             <button
               className={`sub-btn${scannerView === 'flow' ? ' active' : ''}`}
               onClick={() => setScannerView('flow')}
-              data-tip="Options Flow — large options bets placed by institutional traders. Unusual call or put activity often reveals where smart money is positioned before a move."
+              data-tip="Options Flow — contracts with unusually high volume relative to open interest, often (not always) large or institutional positioning. A net call/put premium read tells you which way the money is leaning. Delayed quotes."
             >Options Flow</button>
             <button
               className={`sub-btn${scannerView === 'tape' ? ' active' : ''}`}
               onClick={() => setScannerView('tape')}
-              data-tip="Live Flow — real-time stream of options trades printing right now. See every large position the moment it happens."
+              data-tip="Live Flow — your watchlist's unusual options activity, refreshed every 45s from delayed (~15 min) quotes. New prints surface at the top as the scan detects them. A derived read, not a live exchange tape."
             >Live Flow</button>
             <button
               className={`sub-btn${scannerView === 'playbook' ? ' active' : ''}`}

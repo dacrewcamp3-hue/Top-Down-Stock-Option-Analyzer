@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { scanUnusualFlow } from '../utils/runFlowScanner'
 import { UNIVERSE } from '../utils/runScanner'
+import { FlowVerdict } from './FlowVerdict'
 import './FlowScanner.css'
 
 const FLOW_CACHE_KEY = 'tdsa-flow-results'
@@ -137,6 +138,7 @@ export default function FlowScanner({ onLoadTicker }) {
   const [sentiment, setSentiment] = useState({})
   const [fetchErrors, setFetchErrors] = useState(0)
   const [filter,   setFilter]   = useState('all')  // all | call | put
+  const [scanAt,   setScanAt]   = useState(null)
 
   function handleAdd() {
     const syms = input.toUpperCase().split(/[\s,]+/).map(s => s.trim()).filter(Boolean)
@@ -158,6 +160,7 @@ export default function FlowScanner({ onLoadTicker }) {
       setFlows(f)
       setSentiment(s)
       setFetchErrors(e ?? 0)
+      setScanAt(new Date())
       try { localStorage.setItem(FLOW_CACHE_KEY, JSON.stringify({ sentiment: s, at: new Date().toISOString() })) } catch {}
     } catch (_) {}
     setStatus('done')
@@ -239,6 +242,7 @@ export default function FlowScanner({ onLoadTicker }) {
       {/* Top movers when done */}
       {status === 'done' && flows.length > 0 && (
         <>
+          <FlowVerdict sentiment={sentiment} contractCount={flows.length} updatedAt={scanAt} />
           <div className="fl-top-cards">
             {topCall && (
               <div className="fl-top-card fl-top-call">
@@ -317,7 +321,7 @@ export default function FlowScanner({ onLoadTicker }) {
           <div className="fl-empty-title">Options flow scanner</div>
           <div className="fl-empty-sub">
             Hit <strong>Scan</strong> to check {tickers.length} tickers for unusual call and put activity.
-            Works best during market hours — volume data updates in real time.
+            Works best during market hours — volume builds through the session (quotes are delayed ~15 min).
           </div>
         </div>
       )}
