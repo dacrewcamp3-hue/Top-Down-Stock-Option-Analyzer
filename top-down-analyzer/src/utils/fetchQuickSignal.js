@@ -3,6 +3,7 @@
 // 5m/15m bars power the ORB (Opening Range Breakout) detection.
 
 import { calcORBreakRetest } from './indicators'
+import { mapInBatches } from './batch'
 
 const BASE = '/yf-api/v8/finance/chart'
 
@@ -166,14 +167,15 @@ export async function fetchQuickSignal(ticker) {
 
 // Batched parallel scan with progress callback
 export async function scanSignals(tickers, onProgress) {
-  const BATCH = 4   // parallel tickers per wave
   const results = []
-  for (let i = 0; i < tickers.length; i += BATCH) {
-    const batch = tickers.slice(i, i + BATCH)
-    const res   = (await Promise.all(batch.map(t => fetchQuickSignal(t)))).filter(Boolean)
-    results.push(...res)
-    onProgress?.(Math.min(results.length, tickers.length), tickers.length)
-  }
+  await mapInBatches(tickers, t => fetchQuickSignal(t), {
+    size: 4,   // parallel tickers per wave
+    onBatch: (batchResults) => {
+      results.push(...batchResults.filter(Boolean))
+      // Progress tracks cumulative successful results, as before.
+      onProgress?.(Math.min(results.length, tickers.length), tickers.length)
+    },
+  })
   // Sort: ORB actionable first, then by swing signal, then by score
   return results.sort((a, b) => {
     const orbPri = r => {

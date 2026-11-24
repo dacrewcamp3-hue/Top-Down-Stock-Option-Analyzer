@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { UNIVERSE } from '../utils/runScanner'
+import { mapInBatches } from '../utils/batch'
 import './GapScanner.css'
 
 const BASE    = '/yf-api/v8/finance/chart'
@@ -337,12 +338,13 @@ export default function GapScanner({ watchlist = [], onLoadTicker, vixData, verd
     setResults([])
     setProg({ done: 0, total: defaultList.length })
     const all = []
-    for (let i = 0; i < defaultList.length; i += BATCH) {
-      const batch   = defaultList.slice(i, i + BATCH)
-      const fetched = await Promise.all(batch.map(fetchGapData))
-      fetched.forEach(r => r && all.push(r))
-      setProg({ done: Math.min(i + BATCH, defaultList.length), total: defaultList.length })
-    }
+    await mapInBatches(defaultList, fetchGapData, {
+      size: BATCH,
+      onBatch: (fetched, done, total) => {
+        fetched.forEach(r => r && all.push(r))
+        setProg({ done, total })
+      },
+    })
     const filtered = all
       .filter(r => Math.abs(r.gapPct) >= MIN_GAP)
       .sort((a, b) => Math.abs(b.gapPct) - Math.abs(a.gapPct))

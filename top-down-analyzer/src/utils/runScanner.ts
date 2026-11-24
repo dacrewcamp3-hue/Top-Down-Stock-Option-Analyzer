@@ -1,4 +1,5 @@
 import { calcEMASeries, calcRSI, calcMACD, calcADX } from './indicators'
+import { mapInBatches } from './batch'
 import type { ScanResult, ScanRow } from '../types'
 
 const CHART_BASE = '/yf-api/v8/finance/chart'
@@ -339,15 +340,12 @@ export async function runScanner(
     if (sn >= 62) spyReturn = (sc[sn - 1] - sc[sn - 61]) / sc[sn - 61]
   } catch {}
 
-  const results = []
-  const BATCH   = 3
-  for (let i = 0; i < tickers.length; i += BATCH) {
-    const batch        = tickers.slice(i, i + BATCH)
-    const batchResults = await Promise.all(batch.map(t => scanTicker(t, spyReturn)))
-    results.push(...batchResults)
-    onResult?.(batchResults)
-    onProgress(Math.min(i + BATCH, tickers.length), tickers.length)
-    if (i + BATCH < tickers.length) await new Promise(r => setTimeout(r, 200))
-  }
-  return results
+  return mapInBatches(tickers, t => scanTicker(t, spyReturn), {
+    size: 3,
+    delayMs: 200,   // Yahoo throttle guard between waves
+    onBatch: (batchResults, done, total) => {
+      onResult?.(batchResults)
+      onProgress(done, total)
+    },
+  })
 }
