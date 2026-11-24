@@ -22,12 +22,36 @@ const SECTOR_ETFS = {
   'Communication Services': 'XLC',
 }
 
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
+
+// Transient failures worth retrying. The proxy clears its crumb on a 401/403, so a
+// retry ~0.5s later re-authenticates and usually succeeds. 429/5xx are throttling or
+// host hiccups that also clear quickly. 404 (unknown ticker) and other 4xx are
+// permanent and never retried.
+const RETRYABLE_STATUS = new Set([401, 403, 408, 425, 429, 500, 502, 503, 504])
+const MAX_ATTEMPTS = 3
+
 async function fetchYFChart(ticker, interval, range, prePost = false) {
   const url = `${CHART_BASE}/${encodeURIComponent(ticker)}?interval=${interval}&range=${range}&includePrePost=${prePost}`
-  const res = await fetch(url, { cache: 'no-cache' })
 
-  if (res.status === 404) throw new Error(`Ticker "${ticker}" not found`)
-  if (!res.ok) throw new Error(`Yahoo Finance returned HTTP ${res.status} — try again later`)
+  let res: Response | null = null
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    try {
+      res = await fetch(url, { cache: 'no-cache' })
+    } catch (netErr) {
+      // Network/CORS error — retry with backoff, then give up.
+      if (attempt < MAX_ATTEMPTS - 1) { await sleep(400 * (attempt + 1)); continue }
+      throw netErr
+    }
+    if (res.status === 404) throw new Error(`Ticker "${ticker}" not found`)
+    if (res.ok) break
+    if (RETRYABLE_STATUS.has(res.status) && attempt < MAX_ATTEMPTS - 1) {
+      await sleep(400 * (attempt + 1))   // 400ms, then 800ms — gives the proxy time to re-crumb
+      continue
+    }
+    throw new Error(`Yahoo Finance returned HTTP ${res.status} — try again later`)
+  }
+  if (!res || !res.ok) throw new Error(`Yahoo Finance request failed for "${ticker}" — try again later`)
 
   const json = await res.json()
   const yfError = json.chart?.error

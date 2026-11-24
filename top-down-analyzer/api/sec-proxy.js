@@ -1,5 +1,12 @@
 import https from 'node:https'
 
+// SEC's fair-access policy wants a contact in the User-Agent. Read it from the
+// SEC_CONTACT env var (Vercel dashboard in prod, .env.local in dev) so no personal
+// email is ever committed. Falls back to a non-personal app identifier when unset.
+const SEC_UA = process.env.SEC_CONTACT
+  ? `Top-Down-Stock-Option-Analyzer/1.0 (contact: ${process.env.SEC_CONTACT})`
+  : 'Top-Down-Stock-Option-Analyzer/1.0'
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return }
@@ -11,7 +18,7 @@ export default async function handler(req, res) {
 
     const result = await new Promise((resolve, reject) => {
       const headers = {
-        'User-Agent': 'Top-Down-Stock-Option-Analyzer/1.0 (contact: dacrewcamp3@gmail.com)',
+        'User-Agent': SEC_UA,
         'Accept':     'application/json',
       }
       const r = https.request({ hostname: 'efts.sec.gov', path: targetPath, method: 'GET', headers }, proxyRes => {
